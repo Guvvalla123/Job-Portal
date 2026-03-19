@@ -1,0 +1,12 @@
+{
+  "name": "job-portal-mern",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Naukri-like job portal using MERN + Tailwind",
+  "scripts": {
+    "frontend:dev": "npm --prefix frontend run dev",
+    "backend:dev": "npm --prefix backend run dev",
+    "frontend:build": "npm --prefix frontend run build",
+    "backend:start": "npm --prefix backend run start"
+  }
+}

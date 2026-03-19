@@ -1,0 +1,121 @@
+const { ApiError } = require("../utils/apiError");
+const { notifyAlertsForJob } = require("./jobAlertService");
+const jobRepository = require("../repositories/jobRepository");
+const applicationRepository = require("../repositories/applicationRepository");
+const { logger } = require("../config/logger");
+const cache = require("../utils/cache");
+
+const createJob = async (payload, userId) => {
+  const { companyId, ...rest } = payload;
+  const company = await require("../models/Company").findById(companyId);
+  if (!company) throw new ApiError(404, "Company not found");
+  if (company.createdBy.toString() !== userId) throw new ApiError(403, "You do not own this company");
+
+  const job = await jobRepository.create({
+    ...rest,
+    company: company._id,
+    postedBy: userId,
+  });
+
+  cache.invalidatePattern("jobs:list").catch(() => {});
+  notifyAlertsForJob(job).catch((err) => logger.error("JobAlert", { error: err.message }));
+  return { job };
+};
+
+const listJobs = async (query) => {
+  const key = cache.cacheKey("jobs:list", query);
+  const cached = await cache.get(key);
+  const ttl = cache.CACHE_TTL.jobsList || 180;
+  const isCacheable = query.page === 1 && !query.q && !query.location;
+
+  if (cached) {
+    const data = cached.data ?? cached;
+    if (isCacheable && cached._age) {
+      const age = (Date.now() - cached._age) / 1000;
+      if (age > ttl * 0.8 && Math.random() < 0.1) {
+        setImmediate(() => listJobs(query).catch(() => {}));
+      }
+    }
+    return data;
+  }
+
+  const filter = jobRepository.buildListFilter(query);
+  const { page, limit } = query;
+  const [jobs, total] = await Promise.all([
+    jobRepository.findWithFilter(filter, { page, limit }),
+    jobRepository.count(filter),
+  ]);
+
+  const result = {
+    jobs,
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+
+  if (isCacheable) {
+    await cache.set(key, { data: result, _age: Date.now() }, ttl);
+  }
+  return result;
+};
+
+const getJobById = async (id) => {
+  const job = await jobRepository.findActiveById(id);
+  if (!job) throw new ApiError(404, "Job not found");
+  return { job };
+};
+
+const listMyJobs = async (userId) => {
+  const jobs = await jobRepository.findByPostedBy(userId);
+  return { jobs };
+};
+
+const updateJob = async (id, payload, userId) => {
+  const job = await jobRepository.findById(id);
+  if (!job) throw new ApiError(404, "Job not found");
+  if (job.postedBy.toString() !== userId) throw new ApiError(403, "Not authorized to update this job");
+
+  const { companyId, ...updates } = payload;
+  Object.assign(job, updates);
+  await job.save();
+  cache.invalidatePattern("jobs:list").catch(() => {});
+  return { job };
+};
+
+const deleteJob = async (id, userId) => {
+  const job = await jobRepository.findById(id);
+  if (!job) throw new ApiError(404, "Job not found");
+  if (job.postedBy.toString() !== userId) throw new ApiError(403, "Not authorized to delete this job");
+
+  job.isActive = false;
+  await job.save();
+  cache.invalidatePattern("jobs:list").catch(() => {});
+  return {};
+};
+
+const getRecruiterAnalytics = async (userId) => {
+  const jobIds = (await jobRepository.findJobIdsByPostedBy(userId)).map((j) => j._id);
+  const [totalApplications, byStatus] = await Promise.all([
+    applicationRepository.countByJobs(jobIds),
+    applicationRepository.aggregateByStatus(jobIds),
+  ]);
+  const statusCounts = Object.fromEntries(byStatus.map((s) => [s._id, s.count]));
+  return {
+    totalJobs: jobIds.length,
+    totalApplications,
+    byStatus: statusCounts,
+  };
+};
+
+module.exports = {
+  createJob,
+  listJobs,
+  getJobById,
+  listMyJobs,
+  updateJob,
+  deleteJob,
+  getRecruiterAnalytics,
+};

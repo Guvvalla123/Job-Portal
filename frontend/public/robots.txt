@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+
+# Disallow auth/dashboard from indexing (optional - remove if you want them indexed)
+Disallow: /dashboard
+Disallow: /candidate/dashboard
+Disallow: /recruiter/dashboard
+Disallow: /admin/dashboard
+
+# Sitemap (update with your production URL)
+Sitemap: https://jobportal.example.com/sitemap.xml
