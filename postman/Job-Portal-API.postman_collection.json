@@ -1,0 +1,480 @@
+{
+  "info": {
+    "name": "Job Portal API",
+    "description": "MERN Job Portal - Production-ready API collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000/api" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "System",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/health"
+          }
+        },
+        {
+          "name": "Readiness Check",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/ready"
+          }
+        },
+        {
+          "name": "Metrics",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/metrics"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/v1/auth/register",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"candidate\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.data && json.data.accessToken) pm.collectionVariables.set('accessToken', json.data.accessToken);",
+                  "  if (json.data && json.data.refreshToken) pm.collectionVariables.set('refreshToken', json.data.refreshToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/v1/auth/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"password123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/v1/auth/refresh",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Me",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/v1/auth/me",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/v1/auth/logout",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/v1/auth/forgot-password",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/v1/auth/reset-password/:token",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"newpassword123\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Jobs",
+      "item": [
+        {
+          "name": "List Jobs",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/v1/jobs?page=1&limit=10"
+          }
+        },
+        {
+          "name": "List Jobs (Filtered)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/v1/jobs?page=1&limit=10&q=developer&location=remote"
+          }
+        },
+        {
+          "name": "Get Job",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/v1/jobs/:id"
+          }
+        },
+        {
+          "name": "List My Jobs",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/v1/jobs/me",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "Get Analytics",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/v1/jobs/analytics",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "Create Job",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/v1/jobs",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"companyId\": \"<company_id>\",\n  \"title\": \"Senior Developer\",\n  \"description\": \"Job description\",\n  \"location\": \"Remote\",\n  \"employmentType\": \"full-time\",\n  \"experienceLevel\": \"senior\",\n  \"skills\": [\"Node.js\", \"React\"]\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Job",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/v1/jobs/:id",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"companyId\": \"<company_id>\",\n  \"title\": \"Updated Title\",\n  \"description\": \"Updated description\",\n  \"location\": \"Hybrid\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Job",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/v1/jobs/:id",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Applications",
+      "item": [
+        {
+          "name": "Apply to Job",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/v1/applications",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jobId\": \"<job_id>\",\n  \"coverLetter\": \"I am interested in this position.\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List My Applications",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/v1/applications/me",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "List Applications for Job",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/v1/applications/job/:jobId",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "Update Application Status",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/v1/applications/:id/status",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"shortlisted\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/v1/users/profile",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"John Doe\",\n  \"headline\": \"Full Stack Developer\",\n  \"location\": \"New York\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Toggle Saved Job",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/v1/users/saved-jobs/:jobId",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "Get Saved Jobs",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/v1/users/saved-jobs",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "Delete Account",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/v1/users/account",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Companies",
+      "item": [
+        {
+          "name": "List Public Companies",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/v1/companies?page=1&limit=12"
+          }
+        },
+        {
+          "name": "List My Companies",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/v1/companies/me",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "Get Company",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/v1/companies/:id"
+          }
+        },
+        {
+          "name": "Create Company",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/v1/companies",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Acme Corp\",\n  \"website\": \"https://acme.com\",\n  \"location\": \"San Francisco\",\n  \"description\": \"We build great products.\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Job Alerts",
+      "item": [
+        {
+          "name": "Create Alert",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/v1/job-alerts",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"keywords\": \"developer react\",\n  \"location\": \"Remote\",\n  \"employmentType\": \"full-time\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List Alerts",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/v1/job-alerts",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "Update Alert",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/v1/job-alerts/:id",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"keywords\": \"developer node\",\n  \"isActive\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Alert",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/v1/job-alerts/:id",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "List Notifications",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/v1/notifications",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "Mark as Read",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/v1/notifications/:id/read",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "Mark All as Read",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/v1/notifications/read-all",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Get Stats",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/v1/admin/stats",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "List All Users",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/v1/admin/users",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "List All Jobs",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/v1/admin/jobs",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "Toggle User Status",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/v1/admin/users/:id/toggle-status",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "Toggle Job Status",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/v1/admin/jobs/:id/toggle-status",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        }
+      ]
+    }
+  ]
+}
