@@ -1,11 +1,12 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { apiClient } from '../api/apiClient.js'
 import { useAuth } from '../context/useAuth.jsx'
 import { getApiErrorMessage } from '../utils/getApiErrorMessage.js'
 import { queryKeys } from '../lib/queryKeys.js'
-import { Button } from './ui/index.js'
+import { Button, Modal } from './ui/index.js'
+import { ResumeViewer } from './resume/ResumeViewer.jsx'
 
 const RESUME_MAX_SIZE = 2 * 1024 * 1024 // 2MB
 
@@ -28,6 +29,7 @@ export function ResumeSection({ user, onUserUpdate, compact = false }) {
   const queryClient = useQueryClient()
   const { updateUser } = useAuth()
   const fileInputRef = useRef(null)
+  const [previewOpen, setPreviewOpen] = useState(false)
 
   const uploadResumeMutation = useMutation({
     mutationFn: async (file) => {
@@ -102,28 +104,44 @@ export function ResumeSection({ user, onUserUpdate, compact = false }) {
 
   if (compact) {
     return (
-      <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-50">
-            <svg className="h-4 w-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
+      <>
+        <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-50">
+              <svg className="h-4 w-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-gray-900">Resume</p>
+              <p className="text-xs text-gray-500 truncate">
+                {hasResume ? displayName || 'Uploaded' : 'Not uploaded yet'}
+              </p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-gray-900">Resume</p>
-            <p className="text-xs text-gray-500 truncate">
-              {hasResume ? displayName || 'Uploaded' : 'Not uploaded yet'}
-            </p>
-          </div>
+          {hasResume && (
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPreviewOpen(true)}
+                className="text-xs font-semibold text-indigo-600 hover:text-indigo-500"
+              >
+                View
+              </button>
+            </div>
+          )}
         </div>
-        {hasResume && (
-          <div className="flex shrink-0 items-center gap-2">
-            <a href={user.resumeUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-indigo-600 hover:text-indigo-500">
-              View
-            </a>
-          </div>
-        )}
-      </div>
+        <Modal
+          open={previewOpen}
+          onClose={() => setPreviewOpen(false)}
+          title={displayName ? `Resume — ${displayName}` : 'Resume'}
+          size="xl"
+        >
+          {previewOpen && hasResume ? (
+            <ResumeViewer path="/users/profile/resume/file" title={displayName || 'Resume'} />
+          ) : null}
+        </Modal>
+      </>
     )
   }
 
@@ -150,14 +168,13 @@ export function ResumeSection({ user, onUserUpdate, compact = false }) {
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              <a
-                href={user.resumeUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                type="button"
+                onClick={() => setPreviewOpen(true)}
                 className="rounded-lg border border-indigo-200 px-3 py-1.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50"
               >
                 View
-              </a>
+              </button>
               <Button
                 variant="ghost"
                 size="sm"
@@ -211,6 +228,17 @@ export function ResumeSection({ user, onUserUpdate, compact = false }) {
           />
         </label>
       )}
+
+      <Modal
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        title={displayName ? `Resume — ${displayName}` : 'Resume'}
+        size="xl"
+      >
+        {previewOpen && hasResume ? (
+          <ResumeViewer path="/users/profile/resume/file" title={displayName || 'Resume'} />
+        ) : null}
+      </Modal>
     </div>
   )
 }

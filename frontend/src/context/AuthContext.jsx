@@ -21,6 +21,8 @@ export function AuthProvider({ children }) {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const logoutInProgress = useRef(false)
+  /** Bumps on login/logout so in-flight /auth/me cannot overwrite a newer session. */
+  const authEpoch = useRef(0)
 
   const [user, setUser] = useState(() => {
     const raw = localStorage.getItem(AUTH_KEYS.USER)
@@ -35,6 +37,7 @@ export function AuthProvider({ children }) {
   const performLogout = useCallback(async (options = {}) => {
     if (logoutInProgress.current) return
     logoutInProgress.current = true
+    authEpoch.current += 1
 
     const { clearCache = true, redirectToLogin = true } = options
     const token = localStorage.getItem(AUTH_KEYS.ACCESS_TOKEN)
@@ -65,6 +68,7 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const unsubscribe = subscribeToSessionExpiry(() => {
+      authEpoch.current += 1
       setUser(null)
       clearAuthStorage()
       Promise.all(
@@ -83,25 +87,36 @@ export function AuthProvider({ children }) {
       return
     }
 
+    const epochAtStart = authEpoch.current
     apiClient
       .get('/auth/me')
       .then((response) => {
+        if (epochAtStart !== authEpoch.current) return
         const validatedUser = response.data.data.user
         setUser(validatedUser)
         localStorage.setItem(AUTH_KEYS.USER, JSON.stringify(validatedUser))
       })
       .catch(() => {
+        if (epochAtStart !== authEpoch.current) return
         setUser(null)
         clearAuthStorage()
       })
-      .finally(() => setLoading(false))
+      .finally(() => {
+        if (epochAtStart !== authEpoch.current) return
+        setLoading(false)
+      })
   }, [])
 
   const login = useCallback(({ user: userData, accessToken, refreshToken }) => {
+    authEpoch.current += 1
     setUser(userData)
     localStorage.setItem(AUTH_KEYS.USER, JSON.stringify(userData))
     localStorage.setItem(AUTH_KEYS.ACCESS_TOKEN, accessToken)
     if (refreshToken) localStorage.setItem(AUTH_KEYS.REFRESH_TOKEN, refreshToken)
+    if (apiClient.defaults.headers.common) {
+      apiClient.defaults.headers.common.Authorization = `Bearer ${accessToken}`
+    }
+    setLoading(false)
   }, [])
 
   const logout = useCallback(() => {

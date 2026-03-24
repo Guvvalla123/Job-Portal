@@ -7,7 +7,8 @@ import { toast } from 'sonner'
 import { apiClient } from '../../api/apiClient.js'
 import { getApiErrorMessage } from '../../utils/getApiErrorMessage.js'
 import { queryKeys } from '../../lib/queryKeys.js'
-import { CACHE_TIERS } from '../../lib/queryOptions.js'
+import { formatSalaryRange } from '../../utils/formatSalary.js'
+import { openApplicationResumeInNewTab } from '../../lib/openApplicationResumeTab.js'
 
 const companySchema = z.object({
   name: z.string().min(2, 'Company name must be at least 2 characters'),
@@ -16,17 +17,22 @@ const companySchema = z.object({
   description: z.string().optional(),
 })
 
-const jobSchema = z.object({
-  title: z.string().min(3, 'Job title must be at least 3 characters'),
-  description: z.string().min(10, 'Description must be at least 10 characters'),
-  location: z.string().min(1, 'Location is required'),
-  employmentType: z.enum(['full-time', 'part-time', 'contract', 'internship']),
-  experienceLevel: z.enum(['fresher', 'junior', 'mid', 'senior', 'lead']),
-  minSalary: z.coerce.number().min(0, 'Min salary must be 0 or more'),
-  maxSalary: z.coerce.number().min(0, 'Max salary must be 0 or more'),
-  skills: z.string().optional(),
-  companyId: z.string().min(1, 'Please select a company'),
-})
+const jobSchema = z
+  .object({
+    title: z.string().min(3, 'Job title must be at least 3 characters'),
+    description: z.string().min(20, 'Description must be at least 20 characters (API requirement)'),
+    location: z.string().min(2, 'Location must be at least 2 characters'),
+    employmentType: z.enum(['full-time', 'part-time', 'contract', 'internship']),
+    experienceLevel: z.enum(['fresher', 'junior', 'mid', 'senior', 'lead']),
+    minSalary: z.coerce.number().min(0, 'Min salary must be 0 or more'),
+    maxSalary: z.coerce.number().min(0, 'Max salary must be 0 or more'),
+    skills: z.string().optional(),
+    companyId: z.string().min(1, 'Please select a company'),
+  })
+  .refine((d) => d.maxSalary >= d.minSalary, {
+    message: 'Max salary must be greater than or equal to min salary',
+    path: ['maxSalary'],
+  })
 
 const JOB_DEFAULTS = {
   title: '',
@@ -62,7 +68,7 @@ export function RecruiterDashboardPage() {
   })
 
   const companiesQuery = useQuery({
-    queryKey: ['my-companies'],
+    queryKey: queryKeys.recruiter.companies(),
     queryFn: async () => {
       const response = await apiClient.get('/companies/me')
       return response.data.data.companies
@@ -70,7 +76,7 @@ export function RecruiterDashboardPage() {
   })
 
   const jobsQuery = useQuery({
-    queryKey: ['my-jobs'],
+    queryKey: queryKeys.recruiter.jobs(),
     queryFn: async () => {
       const response = await apiClient.get('/jobs/me')
       return response.data.data.jobs
@@ -78,7 +84,7 @@ export function RecruiterDashboardPage() {
   })
 
   const analyticsQuery = useQuery({
-    queryKey: ['recruiter-analytics'],
+    queryKey: queryKeys.recruiter.analytics(),
     queryFn: async () => {
       const response = await apiClient.get('/jobs/analytics')
       return response.data.data
@@ -89,7 +95,17 @@ export function RecruiterDashboardPage() {
     mutationFn: (payload) => apiClient.post('/companies', payload),
     onSuccess: async (response) => {
       companyForm.reset()
+      const created = response.data?.data?.company
+      if (created) {
+        queryClient.setQueryData(queryKeys.recruiter.companies(), (old) => {
+          const list = Array.isArray(old) ? old : []
+          const exists = list.some((c) => c._id === created._id)
+          if (exists) return list
+          return [created, ...list]
+        })
+      }
       await queryClient.invalidateQueries({ queryKey: queryKeys.recruiter.companies() })
+      await queryClient.invalidateQueries({ queryKey: ['companies', 'list'] })
       toast.success(response.data?.message || 'Company created successfully.')
     },
     onError: (error) => {
@@ -101,7 +117,18 @@ export function RecruiterDashboardPage() {
     mutationFn: (payload) => apiClient.post('/jobs', payload),
     onSuccess: async (response) => {
       jobForm.reset(JOB_DEFAULTS)
+      const createdJob = response.data?.data?.job
+      if (createdJob) {
+        queryClient.setQueryData(queryKeys.recruiter.jobs(), (old) => {
+          const list = Array.isArray(old) ? old : []
+          const exists = list.some((j) => j._id === createdJob._id)
+          if (exists) return list
+          return [createdJob, ...list]
+        })
+      }
       await queryClient.invalidateQueries({ queryKey: queryKeys.recruiter.jobs() })
+      await queryClient.invalidateQueries({ queryKey: queryKeys.recruiter.analytics() })
+      await queryClient.invalidateQueries({ queryKey: ['jobs', 'list'] })
       toast.success(response.data?.message || 'Job posted successfully.')
     },
     onError: (error) => {
@@ -114,7 +141,16 @@ export function RecruiterDashboardPage() {
     onSuccess: async (response) => {
       jobForm.reset(JOB_DEFAULTS)
       setEditingJobId(null)
+      const updated = response.data?.data?.job
+      if (updated?._id) {
+        queryClient.setQueryData(queryKeys.recruiter.jobs(), (old) => {
+          const list = Array.isArray(old) ? old : []
+          return list.map((j) => (j._id === updated._id ? { ...j, ...updated } : j))
+        })
+      }
       await queryClient.invalidateQueries({ queryKey: queryKeys.recruiter.jobs() })
+      await queryClient.invalidateQueries({ queryKey: queryKeys.recruiter.analytics() })
+      await queryClient.invalidateQueries({ queryKey: ['jobs', 'list'] })
       toast.success(response.data?.message || 'Job updated successfully.')
     },
     onError: (error) => {
@@ -124,8 +160,14 @@ export function RecruiterDashboardPage() {
 
   const deleteJobMutation = useMutation({
     mutationFn: (id) => apiClient.delete(`/jobs/${id}`),
-    onSuccess: async (response) => {
+    onSuccess: async (response, deletedId) => {
+      queryClient.setQueryData(queryKeys.recruiter.jobs(), (old) => {
+        const list = Array.isArray(old) ? old : []
+        return list.filter((j) => j._id !== deletedId)
+      })
       await queryClient.invalidateQueries({ queryKey: queryKeys.recruiter.jobs() })
+      await queryClient.invalidateQueries({ queryKey: queryKeys.recruiter.analytics() })
+      await queryClient.invalidateQueries({ queryKey: ['jobs', 'list'] })
       toast.success(response.data?.message || 'Job deleted successfully.')
     },
     onError: (error) => {
@@ -134,9 +176,25 @@ export function RecruiterDashboardPage() {
   })
 
   const updateApplicationMutation = useMutation({
-    mutationFn: ({ applicationId, status }) =>
-      apiClient.patch(`/applications/${applicationId}/status`, { status }),
-    onSuccess: (response) => {
+    mutationFn: ({ applicationId, status, jobId }) =>
+      apiClient.patch(`/applications/${String(applicationId)}/status`, { status }),
+    onSuccess: (response, variables) => {
+      const { applicationId, status, jobId } = variables
+      const jKey = String(jobId)
+      const aKey = String(applicationId)
+      const serverApp = response?.data?.data?.application
+
+      queryClient.setQueryData(queryKeys.recruiter.jobApplications(jKey), (old) => {
+        if (!Array.isArray(old)) return old
+        return old.map((a) =>
+          String(a._id) === aKey ? { ...a, status: serverApp?.status ?? status } : a,
+        )
+      })
+
+      void queryClient.invalidateQueries({ queryKey: queryKeys.recruiter.jobApplications(jKey) })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.recruiter.jobs() })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.recruiter.analytics() })
+
       toast.success(response.data?.message || 'Application status updated.')
     },
     onError: (error) => {
@@ -166,14 +224,21 @@ export function RecruiterDashboardPage() {
   }
 
   const handleJobSubmit = (values) => {
+    const minSalary = Number.isFinite(Number(values.minSalary)) ? Number(values.minSalary) : 0
+    const maxSalary = Number.isFinite(Number(values.maxSalary)) ? Number(values.maxSalary) : 0
     const payload = {
-      ...values,
+      title: values.title,
+      description: values.description,
+      location: values.location,
+      employmentType: values.employmentType,
+      experienceLevel: values.experienceLevel,
+      minSalary,
+      maxSalary,
       skills: (values.skills || '')
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean),
-      minSalary: Number(values.minSalary),
-      maxSalary: Number(values.maxSalary),
+      companyId: values.companyId,
     }
 
     if (editingJobId) {
@@ -331,11 +396,11 @@ export function RecruiterDashboardPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label htmlFor="rc-minSalary" className="mb-1.5 block text-sm font-medium text-gray-700">Min salary</label>
+                <label htmlFor="rc-minSalary" className="mb-1.5 block text-sm font-medium text-gray-700">Min salary (₹ / year)</label>
                 <input {...jobForm.register('minSalary')} id="rc-minSalary" type="number" min="0" placeholder="0" className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
               </div>
               <div>
-                <label htmlFor="rc-maxSalary" className="mb-1.5 block text-sm font-medium text-gray-700">Max salary</label>
+                <label htmlFor="rc-maxSalary" className="mb-1.5 block text-sm font-medium text-gray-700">Max salary (₹ / year)</label>
                 <input {...jobForm.register('maxSalary')} id="rc-maxSalary" type="number" min="0" placeholder="0" className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
               </div>
             </div>
@@ -396,9 +461,7 @@ export function RecruiterDashboardPage() {
                   </p>
                   <p className="mt-1 text-xs text-gray-500">
                     {job.employmentType} &middot; {job.experienceLevel}
-                    {job.minSalary || job.maxSalary
-                      ? ` · $${(job.minSalary || 0).toLocaleString()} – $${(job.maxSalary || 0).toLocaleString()}`
-                      : ''}
+                    {job.minSalary || job.maxSalary ? ` · ${formatSalaryRange(job.minSalary, job.maxSalary)}` : ''}
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -427,10 +490,17 @@ export function RecruiterDashboardPage() {
               {job.isActive !== false && (
                 <ApplicantsPanel
                   jobId={job._id}
-                  onStatusChange={async (applicationId, status) => {
-                    await updateApplicationMutation.mutateAsync({ applicationId, status })
-                    await queryClient.invalidateQueries({ queryKey: queryKeys.recruiter.jobs() })
-                  }}
+                  onStatusChange={(applicationId, status) =>
+                    updateApplicationMutation.mutateAsync({
+                      applicationId: String(applicationId),
+                      status,
+                      jobId: String(job._id),
+                    })
+                  }
+                  isStatusPendingFor={(applicationId) =>
+                    updateApplicationMutation.isPending &&
+                    String(updateApplicationMutation.variables?.applicationId) === String(applicationId)
+                  }
                 />
               )}
             </div>
@@ -442,12 +512,14 @@ export function RecruiterDashboardPage() {
   )
 }
 
-function ApplicantsPanel({ jobId, onStatusChange }) {
-  const queryClient = useQueryClient()
+function ApplicantsPanel({ jobId, onStatusChange, isStatusPendingFor }) {
+  const [openingResumeId, setOpeningResumeId] = useState(null)
+  const jobKey = String(jobId)
+
   const applicationsQuery = useQuery({
-    queryKey: queryKeys.recruiter.jobApplications(jobId),
+    queryKey: queryKeys.recruiter.jobApplications(jobKey),
     queryFn: async () => {
-      const response = await apiClient.get(`/applications/job/${jobId}`)
+      const response = await apiClient.get(`/applications/job/${jobKey}`)
       return response.data.data.applications
     },
   })
@@ -472,15 +544,22 @@ function ApplicantsPanel({ jobId, onStatusChange }) {
                 {app.status}
               </span>
               {app.candidate?.resumeUrl && (
-                <a
-                  href={app.candidate.resumeUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-lg border border-indigo-200 px-2.5 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50"
-                  title={app.candidate?.resumeFileName || 'View resume'}
+                <button
+                  type="button"
+                  disabled={openingResumeId === String(app._id)}
+                  onClick={async () => {
+                    const id = String(app._id ?? '')
+                    setOpeningResumeId(id)
+                    try {
+                      await openApplicationResumeInNewTab(id)
+                    } finally {
+                      setOpeningResumeId(null)
+                    }
+                  }}
+                  className="rounded-lg border border-indigo-200 px-2.5 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50 disabled:opacity-60"
                 >
-                  View Resume
-                </a>
+                  {openingResumeId === String(app._id) ? 'Opening…' : 'View Resume'}
+                </button>
               )}
             </div>
             {app.coverLetter && (
@@ -491,11 +570,16 @@ function ApplicantsPanel({ jobId, onStatusChange }) {
               <select
                 id={`status-${app._id}`}
                 value={app.status}
+                disabled={isStatusPendingFor?.(app._id)}
                 onChange={async (e) => {
-                  await onStatusChange(app._id, e.target.value)
-                  await queryClient.invalidateQueries({ queryKey: queryKeys.recruiter.jobApplications(jobId) })
+                  const next = e.target.value
+                  try {
+                    await onStatusChange(app._id, next)
+                  } catch {
+                    /* toast + rollback: mutation onError; revert select via refetch from cache */
+                  }
                 }}
-                className="rounded-md border border-gray-300 px-2 py-1 text-xs shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                className="rounded-md border border-gray-300 px-2 py-1 text-xs shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <option value="applied">Applied</option>
                 <option value="shortlisted">Shortlisted</option>

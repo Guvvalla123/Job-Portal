@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { SOCIAL_LINKS } from '../config/site.js'
+import { ThemeToggleFooter } from './ThemeToggle.jsx'
 
 const FOOTER_LINKS = {
   company: [
@@ -59,38 +60,49 @@ export function Footer() {
   }
 
   return (
-    <footer className="border-t border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800" role="contentinfo">
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="grid gap-8 lg:grid-cols-6">
-          {/* Brand & Newsletter */}
-          <div className="lg:col-span-2">
-            <Link to="/" className="flex items-center gap-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-lg font-bold text-white">
+    <footer
+      className="relative isolate overflow-hidden border-t border-indigo-200/30 bg-gradient-to-b from-slate-50 via-white to-slate-100/80 dark:border-indigo-900/40 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950"
+      role="contentinfo"
+    >
+      <div
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(99,102,241,0.12),transparent)] dark:bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(99,102,241,0.15),transparent)]"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute -right-24 top-20 h-64 w-64 rounded-full bg-blue-400/10 blur-3xl dark:bg-indigo-600/10"
+        aria-hidden
+      />
+      <div className="relative mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8 lg:py-16">
+        <div className="grid gap-10 lg:grid-cols-12 lg:gap-8">
+          <div className="lg:col-span-4">
+            <Link to="/" className="inline-flex items-center gap-3 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-600 text-lg font-bold text-white shadow-lg shadow-indigo-500/30">
                 JP
               </div>
               <span className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">JobPortal</span>
             </Link>
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-gray-600 dark:text-gray-400">
-              Connect with top employers, discover opportunities that match your skills, and take the next step in your career.
+              The modern way to hire and get hired. Search roles, build your profile, and connect with employers who
+              move fast.
             </p>
-            <div className="mt-6">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Job alerts</h3>
-              <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Get the latest jobs delivered to your inbox.</p>
+            <div className="mt-8 rounded-2xl border border-gray-200/80 bg-white/60 p-5 shadow-sm backdrop-blur-sm dark:border-gray-700/80 dark:bg-gray-800/50">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Job alerts & newsletter</h3>
+              <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">Weekly picks tailored to your interests.</p>
               {subscribed ? (
-                <p className="mt-3 text-sm font-medium text-green-600 dark:text-green-400">Thanks for subscribing!</p>
+                <p className="mt-4 text-sm font-medium text-emerald-600 dark:text-emerald-400">You&apos;re on the list — thanks!</p>
               ) : (
-                <form onSubmit={handleNewsletter} className="mt-3 flex gap-2">
+                <form onSubmit={handleNewsletter} className="mt-4 flex flex-col gap-2 sm:flex-row">
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email"
-                    className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
+                    placeholder="you@company.com"
+                    className="min-w-0 flex-1 rounded-xl border border-gray-200 bg-white/90 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-inner focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-600 dark:bg-gray-900/80 dark:text-white dark:placeholder-gray-500"
                     aria-label="Email for job alerts"
                   />
                   <button
                     type="submit"
-                    className="shrink-0 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+                    className="shrink-0 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:shadow-lg hover:brightness-105 active:scale-[0.98]"
                   >
                     Subscribe
                   </button>
@@ -99,90 +111,93 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Links */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Company</h3>
-            <ul className="mt-4 space-y-2">
-              {FOOTER_LINKS.company.map(({ label, href }) => (
-                <li key={label}>
-                  <Link
-                    to={href}
-                    className="text-sm text-gray-600 transition-colors hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
-                  >
-                    {label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Jobs</h3>
-            <ul className="mt-4 space-y-2">
-              {FOOTER_LINKS.jobs.map(({ label, href }) => (
-                <li key={label}>
-                  <Link
-                    to={href}
-                    className="text-sm text-gray-600 transition-colors hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
-                  >
-                    {label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Resources</h3>
-            <ul className="mt-4 space-y-2">
-              {FOOTER_LINKS.resources.map(({ label, href }) => (
-                <li key={label}>
-                  <Link
-                    to={href}
-                    className="text-sm text-gray-600 transition-colors hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
-                  >
-                    {label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Legal</h3>
-            <ul className="mt-4 space-y-2">
-              {FOOTER_LINKS.legal.map(({ label, href }) => (
-                <li key={label}>
-                  <Link
-                    to={href}
-                    className="text-sm text-gray-600 transition-colors hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
-                  >
-                    {label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+          <div className="grid grid-cols-2 gap-8 sm:grid-cols-4 lg:col-span-8">
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Company</h3>
+              <ul className="mt-4 space-y-3">
+                {FOOTER_LINKS.company.map(({ label, href }) => (
+                  <li key={label}>
+                    <Link
+                      to={href}
+                      className="text-sm text-gray-600 transition-colors hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-300"
+                    >
+                      {label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Jobs</h3>
+              <ul className="mt-4 space-y-3">
+                {FOOTER_LINKS.jobs.map(({ label, href }) => (
+                  <li key={label}>
+                    <Link
+                      to={href}
+                      className="text-sm text-gray-600 transition-colors hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-300"
+                    >
+                      {label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Resources</h3>
+              <ul className="mt-4 space-y-3">
+                {FOOTER_LINKS.resources.map(({ label, href }) => (
+                  <li key={label}>
+                    <Link
+                      to={href}
+                      className="text-sm text-gray-600 transition-colors hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-300"
+                    >
+                      {label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Legal</h3>
+              <ul className="mt-4 space-y-3">
+                {FOOTER_LINKS.legal.map(({ label, href }) => (
+                  <li key={label}>
+                    <Link
+                      to={href}
+                      className="text-sm text-gray-600 transition-colors hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-300"
+                    >
+                      {label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
 
-        {/* Bottom bar */}
-        <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-gray-200 pt-8 dark:border-gray-700 sm:flex-row">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+        <div className="mt-14 flex flex-col items-center justify-between gap-6 border-t border-gray-200/80 pt-10 dark:border-gray-800 sm:flex-row">
+          <p className="text-sm text-gray-500 dark:text-gray-500">
             &copy; {new Date().getFullYear()} JobPortal. All rights reserved.
           </p>
-          {SOCIAL_LINKS.length > 0 && (
-            <div className="flex gap-6" aria-label="Social links">
-              {SOCIAL_LINKS.map(({ label, href, icon }) => (
-                <a
-                  key={icon}
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-gray-500 transition-colors hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
-                  aria-label={`${label} (opens in new tab)`}
-                >
-                  <SocialIcon icon={icon} />
-                </a>
-              ))}
-            </div>
-          )}
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            <ThemeToggleFooter />
+            {SOCIAL_LINKS.length > 0 && (
+              <div className="flex gap-4 rounded-full border border-gray-200 bg-white/80 px-4 py-2 dark:border-gray-700 dark:bg-gray-800/80" aria-label="Social links">
+                {SOCIAL_LINKS.map(({ label, href, icon }) => (
+                  <a
+                    key={icon}
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-gray-500 transition-all hover:scale-110 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400"
+                    aria-label={`${label} (opens in new tab)`}
+                  >
+                    <SocialIcon icon={icon} />
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </footer>

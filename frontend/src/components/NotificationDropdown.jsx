@@ -21,6 +21,7 @@ export function NotificationDropdown() {
     enabled: isAuthenticated,
     staleTime: CACHE_TIERS.notifications.staleTime,
     gcTime: CACHE_TIERS.notifications.gcTime,
+    refetchOnWindowFocus: true,
   })
 
   const notifications = data?.notifications || []

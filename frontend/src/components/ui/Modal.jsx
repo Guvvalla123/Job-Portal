@@ -49,18 +49,18 @@ export function Modal({ open, onClose, title, children, size = 'md' }) {
       aria-labelledby="modal-title"
     >
       <div
-        className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity duration-200"
+        className="absolute inset-0 bg-gray-950/70 backdrop-blur-md transition-opacity duration-300 dark:bg-black/80"
         onClick={onClose}
         aria-hidden="true"
       />
       <div
         ref={ref}
-        className={`relative w-full ${sizeStyles[size]} rounded-2xl bg-white shadow-2xl ring-1 ring-gray-200 opacity-0 animate-[fadeIn_0.2s_ease-out_forwards]`}
+        className={`relative w-full ${sizeStyles[size]} origin-center scale-95 rounded-2xl bg-white opacity-0 shadow-2xl ring-1 ring-gray-200 motion-safe:animate-[modalIn_0.25s_cubic-bezier(0.16,1,0.3,1)_forwards] dark:bg-gray-800 dark:ring-gray-600 motion-reduce:animate-[fadeIn_0.2s_ease-out_forwards] motion-reduce:scale-100`}
         onClick={(e) => e.stopPropagation()}
       >
         {title && (
           <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-            <h2 id="modal-title" className="text-lg font-semibold text-gray-900">
+            <h2 id="modal-title" className="text-lg font-semibold text-gray-900 dark:text-white">
               {title}
             </h2>
             <button

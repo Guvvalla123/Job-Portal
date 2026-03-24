@@ -2,12 +2,12 @@
  * Badge for tags, status, and labels.
  */
 const variants = {
-  default: 'bg-gray-100 text-gray-700',
-  primary: 'bg-indigo-50 text-indigo-700',
-  success: 'bg-emerald-50 text-emerald-700',
-  warning: 'bg-amber-50 text-amber-700',
-  danger: 'bg-red-50 text-red-700',
-  info: 'bg-blue-50 text-blue-700',
+  default: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200',
+  primary: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/80 dark:text-indigo-300',
+  success: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300',
+  warning: 'bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300',
+  danger: 'bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-300',
+  info: 'bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300',
 }
 
 const sizes = {

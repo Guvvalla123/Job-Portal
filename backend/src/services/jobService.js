@@ -2,17 +2,36 @@ const { ApiError } = require("../utils/apiError");
 const { notifyAlertsForJob } = require("./jobAlertService");
 const jobRepository = require("../repositories/jobRepository");
 const applicationRepository = require("../repositories/applicationRepository");
+const { Company } = require("../models/Company");
 const { logger } = require("../config/logger");
 const cache = require("../utils/cache");
 
 const createJob = async (payload, userId) => {
-  const { companyId, ...rest } = payload;
-  const company = await require("../models/Company").findById(companyId);
+  const {
+    companyId,
+    title,
+    description,
+    location,
+    employmentType,
+    experienceLevel,
+    minSalary,
+    maxSalary,
+    skills,
+  } = payload;
+
+  const company = await Company.findById(companyId);
   if (!company) throw new ApiError(404, "Company not found");
   if (company.createdBy.toString() !== userId) throw new ApiError(403, "You do not own this company");
 
   const job = await jobRepository.create({
-    ...rest,
+    title,
+    description,
+    location,
+    employmentType,
+    experienceLevel,
+    minSalary,
+    maxSalary,
+    skills: Array.isArray(skills) ? skills : [],
     company: company._id,
     postedBy: userId,
   });
@@ -78,8 +97,34 @@ const updateJob = async (id, payload, userId) => {
   if (!job) throw new ApiError(404, "Job not found");
   if (job.postedBy.toString() !== userId) throw new ApiError(403, "Not authorized to update this job");
 
-  const { companyId, ...updates } = payload;
-  Object.assign(job, updates);
+  const {
+    companyId,
+    title,
+    description,
+    location,
+    employmentType,
+    experienceLevel,
+    minSalary,
+    maxSalary,
+    skills,
+  } = payload;
+
+  if (companyId) {
+    const company = await Company.findById(companyId);
+    if (!company) throw new ApiError(404, "Company not found");
+    if (company.createdBy.toString() !== userId) throw new ApiError(403, "You do not own this company");
+    job.company = company._id;
+  }
+
+  if (title !== undefined) job.title = title;
+  if (description !== undefined) job.description = description;
+  if (location !== undefined) job.location = location;
+  if (employmentType !== undefined) job.employmentType = employmentType;
+  if (experienceLevel !== undefined) job.experienceLevel = experienceLevel;
+  if (minSalary !== undefined) job.minSalary = minSalary;
+  if (maxSalary !== undefined) job.maxSalary = maxSalary;
+  if (skills !== undefined) job.skills = Array.isArray(skills) ? skills : [];
+
   await job.save();
   cache.invalidatePattern("jobs:list").catch(() => {});
   return { job };

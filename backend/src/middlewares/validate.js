@@ -1,7 +1,12 @@
 const { ApiError } = require("../utils/apiError");
 
 const formatZodError = (error) =>
-  error.issues.map((i) => (i.path.length ? `${i.path.join(".")}: ${i.message}` : i.message)).join("; ");
+  (error.issues || [])
+    .map((i) => {
+      const path = Array.isArray(i.path) ? i.path : [];
+      return path.length ? `${path.join(".")}: ${i.message}` : i.message;
+    })
+    .join("; ");
 
 const validate = (schema) => (req, res, next) => {
   const parsed = schema.safeParse(req.body);

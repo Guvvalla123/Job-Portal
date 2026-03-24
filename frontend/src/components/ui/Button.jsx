@@ -4,17 +4,19 @@
  */
 const variants = {
   primary:
-    'bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 active:bg-indigo-800 focus-visible:ring-indigo-500',
+    'bg-indigo-600 text-white shadow-md shadow-indigo-900/10 hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-500/20 active:scale-[0.98] active:bg-indigo-800 focus-visible:ring-indigo-500 motion-reduce:active:scale-100 motion-reduce:hover:shadow-md',
+  gradient:
+    'bg-gradient-to-r from-indigo-600 via-blue-600 to-indigo-600 text-white shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30 hover:scale-[1.02] active:scale-[0.98] focus-visible:ring-indigo-500 motion-reduce:hover:scale-100 motion-reduce:active:scale-100',
   secondary:
-    'border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 hover:border-gray-400 active:bg-gray-100 focus-visible:ring-gray-400',
+    'border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 hover:border-gray-400 hover:shadow-md active:scale-[0.98] active:bg-gray-100 focus-visible:ring-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 motion-reduce:active:scale-100',
   ghost:
-    'text-gray-700 hover:bg-gray-100 active:bg-gray-200 focus-visible:ring-gray-400',
+    'text-gray-700 hover:bg-gray-100 active:scale-[0.98] active:bg-gray-200 focus-visible:ring-gray-400 dark:text-gray-200 dark:hover:bg-gray-800 motion-reduce:active:scale-100',
   danger:
-    'bg-red-600 text-white shadow-sm hover:bg-red-700 active:bg-red-800 focus-visible:ring-red-500',
+    'bg-red-600 text-white shadow-sm hover:bg-red-700 hover:shadow-md active:scale-[0.98] active:bg-red-800 focus-visible:ring-red-500 motion-reduce:active:scale-100',
   'primary-outline':
-    'border-2 border-indigo-600 text-indigo-600 bg-transparent hover:bg-indigo-50 active:bg-indigo-100 focus-visible:ring-indigo-500',
+    'border-2 border-indigo-600 text-indigo-600 bg-transparent hover:bg-indigo-50 active:scale-[0.98] active:bg-indigo-100 focus-visible:ring-indigo-500 dark:text-indigo-400 dark:hover:bg-indigo-950/50 motion-reduce:active:scale-100',
   success:
-    'bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 active:bg-emerald-800 focus-visible:ring-emerald-500',
+    'bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 hover:shadow-md active:scale-[0.98] active:bg-emerald-800 focus-visible:ring-emerald-500 motion-reduce:active:scale-100',
 }
 
 const sizes = {
@@ -39,7 +41,7 @@ export function Button({
   ...props
 }) {
   const base =
-    'inline-flex items-center justify-center transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none'
+    'inline-flex items-center justify-center transition-all duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none'
 
   const sizeClass = sizes[size] || sizes.md
   const variantClass = variants[variant] || variants.primary

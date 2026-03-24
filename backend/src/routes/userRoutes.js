@@ -5,6 +5,7 @@ const {
   updateProfile,
   uploadProfileImage,
   uploadResume,
+  streamMyResumePdf,
   deleteResume,
   toggleSavedJob,
   getSavedJobs,
@@ -47,6 +48,7 @@ const resumeUpload = multer({
 router.patch("/profile", requireAuth, validate(updateProfileSchema), updateProfile);
 router.post("/profile/image", requireAuth, imageUpload.single("image"), uploadProfileImage);
 router.post("/profile/resume", requireAuth, resumeUpload.single("resume"), uploadResume);
+router.get("/profile/resume/file", requireAuth, streamMyResumePdf);
 router.delete("/profile/resume", requireAuth, deleteResume);
 router.post(
   "/saved-jobs/:jobId",

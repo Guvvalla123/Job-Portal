@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Helmet } from 'react-helmet-async'
-import { Link } from 'react-router-dom'
+import { Link, useNavigationType, useSearchParams } from 'react-router-dom'
+import { useDebouncedValue } from '../hooks/useDebouncedValue.js'
 import { queryKeys } from '../lib/queryKeys.js'
 import { CACHE_TIERS } from '../lib/queryOptions.js'
 import { apiClient } from '../api/apiClient.js'
 import { SaveJobButton } from '../components/SaveJobButton.jsx'
+import { formatSalaryRange } from '../utils/formatSalary.js'
 import {
   JobCardSkeleton,
   EmptyState,
@@ -34,31 +36,71 @@ const TYPE_BADGE_VARIANT = {
 }
 
 export function JobsPage() {
-  const [search, setSearch] = useState('')
-  const [location, setLocation] = useState('')
-  const [employmentType, setEmploymentType] = useState('')
-  const [experienceLevel, setExperienceLevel] = useState('')
-  const [sort, setSort] = useState('recent')
-  const [page, setPage] = useState(1)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const navigationType = useNavigationType()
+
+  const [searchInput, setSearchInput] = useState(() => searchParams.get('q') || '')
+  const debouncedSearch = useDebouncedValue(searchInput, 320)
+  const [location, setLocation] = useState(() => searchParams.get('location') || '')
+  const [employmentType, setEmploymentType] = useState(() => searchParams.get('employmentType') || '')
+  const [experienceLevel, setExperienceLevel] = useState(() => searchParams.get('experienceLevel') || '')
+  const [sort, setSort] = useState(() => searchParams.get('sort') || 'recent')
+  const [page, setPage] = useState(() => {
+    const p = Number(searchParams.get('page'))
+    return Number.isFinite(p) && p > 0 ? p : 1
+  })
   const [filtersOpen, setFiltersOpen] = useState(false)
   const limit = 10
 
-  const hasActiveFilters = search || location || employmentType || experienceLevel || sort !== 'recent'
+  useEffect(() => {
+    if (navigationType !== 'POP') return
+    setSearchInput(searchParams.get('q') || '')
+    setLocation(searchParams.get('location') || '')
+    setEmploymentType(searchParams.get('employmentType') || '')
+    setExperienceLevel(searchParams.get('experienceLevel') || '')
+    setSort(searchParams.get('sort') || 'recent')
+    const p = Number(searchParams.get('page'))
+    setPage(Number.isFinite(p) && p > 0 ? p : 1)
+  }, [navigationType, searchParams])
+
+  useEffect(() => {
+    const next = new URLSearchParams()
+    if (debouncedSearch) next.set('q', debouncedSearch)
+    if (location) next.set('location', location)
+    if (employmentType) next.set('employmentType', employmentType)
+    if (experienceLevel) next.set('experienceLevel', experienceLevel)
+    if (sort && sort !== 'recent') next.set('sort', sort)
+    if (page > 1) next.set('page', String(page))
+    if (next.toString() !== searchParams.toString()) {
+      setSearchParams(next, { replace: true })
+    }
+  }, [debouncedSearch, location, employmentType, experienceLevel, sort, page, setSearchParams, searchParams])
+
+  const hasActiveFilters =
+    debouncedSearch || location || employmentType || experienceLevel || sort !== 'recent'
   const clearFilters = () => {
-    setSearch('')
+    setSearchInput('')
     setLocation('')
     setEmploymentType('')
     setExperienceLevel('')
     setSort('recent')
     setPage(1)
     setFiltersOpen(false)
+    setSearchParams({}, { replace: true })
   }
 
-  const filters = { search, location, employmentType, experienceLevel, sort, page }
+  const filters = {
+    search: debouncedSearch,
+    location,
+    employmentType,
+    experienceLevel,
+    sort,
+    page,
+  }
   const jobsQuery = useQuery({
     queryKey: queryKeys.jobs.list(filters),
     queryFn: async () => {
-      const params = { q: search, page, limit }
+      const params = { q: debouncedSearch || undefined, page, limit }
       if (location) params.location = location
       if (employmentType) params.employmentType = employmentType
       if (experienceLevel) params.experienceLevel = experienceLevel
@@ -68,6 +110,7 @@ export function JobsPage() {
     },
     staleTime: CACHE_TIERS.public.staleTime,
     gcTime: CACHE_TIERS.public.gcTime,
+    placeholderData: (previousData) => previousData,
   })
 
   const jobs = jobsQuery.data?.jobs || []
@@ -93,9 +136,9 @@ export function JobsPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <Input
             placeholder="Search roles, skills..."
-            value={search}
+            value={searchInput}
             onChange={(e) => {
-              setSearch(e.target.value)
+              setSearchInput(e.target.value)
               setPage(1)
             }}
             icon={
@@ -173,7 +216,9 @@ export function JobsPage() {
             </svg>
           }
         >
-          Filters {hasActiveFilters && `(${[search, location, employmentType, experienceLevel].filter(Boolean).length + (sort !== 'recent' ? 1 : 0)})`}
+          Filters{' '}
+          {hasActiveFilters &&
+            `(${[debouncedSearch, location, employmentType, experienceLevel].filter(Boolean).length + (sort !== 'recent' ? 1 : 0)})`}
         </Button>
         {hasActiveFilters && (
           <Button variant="ghost" size="sm" onClick={clearFilters}>
@@ -188,9 +233,12 @@ export function JobsPage() {
             <label className="mb-1.5 block text-sm font-medium text-gray-700">Search</label>
             <input
               placeholder="Roles, skills..."
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm"
+              value={searchInput}
+              onChange={(e) => {
+                setSearchInput(e.target.value)
+                setPage(1)
+              }}
+              className="w-full min-h-11 rounded-lg border border-gray-300 px-4 py-2.5 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white"
             />
           </div>
           <div>
@@ -231,7 +279,7 @@ export function JobsPage() {
 
       {/* Loading / error */}
       {jobsQuery.isLoading ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid min-h-[24rem] gap-4 md:grid-cols-2 xl:grid-cols-3">
           {[...Array(6)].map((_, i) => (
             <JobCardSkeleton key={i} />
           ))}
@@ -258,7 +306,7 @@ export function JobsPage() {
               </div>
               {(job.minSalary > 0 || job.maxSalary > 0) && (
                 <Badge variant="success" size="md" className="shrink-0">
-                  ${(job.minSalary || 0).toLocaleString()} – ${(job.maxSalary || 0).toLocaleString()}
+                  {formatSalaryRange(job.minSalary, job.maxSalary)}
                 </Badge>
               )}
             </div>

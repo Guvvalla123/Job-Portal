@@ -5,6 +5,7 @@ const { Job } = require("../models/Job");
 const { asyncHandler } = require("../utils/asyncHandler");
 const { ApiError } = require("../utils/apiError");
 const { logger } = require("../config/logger");
+const { fetchResumePdfBuffer } = require("../services/resumeStreamService");
 
 /**
  * Upload image to Cloudinary using stream (works well for images).
@@ -39,12 +40,16 @@ const uploadResumeToCloudinary = (opts) =>
       .slice(0, 50);
     const publicId = `resume-${userId}-${Date.now()}-${safeName}.${ext}`;
 
+    // access_mode MUST stay "public" so backend fetch(stream) works without authenticated cookie flows.
+    // Do not use "authenticated" here — it causes 401 on unsigned delivery URLs.
     cloudinary.uploader.upload(
       dataUri,
       {
         folder,
         resource_type: "raw",
         public_id: publicId,
+        access_mode: "public",
+        type: "upload",
       },
       (error, result) => {
         if (error) return reject(error);
@@ -159,6 +164,21 @@ const uploadResume = asyncHandler(async (req, res) => {
   });
 });
 
+const streamMyResumePdf = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user.userId).select("resumeUrl resumePublicId resumeFileName");
+  if (!user) throw new ApiError(404, "User not found");
+
+  const result = await fetchResumePdfBuffer(user);
+  if (!result) throw new ApiError(404, "Resume not available");
+
+  const filename = user.resumeFileName || "resume.pdf";
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `inline; filename*=UTF-8''${encodeURIComponent(filename)}`);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  return res.send(result.buffer);
+});
+
 const deleteResume = asyncHandler(async (req, res) => {
   const userId = req.user.userId;
   const user = await User.findById(userId).select("resumePublicId resumeUrl");
@@ -266,6 +286,7 @@ module.exports = {
   updateProfile,
   uploadProfileImage,
   uploadResume,
+  streamMyResumePdf,
   deleteResume,
   toggleSavedJob,
   getSavedJobs,
