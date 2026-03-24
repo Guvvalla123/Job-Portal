@@ -35,29 +35,33 @@ async function findMatchingAlerts(job) {
 }
 
 async function notifyAlertsForJob(job) {
-  const populatedJob = await Job.findById(job._id).populate("company", "name");
-  if (!populatedJob || populatedJob.isActive === false) return;
+  try {
+    const populatedJob = await Job.findById(job._id).populate("company", "name");
+    if (!populatedJob || populatedJob.isActive === false) return;
 
-  const matches = await findMatchingAlerts(populatedJob);
-  const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
-  const jobUrl = `${clientUrl}/jobs/${populatedJob._id}`;
+    const matches = await findMatchingAlerts(populatedJob);
+    const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+    const jobUrl = `${clientUrl}/jobs/${populatedJob._id}`;
 
-  for (const { user } of matches) {
-    try {
-      await queueEmail({
-        to: user.email,
-        subject: `JobPortal: New job matching your alert - ${populatedJob.title}`,
-        html: `
+    for (const { user } of matches) {
+      try {
+        await queueEmail({
+          to: user.email,
+          subject: `JobPortal: New job matching your alert - ${populatedJob.title}`,
+          html: `
           <p>Hi ${user.fullName || "there"},</p>
           <p>A new job was posted that matches your job alert:</p>
           <p><strong>${populatedJob.title}</strong></p>
           <p>${populatedJob.company?.name || "Company"} &middot; ${populatedJob.location}</p>
           <p><a href="${jobUrl}" style="color:#4f46e5;">View job &rarr;</a></p>
         `,
-      });
-    } catch (err) {
-      console.error("[JobAlert] Failed to send email to", user.email, err.message);
+        });
+      } catch (err) {
+        console.error("[JobAlert] Failed to send email to", user.email, err.message);
+      }
     }
+  } catch (err) {
+    console.error("[JobAlert] notifyAlertsForJob failed", err.message);
   }
 }
 

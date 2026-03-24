@@ -30,4 +30,7 @@ const requireRole = (...roles) => (req, res, next) => {
   return next();
 };
 
-module.exports = { requireAuth, requireRole };
+/** Alias for route definitions (same as requireAuth). */
+const protect = requireAuth;
+
+module.exports = { requireAuth, protect, requireRole };

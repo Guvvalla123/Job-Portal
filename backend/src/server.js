@@ -47,7 +47,10 @@ const startServer = async () => {
     process.on("SIGTERM", () => shutdown("SIGTERM"));
     process.on("SIGINT", () => shutdown("SIGINT"));
   } catch (error) {
-    logger.error("Failed to start server", { error: error.message, stack: error.stack });
+    // DB errors already logged in connectDB with fix hints; avoid duplicate stack noise
+    if (!String(error?.message || "").includes("MongoDB")) {
+      logger.error("Failed to start server", { error: error.message, stack: error.stack });
+    }
     process.exit(1);
   }
 };

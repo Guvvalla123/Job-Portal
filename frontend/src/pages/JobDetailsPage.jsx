@@ -13,6 +13,8 @@ import { Modal, Button } from '../components/ui/index.js'
 import { queryKeys } from '../lib/queryKeys.js'
 import { CACHE_TIERS } from '../lib/queryOptions.js'
 import { trackJobApplication } from '../lib/analytics.js'
+import { formatSalaryRange } from '../utils/formatSalary.js'
+import { ResumeViewer } from '../components/resume/ResumeViewer.jsx'
 
 export function JobDetailsPage() {
   const { id } = useParams()
@@ -20,6 +22,7 @@ export function JobDetailsPage() {
   const { user, isAuthenticated } = useAuth()
   const [coverLetter, setCoverLetter] = useState('')
   const [applyModalOpen, setApplyModalOpen] = useState(false)
+  const [resumePreviewOpen, setResumePreviewOpen] = useState(false)
 
   const detailsQuery = useQuery({
     queryKey: queryKeys.jobs.detail(id),
@@ -92,7 +95,7 @@ export function JobDetailsPage() {
       ? {
           baseSalary: {
             '@type': 'MonetaryAmount',
-            currency: 'USD',
+            currency: 'INR',
             value: {
               '@type': 'QuantitativeValue',
               minValue: job.minSalary || 0,
@@ -127,7 +130,7 @@ export function JobDetailsPage() {
             </div>
             {(job.minSalary > 0 || job.maxSalary > 0) && (
               <span className="rounded-lg bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700">
-                ${job.minSalary?.toLocaleString()} - ${job.maxSalary?.toLocaleString()}
+                {formatSalaryRange(job.minSalary, job.maxSalary)}
               </span>
             )}
           </div>
@@ -275,14 +278,13 @@ export function JobDetailsPage() {
                     {user?.resumeFileName || 'Resume attached'}
                   </span>
                 </div>
-                <a
-                  href={user.resumeUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  type="button"
+                  onClick={() => setResumePreviewOpen(true)}
                   className="shrink-0 text-sm font-semibold text-indigo-600 hover:text-indigo-500"
                 >
                   View
-                </a>
+                </button>
               </div>
             ) : (
               <div className="mt-2 flex items-start gap-2">
@@ -349,6 +351,17 @@ export function JobDetailsPage() {
             </p>
           )}
         </div>
+      </Modal>
+
+      <Modal
+        open={resumePreviewOpen}
+        onClose={() => setResumePreviewOpen(false)}
+        title={user?.resumeFileName ? `Resume — ${user.resumeFileName}` : 'Your resume'}
+        size="xl"
+      >
+        {resumePreviewOpen && user?.resumeUrl ? (
+          <ResumeViewer path="/users/profile/resume/file" title={user?.resumeFileName || 'Resume'} />
+        ) : null}
       </Modal>
     </div>
     </>

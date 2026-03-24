@@ -15,7 +15,7 @@ export function Input({
   ...props
 }) {
   const base =
-    'w-full rounded-lg border px-4 py-2.5 text-sm shadow-sm transition-colors placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-0 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed'
+    'w-full rounded-lg border px-4 py-2.5 text-sm shadow-sm transition-all duration-200 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-0 focus:shadow-md focus:shadow-indigo-500/10 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed dark:bg-gray-900/50 dark:text-gray-100 dark:placeholder:text-gray-500 dark:disabled:bg-gray-900'
   const errorStyles = error
     ? 'border-red-300 focus:border-red-500 focus:ring-red-500/40'
     : ''
@@ -24,7 +24,7 @@ export function Input({
     : ''
   const defaultStyles =
     !error && !success
-      ? 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500/40'
+      ? 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500/40 dark:border-gray-600 dark:focus:border-indigo-400 dark:focus:ring-indigo-400/35'
       : ''
 
   const paddingWithIcon =
@@ -39,7 +39,7 @@ export function Input({
       {label && (
         <label
           htmlFor={id}
-          className="mb-1.5 block text-sm font-medium text-gray-700"
+          className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
         >
           {label}
         </label>

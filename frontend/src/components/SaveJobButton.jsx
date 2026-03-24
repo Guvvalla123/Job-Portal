@@ -14,13 +14,24 @@ export function SaveJobButton({ jobId, className = '' }) {
 
   const mutation = useMutation({
     mutationFn: () => apiClient.post(`/users/saved-jobs/${jobId}`),
-    onSuccess: async (response) => {
-      const { savedJobs } = response.data.data
-      updateUser({ ...user, savedJobs })
-      await queryClient.invalidateQueries({ queryKey: queryKeys.user.savedJobs() })
-      toast.success(response.data?.message || (isSaved ? 'Removed from saved' : 'Job saved'))
+    onMutate: () => {
+      const prevUser = { ...user, savedJobs: [...(user?.savedJobs || [])] }
+      const ids = savedIds
+      const nextIds = isSaved ? ids.filter((id) => id !== jobId) : [...ids, jobId]
+      updateUser({
+        ...user,
+        savedJobs: nextIds.map((id) => ({ _id: id })),
+      })
+      return { prevUser }
     },
-    onError: (error) => {
+    onSuccess: async (response, _vars, ctx) => {
+      const { savedJobs } = response.data.data
+      updateUser({ ...ctx.prevUser, savedJobs })
+      await queryClient.invalidateQueries({ queryKey: queryKeys.user.savedJobs() })
+      toast.success(response.data?.message || 'Saved jobs updated')
+    },
+    onError: (error, _vars, ctx) => {
+      if (ctx?.prevUser) updateUser(ctx.prevUser)
       toast.error(getApiErrorMessage(error, 'Could not update saved jobs.'))
     },
   })

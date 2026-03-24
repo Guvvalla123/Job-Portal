@@ -2,12 +2,19 @@
  * Skeleton loaders for consistent loading states
  */
 export function Skeleton({ className = '' }) {
-  return <div className={`animate-pulse rounded bg-gray-200 ${className}`} aria-hidden="true" />
+  return (
+    <div
+      className={`relative overflow-hidden rounded bg-gray-200 dark:bg-gray-700 ${className}`}
+      aria-hidden="true"
+    >
+      <div className="animate-shimmer absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent dark:via-white/15" />
+    </div>
+  )
 }
 
 export function JobCardSkeleton() {
   return (
-    <div className="flex flex-col rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
+    <div className="flex flex-col rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1 space-y-2">
           <Skeleton className="h-5 w-3/4" />

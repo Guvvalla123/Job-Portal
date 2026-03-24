@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react'
 
 /**
- * Slide-in panel (drawer) for mobile filters, etc.
+ * Slide-in panel — filters (right) or mobile nav (left, full-width).
  */
-export function Sheet({ open, onClose, title, children, side = 'right' }) {
+export function Sheet({ open, onClose, title, children, side = 'right', fullWidth = false }) {
   const ref = useRef(null)
 
   useEffect(() => {
@@ -21,37 +21,41 @@ export function Sheet({ open, onClose, title, children, side = 'right' }) {
 
   if (!open) return null
 
-  const sideStyles = {
-    right: 'right-0 translate-x-0',
-    left: 'left-0 -translate-x-0',
-  }
+  const isLeft = side === 'left'
+  const panelAnim = isLeft
+    ? 'animate-[slideInLeft_0.28s_cubic-bezier(0.22,1,0.36,1)_forwards]'
+    : 'animate-[slideInRight_0.28s_cubic-bezier(0.22,1,0.36,1)_forwards]'
+
+  const sideStyles = isLeft ? 'left-0' : 'right-0'
+
+  const widthClass = fullWidth ? 'max-w-full w-full sm:max-w-md' : 'max-w-sm w-full'
 
   return (
     <div
-      className="fixed inset-0 z-50"
+      className="fixed inset-0 z-[60]"
       role="dialog"
       aria-modal="true"
       aria-labelledby={title ? 'sheet-title' : undefined}
     >
       <div
-        className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity"
+        className="absolute inset-0 bg-gray-950/60 backdrop-blur-sm transition-opacity dark:bg-black/70"
         onClick={onClose}
         aria-hidden="true"
       />
       <div
         ref={ref}
-        className={`absolute top-0 bottom-0 w-full max-w-sm bg-white shadow-2xl ${sideStyles[side]} animate-[slideInRight_0.25s_ease-out_forwards]`}
+        className={`absolute top-0 bottom-0 ${widthClass} bg-white shadow-2xl dark:bg-gray-900 dark:shadow-black/40 ${sideStyles} ${panelAnim}`}
         onClick={(e) => e.stopPropagation()}
       >
         {title && (
-          <div className="flex items-center justify-between border-b border-gray-100 px-4 py-4">
-            <h2 id="sheet-title" className="text-lg font-semibold text-gray-900">
+          <div className="flex items-center justify-between border-b border-gray-100 px-4 py-4 pt-[max(1rem,env(safe-area-inset-top,0px))] dark:border-gray-800">
+            <h2 id="sheet-title" className="text-lg font-semibold text-gray-900 dark:text-white">
               {title}
             </h2>
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+              className="tap-target rounded-xl text-gray-500 hover:bg-gray-100 hover:text-gray-800 dark:hover:bg-gray-800 dark:hover:text-gray-200"
               aria-label="Close"
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -60,7 +64,11 @@ export function Sheet({ open, onClose, title, children, side = 'right' }) {
             </button>
           </div>
         )}
-        <div className="overflow-y-auto p-4 max-h-[calc(100vh-4rem)]">{children}</div>
+        <div
+          className={`overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))] ${title ? 'max-h-[calc(100dvh-4.5rem)]' : 'max-h-dvh'}`}
+        >
+          {children}
+        </div>
       </div>
     </div>
   )

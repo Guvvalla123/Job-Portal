@@ -57,6 +57,7 @@ app.get("/api/metrics", async (req, res) => {
     res.status(500).end(String(err.message));
   }
 });
+// v1 includes: router.use("/applications", applicationRoutes) → GET /api/v1/applications/:id/resume
 app.use("/api", apiRoutes);
 app.use(notFound);
 app.use(errorHandler);

@@ -10,6 +10,7 @@ import App from './App.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
 import { ThemeProvider } from './context/ThemeContext.jsx'
 import { AnalyticsTracker } from './components/AnalyticsTracker.jsx'
+import { ScrollToTop } from './components/ScrollToTop.jsx'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -21,7 +22,8 @@ const queryClient = new QueryClient({
         if (status === 401 || status === 403) return false
         return failureCount < 2
       },
-      refetchOnWindowFocus: true,
+      /** Reduces layout thrash / surprise refetch; per-query can override (e.g. notifications). */
+      refetchOnWindowFocus: false,
       refetchOnReconnect: true,
     },
   },
@@ -58,6 +60,7 @@ createRoot(document.getElementById('root')).render(
           <QueryClientProvider client={queryClient}>
             <BrowserRouter>
               <AuthProvider>
+                <ScrollToTop />
                 <AnalyticsTracker />
                 <App />
                 <Toaster

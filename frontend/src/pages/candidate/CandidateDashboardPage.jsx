@@ -16,6 +16,7 @@ import { useAuth } from '../../context/useAuth.jsx'
 import { getApiErrorMessage } from '../../utils/getApiErrorMessage.js'
 import { queryKeys } from '../../lib/queryKeys.js'
 import { CACHE_TIERS } from '../../lib/queryOptions.js'
+import { formatSalaryRange } from '../../utils/formatSalary.js'
 
 const profileSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters'),
@@ -367,7 +368,7 @@ export function CandidateDashboardPage() {
                             <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${TYPE_COLORS[job.employmentType] || 'bg-gray-100 text-gray-600'}`}>{job.employmentType}</span>
                           )}
                           {(job.minSalary > 0 || job.maxSalary > 0) && (
-                            <span className="text-xs font-medium text-emerald-600">${(job.minSalary || 0).toLocaleString()} – ${(job.maxSalary || 0).toLocaleString()}</span>
+                            <span className="text-xs font-medium text-emerald-600">{formatSalaryRange(job.minSalary, job.maxSalary)}</span>
                           )}
                           {job.skills?.slice(0, 3).map((s) => (
                             <span key={s} className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500">{s}</span>
@@ -473,7 +474,7 @@ export function CandidateDashboardPage() {
                         <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${TYPE_COLORS[job.employmentType] || 'bg-gray-100 text-gray-600'}`}>{job.employmentType}</span>
                       )}
                       {(job.minSalary > 0 || job.maxSalary > 0) && (
-                        <span className="text-xs font-medium text-emerald-600">${(job.minSalary || 0).toLocaleString()} – ${(job.maxSalary || 0).toLocaleString()}</span>
+                        <span className="text-xs font-medium text-emerald-600">{formatSalaryRange(job.minSalary, job.maxSalary)}</span>
                       )}
                     </div>
                   </div>
