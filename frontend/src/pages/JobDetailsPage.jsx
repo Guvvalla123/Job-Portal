@@ -3,18 +3,19 @@ import { Helmet } from 'react-helmet-async'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useParams, Link } from 'react-router-dom'
 import { toast } from 'sonner'
-import { apiClient } from '../api/apiClient.js'
+import { getJobById } from '../api/jobsApi.js'
+import { listMyApplications, applyToJob } from '../api/applicationsApi.js'
 import { useAuth } from '../context/useAuth.jsx'
 import { getApiErrorMessage } from '../utils/getApiErrorMessage.js'
 import { SaveJobButton } from '../components/SaveJobButton.jsx'
 import { SITE_URL } from '../config/site.js'
 import { JobDetailsSkeleton } from '../components/JobDetailsSkeleton.jsx'
-import { Modal, Button } from '../components/ui/index.js'
+import { Modal, Button, Skeleton } from '../components/ui/index.js'
 import { queryKeys } from '../lib/queryKeys.js'
 import { CACHE_TIERS } from '../lib/queryOptions.js'
 import { trackJobApplication } from '../lib/analytics.js'
 import { formatSalaryRange } from '../utils/formatSalary.js'
-import { ResumeViewer } from '../components/resume/ResumeViewer.jsx'
+import { LazyResumeViewer } from '../components/resume/LazyResumeViewer.jsx'
 
 export function JobDetailsPage() {
   const { id } = useParams()
@@ -26,10 +27,7 @@ export function JobDetailsPage() {
 
   const detailsQuery = useQuery({
     queryKey: queryKeys.jobs.detail(id),
-    queryFn: async () => {
-      const response = await apiClient.get(`/jobs/${id}`)
-      return response.data.data.job
-    },
+    queryFn: () => getJobById(id),
     staleTime: CACHE_TIERS.detail.staleTime,
     gcTime: CACHE_TIERS.detail.gcTime,
   })
@@ -37,16 +35,16 @@ export function JobDetailsPage() {
   const myApplicationsQuery = useQuery({
     queryKey: queryKeys.user.applications(),
     queryFn: async () => {
-      const response = await apiClient.get('/applications/me')
-      return response.data.data.applications
+      const d = await listMyApplications({ page: 1, limit: 50 })
+      return d.applications ?? []
     },
     enabled: isAuthenticated && user?.role === 'candidate',
   })
 
   const applyMutation = useMutation({
-    mutationFn: () => apiClient.post('/applications', { jobId: id, coverLetter }),
-    onSuccess: async (response) => {
-      toast.success(response.data?.message || 'Application submitted successfully!')
+    mutationFn: () => applyToJob({ jobId: id, coverLetter }),
+    onSuccess: async () => {
+      toast.success('Application submitted successfully!')
       setApplyModalOpen(false)
       setCoverLetter('')
       const job = detailsQuery.data
@@ -59,7 +57,7 @@ export function JobDetailsPage() {
     },
   })
 
-  if (detailsQuery.isLoading) {
+  if (detailsQuery.isPending) {
     return <JobDetailsSkeleton />
   }
   if (detailsQuery.isError) {
@@ -110,7 +108,7 @@ export function JobDetailsPage() {
   return (
     <>
       <Helmet>
-        <title>{job.title} at {job.company?.name} | JobPortal</title>
+        <title>{job.title} at {job.company?.name} | CareerSync</title>
         <meta name="description" content={job.description?.slice(0, 160) || `${job.title} - ${job.company?.name}`} />
         <meta property="og:title" content={`${job.title} at ${job.company?.name}`} />
         <meta property="og:description" content={job.description?.slice(0, 160)} />
@@ -188,32 +186,41 @@ export function JobDetailsPage() {
         <div className="sticky top-6 space-y-4">
           {/* Apply card */}
           <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
-            {isAuthenticated && user?.role === 'candidate' && (
-              <div className="mb-4 flex justify-end">
-                <SaveJobButton jobId={job._id} />
-              </div>
-            )}
-            {alreadyApplied && (
-              <div className="flex items-center gap-2 rounded-lg bg-emerald-50 p-3">
-                <svg className="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-                <span className="text-sm font-semibold text-emerald-700">You've already applied</span>
+            {isAuthenticated && user?.role === 'candidate' && myApplicationsQuery.isPending && (
+              <div className="space-y-4" aria-busy="true">
+                <div className="flex justify-end">
+                  <Skeleton className="h-9 w-28 rounded-lg" />
+                </div>
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-12 w-full rounded-lg" />
               </div>
             )}
 
-            {isAuthenticated && user?.role === 'candidate' && !alreadyApplied && (
-              <div className="space-y-4">
-                <h3 className="font-semibold text-gray-900">Apply for this position</h3>
-                <p className="text-sm text-gray-500">Add a cover letter to stand out from other applicants.</p>
-                <Button
-                  className="w-full"
-                  size="lg"
-                  onClick={() => setApplyModalOpen(true)}
-                >
-                  Apply Now
-                </Button>
-              </div>
+            {isAuthenticated && user?.role === 'candidate' && !myApplicationsQuery.isPending && (
+              <>
+                <div className="mb-4 flex justify-end">
+                  <SaveJobButton jobId={job._id} variant="icon" />
+                </div>
+                {alreadyApplied && (
+                  <div className="flex items-center gap-2 rounded-lg bg-emerald-50 p-3">
+                    <svg className="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className="text-sm font-semibold text-emerald-700">You've already applied</span>
+                  </div>
+                )}
+
+                {!alreadyApplied && (
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-gray-900">Apply for this position</h3>
+                    <p className="text-sm text-gray-500">Add a cover letter to stand out from other applicants.</p>
+                    <Button className="w-full" size="lg" onClick={() => setApplyModalOpen(true)}>
+                      Apply Now
+                    </Button>
+                  </div>
+                )}
+              </>
             )}
 
             {!isAuthenticated && (
@@ -360,7 +367,7 @@ export function JobDetailsPage() {
         size="xl"
       >
         {resumePreviewOpen && user?.resumeUrl ? (
-          <ResumeViewer path="/users/profile/resume/file" title={user?.resumeFileName || 'Resume'} />
+          <LazyResumeViewer path="/users/profile/resume/file" title={user?.resumeFileName || 'Resume'} />
         ) : null}
       </Modal>
     </div>

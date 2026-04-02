@@ -40,6 +40,12 @@ const getRecruiterAnalytics = asyncHandler(async (req, res) => {
   return success(res, result);
 });
 
+const getRecruiterApplicationTrend = asyncHandler(async (req, res) => {
+  const months = req.query.months ? Number(req.query.months) : 6;
+  const result = await jobService.getRecruiterApplicationTrend(req.user.userId, months);
+  return success(res, result, "Application trend loaded");
+});
+
 module.exports = {
   createJob,
   listJobs,
@@ -48,4 +54,5 @@ module.exports = {
   updateJob,
   deleteJob,
   getRecruiterAnalytics,
+  getRecruiterApplicationTrend,
 };

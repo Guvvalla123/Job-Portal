@@ -6,7 +6,6 @@ const mongoose = require("mongoose");
 const { ApiError } = require("../utils/apiError");
 const jobRepository = require("../repositories/jobRepository");
 const { Application } = require("../models/Application");
-const { Job } = require("../models/Job");
 const { Company } = require("../models/Company");
 const { logger } = require("../config/logger");
 
@@ -80,21 +79,7 @@ const requireApplicationJobOwner = (paramName = "id") => async (req, res, next) 
   const recruiterId = normalizeDocId(req.user.userId ?? req.user.id ?? req.user.sub);
   const jobOwnerId = normalizeDocId(job.postedBy);
 
-  logger.debug("requireApplicationJobOwner", {
-    applicationId,
-    recruiterId,
-    jobOwnerId,
-    jobPostedByField: "postedBy",
-  });
-  if (process.env.NODE_ENV !== "production") {
-    console.log("=== AUTH DEBUG (requireApplicationJobOwner) ===");
-    console.log("req.user:", req.user);
-    console.log("recruiterId:", recruiterId);
-    console.log("applicationId:", applicationId);
-    console.log("application.job:", job);
-    console.log("job.postedBy:", job?.postedBy);
-    console.log("comparison:", String(job?.postedBy?._id ?? job?.postedBy), "vs", String(recruiterId));
-  }
+  logger.debug("Auth check", { userId: req.user?.userId });
 
   if (!recruiterId || !jobOwnerId || recruiterId !== jobOwnerId) {
     return next(new ApiError(403, "Not authorized to update this application"));

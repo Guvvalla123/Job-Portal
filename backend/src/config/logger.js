@@ -4,6 +4,8 @@
  * - Human-readable in development
  * - requestId attached via child logger
  */
+const fs = require("fs");
+const path = require("path");
 const winston = require("winston");
 const { env } = require("./env");
 
@@ -35,6 +37,26 @@ const logger = winston.createLogger({
   defaultMeta: { service: "job-portal-api" },
   transports: [new winston.transports.Console()],
 });
+
+if (isProd) {
+  const logsDir = path.join(__dirname, "../../logs");
+  try {
+    fs.mkdirSync(logsDir, { recursive: true });
+  } catch {
+    /* ignore */
+  }
+  logger.add(
+    new winston.transports.File({
+      filename: path.join(logsDir, "error.log"),
+      level: "error",
+    })
+  );
+  logger.add(
+    new winston.transports.File({
+      filename: path.join(logsDir, "combined.log"),
+    })
+  );
+}
 
 /**
  * Create a child logger with requestId for request-scoped logging

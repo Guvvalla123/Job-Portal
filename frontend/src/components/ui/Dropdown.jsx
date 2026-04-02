@@ -27,7 +27,7 @@ export function Dropdown({ trigger, children, align = 'right', className = '' })
         <div onClick={() => setOpen((o) => !o)}>{trigger}</div>
         {open && (
           <div
-            className={`absolute top-full z-50 mt-1.5 min-w-[10rem] rounded-xl bg-white py-1 shadow-lg ring-1 ring-gray-200 animate-[slideDown_0.15s_ease-out] ${alignStyles}`}
+            className={`absolute top-full z-50 mt-1.5 min-w-40 rounded-xl bg-white py-1 shadow-lg ring-1 ring-gray-200 animate-[slideDown_0.15s_ease-out] ${alignStyles}`}
             role="menu"
           >
             {children}

@@ -1,38 +1,42 @@
-import { useEffect, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useEffect, useMemo, useState } from 'react'
+import { useInfiniteQuery } from '@tanstack/react-query'
 import { Helmet } from 'react-helmet-async'
-import { Link, useNavigationType, useSearchParams } from 'react-router-dom'
+import { useNavigationType, useSearchParams } from 'react-router-dom'
 import { useDebouncedValue } from '../hooks/useDebouncedValue.js'
 import { queryKeys } from '../lib/queryKeys.js'
 import { CACHE_TIERS } from '../lib/queryOptions.js'
-import { apiClient } from '../api/apiClient.js'
-import { SaveJobButton } from '../components/SaveJobButton.jsx'
-import { formatSalaryRange } from '../utils/formatSalary.js'
+import { listPublicJobs } from '../api/jobsApi.js'
+import { filterPublicJobs } from '../utils/filterPublicJobs.js'
 import {
   JobCardSkeleton,
+  Skeleton,
   EmptyState,
   EmptyStateIcons,
   Button,
   Input,
   Select,
-  Badge,
   Card,
   Sheet,
+  PageHeader,
 } from '../components/ui/index.js'
+import { JobListCard } from '../components/jobs/JobListCard.jsx'
 
 const EMPLOYMENT_TYPES = ['full-time', 'part-time', 'contract', 'internship']
 const EXPERIENCE_LEVELS = ['fresher', 'junior', 'mid', 'senior', 'lead']
+/** Must match backend `listJobsQuerySchema` sort enum */
 const SORT_OPTIONS = [
-  { value: 'recent', label: 'Most recent' },
-  { value: 'salary-desc', label: 'Salary: High to low' },
-  { value: 'salary-asc', label: 'Salary: Low to high' },
+  { value: 'newest', label: 'Most recent' },
+  { value: 'oldest', label: 'Oldest first' },
+  { value: 'salary_high', label: 'Salary: High to low' },
+  { value: 'salary_low', label: 'Salary: Low to high' },
 ]
 
-const TYPE_BADGE_VARIANT = {
-  'full-time': 'success',
-  'part-time': 'info',
-  contract: 'warning',
-  internship: 'primary',
+const LEGACY_SORT_MAP = { recent: 'newest', 'salary-desc': 'salary_high', 'salary-asc': 'salary_low' }
+const API_SORT_VALUES = new Set(['newest', 'oldest', 'salary_high', 'salary_low'])
+function coerceSortFromUrl(raw) {
+  if (!raw) return 'newest'
+  const mapped = LEGACY_SORT_MAP[raw] || raw
+  return API_SORT_VALUES.has(mapped) ? mapped : 'newest'
 }
 
 export function JobsPage() {
@@ -44,11 +48,7 @@ export function JobsPage() {
   const [location, setLocation] = useState(() => searchParams.get('location') || '')
   const [employmentType, setEmploymentType] = useState(() => searchParams.get('employmentType') || '')
   const [experienceLevel, setExperienceLevel] = useState(() => searchParams.get('experienceLevel') || '')
-  const [sort, setSort] = useState(() => searchParams.get('sort') || 'recent')
-  const [page, setPage] = useState(() => {
-    const p = Number(searchParams.get('page'))
-    return Number.isFinite(p) && p > 0 ? p : 1
-  })
+  const [sort, setSort] = useState(() => coerceSortFromUrl(searchParams.get('sort')))
   const [filtersOpen, setFiltersOpen] = useState(false)
   const limit = 10
 
@@ -58,9 +58,7 @@ export function JobsPage() {
     setLocation(searchParams.get('location') || '')
     setEmploymentType(searchParams.get('employmentType') || '')
     setExperienceLevel(searchParams.get('experienceLevel') || '')
-    setSort(searchParams.get('sort') || 'recent')
-    const p = Number(searchParams.get('page'))
-    setPage(Number.isFinite(p) && p > 0 ? p : 1)
+    setSort(coerceSortFromUrl(searchParams.get('sort')))
   }, [navigationType, searchParams])
 
   useEffect(() => {
@@ -69,66 +67,75 @@ export function JobsPage() {
     if (location) next.set('location', location)
     if (employmentType) next.set('employmentType', employmentType)
     if (experienceLevel) next.set('experienceLevel', experienceLevel)
-    if (sort && sort !== 'recent') next.set('sort', sort)
-    if (page > 1) next.set('page', String(page))
+    if (sort && sort !== 'newest') next.set('sort', sort)
     if (next.toString() !== searchParams.toString()) {
       setSearchParams(next, { replace: true })
     }
-  }, [debouncedSearch, location, employmentType, experienceLevel, sort, page, setSearchParams, searchParams])
+  }, [debouncedSearch, location, employmentType, experienceLevel, sort, setSearchParams, searchParams])
 
   const hasActiveFilters =
-    debouncedSearch || location || employmentType || experienceLevel || sort !== 'recent'
+    debouncedSearch || location || employmentType || experienceLevel || sort !== 'newest'
   const clearFilters = () => {
     setSearchInput('')
     setLocation('')
     setEmploymentType('')
     setExperienceLevel('')
-    setSort('recent')
-    setPage(1)
+    setSort('newest')
     setFiltersOpen(false)
     setSearchParams({}, { replace: true })
   }
 
-  const filters = {
-    search: debouncedSearch,
-    location,
-    employmentType,
-    experienceLevel,
-    sort,
-    page,
-  }
-  const jobsQuery = useQuery({
-    queryKey: queryKeys.jobs.list(filters),
-    queryFn: async () => {
-      const params = { q: debouncedSearch || undefined, page, limit }
-      if (location) params.location = location
-      if (employmentType) params.employmentType = employmentType
-      if (experienceLevel) params.experienceLevel = experienceLevel
-      if (sort && sort !== 'recent') params.sort = sort
-      const response = await apiClient.get('/jobs', { params })
-      return response.data.data
+  const infiniteFilters = useMemo(
+    () => ({
+      q: debouncedSearch || undefined,
+      location: location || undefined,
+      employmentType: employmentType || undefined,
+      experienceLevel: experienceLevel || undefined,
+      sort,
+      limit,
+    }),
+    [debouncedSearch, location, employmentType, experienceLevel, sort, limit],
+  )
+
+  const jobsQuery = useInfiniteQuery({
+    queryKey: queryKeys.jobs.infiniteList(infiniteFilters),
+    queryFn: ({ pageParam }) =>
+      listPublicJobs({
+        page: pageParam,
+        limit,
+        ...infiniteFilters,
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      const p = lastPage?.pagination?.page ?? 1
+      const totalPages = lastPage?.pagination?.totalPages ?? 0
+      if (p < totalPages) return p + 1
+      return undefined
     },
     staleTime: CACHE_TIERS.public.staleTime,
     gcTime: CACHE_TIERS.public.gcTime,
-    placeholderData: (previousData) => previousData,
   })
 
-  const jobs = jobsQuery.data?.jobs || []
-  const pagination = jobsQuery.data?.pagination || {}
-  const totalPages = pagination.totalPages || 1
+  const jobs = filterPublicJobs(jobsQuery.data?.pages.flatMap((p) => p.jobs ?? []) ?? [])
+  const firstPage = jobsQuery.data?.pages[0]
+  const pagination = firstPage?.pagination || {}
 
   return (
     <section className="space-y-6">
       <Helmet>
-        <title>Browse Jobs | JobPortal</title>
+        <title>Browse Jobs | CareerSync</title>
         <meta name="description" content="Browse thousands of job listings. Filter by role, location, experience level, and employment type." />
         <link rel="canonical" href="/jobs" />
       </Helmet>
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Browse Jobs</h1>
-        <p className="mt-1 text-gray-500">
-          {pagination.total ? `${pagination.total} jobs found` : 'Find your next opportunity'}
-        </p>
+      <PageHeader title="Browse jobs" />
+      <div className="type-body mt-1 max-w-2xl text-gray-600 dark:text-gray-400">
+        {jobsQuery.isPending && jobs.length === 0 ? (
+          <Skeleton className="h-5 w-44 sm:w-56" />
+        ) : pagination.total != null ? (
+          `${pagination.total} jobs found`
+        ) : (
+          'Find your next opportunity'
+        )}
       </div>
 
       {/* Filters — desktop */}
@@ -139,7 +146,6 @@ export function JobsPage() {
             value={searchInput}
             onChange={(e) => {
               setSearchInput(e.target.value)
-              setPage(1)
             }}
             icon={
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -152,7 +158,6 @@ export function JobsPage() {
             value={location}
             onChange={(e) => {
               setLocation(e.target.value)
-              setPage(1)
             }}
             icon={
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -166,7 +171,6 @@ export function JobsPage() {
             value={employmentType}
             onChange={(e) => {
               setEmploymentType(e.target.value)
-              setPage(1)
             }}
             options={EMPLOYMENT_TYPES.map((t) => ({
               value: t,
@@ -178,7 +182,6 @@ export function JobsPage() {
             value={experienceLevel}
             onChange={(e) => {
               setExperienceLevel(e.target.value)
-              setPage(1)
             }}
             options={EXPERIENCE_LEVELS.map((l) => ({
               value: l,
@@ -191,7 +194,6 @@ export function JobsPage() {
               value={sort}
               onChange={(e) => {
                 setSort(e.target.value)
-                setPage(1)
               }}
               options={SORT_OPTIONS}
             />
@@ -218,7 +220,7 @@ export function JobsPage() {
         >
           Filters{' '}
           {hasActiveFilters &&
-            `(${[debouncedSearch, location, employmentType, experienceLevel].filter(Boolean).length + (sort !== 'recent' ? 1 : 0)})`}
+            `(${[debouncedSearch, location, employmentType, experienceLevel].filter(Boolean).length + (sort !== 'newest' ? 1 : 0)})`}
         </Button>
         {hasActiveFilters && (
           <Button variant="ghost" size="sm" onClick={clearFilters}>
@@ -236,7 +238,6 @@ export function JobsPage() {
               value={searchInput}
               onChange={(e) => {
                 setSearchInput(e.target.value)
-                setPage(1)
               }}
               className="w-full min-h-11 rounded-lg border border-gray-300 px-4 py-2.5 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white"
             />
@@ -246,7 +247,9 @@ export function JobsPage() {
             <input
               placeholder="City, remote..."
               value={location}
-              onChange={(e) => { setLocation(e.target.value); setPage(1) }}
+              onChange={(e) => {
+                setLocation(e.target.value)
+              }}
               className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm"
             />
           </div>
@@ -254,21 +257,27 @@ export function JobsPage() {
             label="Job type"
             placeholder="All types"
             value={employmentType}
-            onChange={(e) => { setEmploymentType(e.target.value); setPage(1) }}
+            onChange={(e) => {
+              setEmploymentType(e.target.value)
+            }}
             options={EMPLOYMENT_TYPES.map((t) => ({ value: t, label: t.charAt(0).toUpperCase() + t.slice(1) }))}
           />
           <Select
             label="Experience"
             placeholder="All levels"
             value={experienceLevel}
-            onChange={(e) => { setExperienceLevel(e.target.value); setPage(1) }}
+            onChange={(e) => {
+              setExperienceLevel(e.target.value)
+            }}
             options={EXPERIENCE_LEVELS.map((l) => ({ value: l, label: l.charAt(0).toUpperCase() + l.slice(1) }))}
           />
           <Select
             label="Sort by"
             placeholder="Sort by"
             value={sort}
-            onChange={(e) => { setSort(e.target.value); setPage(1) }}
+            onChange={(e) => {
+              setSort(e.target.value)
+            }}
             options={SORT_OPTIONS}
           />
           <Button className="w-full" onClick={() => setFiltersOpen(false)}>
@@ -278,8 +287,8 @@ export function JobsPage() {
       </Sheet>
 
       {/* Loading / error */}
-      {jobsQuery.isLoading ? (
-        <div className="grid min-h-[24rem] gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {jobsQuery.isPending && jobs.length === 0 ? (
+        <div className="grid min-h-96 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {[...Array(6)].map((_, i) => (
             <JobCardSkeleton key={i} />
           ))}
@@ -291,69 +300,12 @@ export function JobsPage() {
       {/* Job cards — responsive grid */}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {jobs.map((job) => (
-          <Card key={job._id} hover padding="default" className="flex flex-col">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <Link
-                  to={`/jobs/${job._id}`}
-                  className="line-clamp-2 text-base font-semibold text-gray-900 transition-colors hover:text-indigo-600"
-                >
-                  {job.title}
-                </Link>
-                <p className="mt-1 text-sm text-gray-500">
-                  {job.company?.name} &middot; {job.location}
-                </p>
-              </div>
-              {(job.minSalary > 0 || job.maxSalary > 0) && (
-                <Badge variant="success" size="md" className="shrink-0">
-                  {formatSalaryRange(job.minSalary, job.maxSalary)}
-                </Badge>
-              )}
-            </div>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              {job.employmentType && (
-                <Badge variant={TYPE_BADGE_VARIANT[job.employmentType] || 'default'} size="sm">
-                  {job.employmentType}
-                </Badge>
-              )}
-              {job.experienceLevel && (
-                <Badge variant="default" size="sm">
-                  {job.experienceLevel}
-                </Badge>
-              )}
-              {job.createdAt && (
-                <span className="text-xs text-gray-400">
-                  Posted {new Date(job.createdAt).toLocaleDateString()}
-                </span>
-              )}
-            </div>
-            {job.skills?.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {job.skills.slice(0, 4).map((skill) => (
-                  <Badge key={skill} variant="primary" size="sm">
-                    {skill}
-                  </Badge>
-                ))}
-                {job.skills.length > 4 && (
-                  <span className="text-xs text-gray-400">+{job.skills.length - 4}</span>
-                )}
-              </div>
-            )}
-            <div className="mt-auto flex items-center justify-between gap-2 pt-4">
-              <Link
-                to={`/jobs/${job._id}`}
-                className="text-sm font-semibold text-indigo-600 transition-colors hover:text-indigo-500"
-              >
-                View Details &rarr;
-              </Link>
-              <SaveJobButton jobId={job._id} />
-            </div>
-          </Card>
+          <JobListCard key={job.id ?? job._id} job={job} />
         ))}
       </div>
 
       {/* Empty state */}
-      {!jobsQuery.isLoading && jobs.length === 0 && (
+      {!jobsQuery.isPending && !jobsQuery.isFetchingNextPage && jobs.length === 0 && (
         <div className="rounded-xl bg-white shadow-sm ring-1 ring-gray-100">
           <EmptyState
             icon={EmptyStateIcons.search}
@@ -365,30 +317,23 @@ export function JobsPage() {
         </div>
       )}
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <nav className="flex items-center justify-center gap-3 pt-6" aria-label="Pagination">
+      {jobsQuery.hasNextPage && jobs.length > 0 ? (
+        <div className="flex flex-col items-center gap-2 pt-6">
+          {pagination.total != null && (
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Showing {jobs.length} of {pagination.total}
+            </p>
+          )}
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
+            onClick={() => jobsQuery.fetchNextPage()}
+            disabled={jobsQuery.isFetchingNextPage}
           >
-            Previous
+            {jobsQuery.isFetchingNextPage ? 'Loading…' : 'Load more'}
           </Button>
-          <span className="text-sm font-medium text-gray-600">
-            Page {page} of {totalPages}
-          </span>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page >= totalPages}
-          >
-            Next
-          </Button>
-        </nav>
-      )}
+        </div>
+      ) : null}
       </>
       )}
     </section>

@@ -7,6 +7,19 @@
 const MAX_DEPTH = 10;
 const DANGEROUS_KEYS = ["__proto__", "constructor", "prototype"];
 
+function cloneJsonLike(obj) {
+  if (obj === null || typeof obj !== "object") return obj;
+  try {
+    return structuredClone(obj);
+  } catch {
+    try {
+      return JSON.parse(JSON.stringify(obj));
+    } catch {
+      return Array.isArray(obj) ? [...obj] : { ...obj };
+    }
+  }
+}
+
 const isDangerousKey = (key) => {
   if (typeof key !== "string") return false;
   const lower = key.toLowerCase();
@@ -58,13 +71,13 @@ const sanitizeObject = (value, depth = 0) => {
 const sanitizeInput = (req, res, next) => {
   try {
     if (req.body && typeof req.body === "object") {
-      sanitizeObject(req.body);
+      req.body = sanitizeObject(cloneJsonLike(req.body));
     }
     if (req.query && typeof req.query === "object") {
-      sanitizeObject(req.query);
+      req.query = sanitizeObject(cloneJsonLike(req.query));
     }
     if (req.params && typeof req.params === "object") {
-      sanitizeObject(req.params);
+      req.params = sanitizeObject(cloneJsonLike(req.params));
     }
   } catch (err) {
     return next(err);

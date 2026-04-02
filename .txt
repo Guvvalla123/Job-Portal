@@ -1,4 +1,0 @@
-Username:saikiranguvvalla_db_user
-password:XiSWs1k7Pe6QfY8L
-
-MONGO_URI=mongodb+srv://saikiranguvvalla_db_user:XiSWs1k7Pe6QfY8L@jobportalmern-cluster.g76jtny.mongodb.net/jobportal?retryWrites=true&w=majority

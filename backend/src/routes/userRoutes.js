@@ -2,6 +2,7 @@ const express = require("express");
 const multer = require("multer");
 const { ApiError } = require("../utils/apiError");
 const {
+  changePassword,
   updateProfile,
   uploadProfileImage,
   uploadResume,
@@ -13,7 +14,7 @@ const {
 } = require("../controllers/userController");
 const { requireAuth, requireRole } = require("../middlewares/auth");
 const { validate, validateParams } = require("../middlewares/validate");
-const { updateProfileSchema } = require("../validations/userValidation");
+const { updateProfileSchema, changePasswordSchema } = require("../validations/userValidation");
 const { mongoIdParam } = require("../validations/common");
 const { ROLES } = require("../constants/roles");
 
@@ -27,7 +28,7 @@ const imageUpload = multer({
     if (allowed.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error("Only JPEG, PNG, and WebP images are allowed"));
+      cb(new ApiError(400, "Only JPEG, PNG and WebP images are allowed."));
     }
   },
 });
@@ -45,6 +46,7 @@ const resumeUpload = multer({
   },
 });
 
+router.patch("/change-password", requireAuth, validate(changePasswordSchema), changePassword);
 router.patch("/profile", requireAuth, validate(updateProfileSchema), updateProfile);
 router.post("/profile/image", requireAuth, imageUpload.single("image"), uploadProfileImage);
 router.post("/profile/resume", requireAuth, resumeUpload.single("resume"), uploadResume);

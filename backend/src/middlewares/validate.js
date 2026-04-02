@@ -1,17 +1,17 @@
 const { ApiError } = require("../utils/apiError");
 
-const formatZodError = (error) =>
-  (error.issues || [])
-    .map((i) => {
-      const path = Array.isArray(i.path) ? i.path : [];
-      return path.length ? `${path.join(".")}: ${i.message}` : i.message;
-    })
-    .join("; ");
+const zodIssuesToErrors = (error) =>
+  (error.issues || []).map((i) => ({
+    field: Array.isArray(i.path) ? i.path.filter(Boolean).join(".") : "",
+    message: i.message,
+  }));
 
 const validate = (schema) => (req, res, next) => {
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) {
-    return next(new ApiError(400, formatZodError(parsed.error)));
+    return next(
+      new ApiError(422, "Validation failed", zodIssuesToErrors(parsed.error), "UNPROCESSABLE_ENTITY")
+    );
   }
   req.body = parsed.data;
   return next();
@@ -20,7 +20,9 @@ const validate = (schema) => (req, res, next) => {
 const validateQuery = (schema) => (req, res, next) => {
   const parsed = schema.safeParse(req.query);
   if (!parsed.success) {
-    return next(new ApiError(400, formatZodError(parsed.error)));
+    return next(
+      new ApiError(422, "Validation failed", zodIssuesToErrors(parsed.error), "UNPROCESSABLE_ENTITY")
+    );
   }
   req.query = parsed.data;
   return next();
@@ -29,7 +31,9 @@ const validateQuery = (schema) => (req, res, next) => {
 const validateParams = (schema) => (req, res, next) => {
   const parsed = schema.safeParse(req.params);
   if (!parsed.success) {
-    return next(new ApiError(400, formatZodError(parsed.error)));
+    return next(
+      new ApiError(422, "Validation failed", zodIssuesToErrors(parsed.error), "UNPROCESSABLE_ENTITY")
+    );
   }
   req.params = { ...req.params, ...parsed.data };
   return next();

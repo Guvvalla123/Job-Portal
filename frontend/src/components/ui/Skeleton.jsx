@@ -1,3 +1,5 @@
+import PropTypes from 'prop-types'
+
 /**
  * Skeleton loaders for consistent loading states
  */
@@ -7,14 +9,18 @@ export function Skeleton({ className = '' }) {
       className={`relative overflow-hidden rounded bg-gray-200 dark:bg-gray-700 ${className}`}
       aria-hidden="true"
     >
-      <div className="animate-shimmer absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent dark:via-white/15" />
+      <div className="animate-shimmer absolute inset-0 bg-linear-to-r from-transparent via-white/50 to-transparent dark:via-white/15" />
     </div>
   )
 }
 
+Skeleton.propTypes = {
+  className: PropTypes.string,
+}
+
 export function JobCardSkeleton() {
   return (
-    <div className="flex flex-col rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700">
+    <div className="flex flex-col rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200/80 dark:bg-gray-800 dark:ring-gray-700/80">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1 space-y-2">
           <Skeleton className="h-5 w-3/4" />

@@ -8,4 +8,4 @@ Disallow: /recruiter/dashboard
 Disallow: /admin/dashboard
 
 # Sitemap (update with your production URL)
-Sitemap: https://jobportal.example.com/sitemap.xml
+Sitemap: https://careersync.example.com/sitemap.xml

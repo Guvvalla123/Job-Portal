@@ -32,7 +32,7 @@ export function Sheet({ open, onClose, title, children, side = 'right', fullWidt
 
   return (
     <div
-      className="fixed inset-0 z-[60]"
+      className="fixed inset-0 z-60"
       role="dialog"
       aria-modal="true"
       aria-labelledby={title ? 'sheet-title' : undefined}

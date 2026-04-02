@@ -1,15 +1,21 @@
 import { useEffect, useState } from 'react'
 
+function getPrefersReducedMotion() {
+  return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
+
 /**
  * Animates from 0 to target over duration (ms). Respects prefers-reduced-motion.
  */
 export function useCountUp(target, { duration = 1400, enabled = true, skip = false } = {}) {
-  const [value, setValue] = useState(0)
+  const [value, setValue] = useState(() => {
+    const prefersReduced = getPrefersReducedMotion()
+    return prefersReduced || skip || !enabled ? target : 0
+  })
 
   useEffect(() => {
-    const reduced =
-      typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (skip || reduced || !enabled) {
+    const prefersReduced = getPrefersReducedMotion()
+    if (skip || prefersReduced || !enabled) {
       setValue(target)
       return
     }

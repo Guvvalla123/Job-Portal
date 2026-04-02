@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { apiClient } from '@/api/apiClient.js'
-import { AUTH_KEYS } from '@/lib/authConstants.js'
+import { apiClient, getAccessToken } from '@/api/apiClient.js'
 
 /** Delay before revoking blob URLs used only for a spawned tab (viewer keeps a handle briefly). */
 const REVOKE_TAB_URL_MS = 180_000
@@ -47,13 +46,16 @@ export function ResumeViewer({ path, applicationId, title = 'Resume' }) {
   const [blobUrl, setBlobUrl] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [errorDetail, setErrorDetail] = useState(null)
   const [openingTab, setOpeningTab] = useState(false)
+  const [loadHint, setLoadHint] = useState(null)
+  const [retryCount, setRetryCount] = useState(0)
+  const [reloadNonce, setReloadNonce] = useState(0)
 
   const resumePath = resolveResumePath(path, applicationId)
 
   const fetchAuthorizedPdfBlob = useCallback(async () => {
-    const token = localStorage.getItem(AUTH_KEYS.ACCESS_TOKEN)
-    if (!token) {
+    if (!getAccessToken()) {
       throw new Error('Please sign in to view this resume.')
     }
     if (!resumePath) {
@@ -61,13 +63,21 @@ export function ResumeViewer({ path, applicationId, title = 'Resume' }) {
     }
     const res = await apiClient.get(resumePath, {
       responseType: 'blob',
-      timeout: 120000,
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      timeout: 30000,
     })
     return blobFromResumeResponse(res)
   }, [resumePath])
+
+  useEffect(() => {
+    if (!loading) return
+    setLoadHint(null)
+    const t8 = window.setTimeout(() => setLoadHint('still'), 8000)
+    const t20 = window.setTimeout(() => setLoadHint('long'), 20000)
+    return () => {
+      window.clearTimeout(t8)
+      window.clearTimeout(t20)
+    }
+  }, [loading, reloadNonce])
 
   useEffect(() => {
     let cancelled = false
@@ -76,6 +86,7 @@ export function ResumeViewer({ path, applicationId, title = 'Resume' }) {
     async function loadResume() {
       setLoading(true)
       setError(null)
+      setErrorDetail(null)
       setBlobUrl(null)
 
       try {
@@ -83,12 +94,18 @@ export function ResumeViewer({ path, applicationId, title = 'Resume' }) {
         if (cancelled) return
         objectUrl = URL.createObjectURL(blob)
         setBlobUrl(objectUrl)
+        setRetryCount(0)
       } catch (e) {
         if (!cancelled) {
-          setError(e instanceof Error ? e.message : 'Could not load resume. Try again or contact support.')
+          const msg = e instanceof Error ? e.message : 'Could not load resume. Try again or contact support.'
+          setError('Failed to load resume.')
+          setErrorDetail(msg)
         }
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) {
+          setLoading(false)
+          setLoadHint(null)
+        }
       }
     }
 
@@ -98,7 +115,13 @@ export function ResumeViewer({ path, applicationId, title = 'Resume' }) {
       cancelled = true
       if (objectUrl) URL.revokeObjectURL(objectUrl)
     }
-  }, [fetchAuthorizedPdfBlob])
+  }, [fetchAuthorizedPdfBlob, reloadNonce])
+
+  const handleRetryLoad = useCallback(() => {
+    if (retryCount >= 2) return
+    setRetryCount((c) => c + 1)
+    setReloadNonce((n) => n + 1)
+  }, [retryCount])
 
   const handleOpenInNewTab = useCallback(async () => {
     if (blobUrl) {
@@ -133,10 +156,18 @@ export function ResumeViewer({ path, applicationId, title = 'Resume' }) {
 
   if (loading) {
     return (
-      <div className="flex min-h-[min(75vh,720px)] items-center justify-center text-gray-500 dark:text-gray-400">
+      <div className="flex min-h-[min(75dvh,45rem)] items-center justify-center text-gray-500 dark:text-gray-400">
         <div className="text-center">
           <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-600 dark:border-indigo-900 dark:border-t-indigo-400" />
           <p className="mt-4 text-sm font-medium">Loading resume…</p>
+          {loadHint === 'still' && (
+            <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">Still loading resume…</p>
+          )}
+          {loadHint === 'long' && (
+            <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
+              Taking longer than expected. Check your connection.
+            </p>
+          )}
         </div>
       </div>
     )
@@ -147,8 +178,24 @@ export function ResumeViewer({ path, applicationId, title = 'Resume' }) {
       <div className="space-y-4">
         <div className="rounded-xl border border-red-200 bg-red-50 p-8 text-center dark:border-red-900/50 dark:bg-red-950/30">
           <p className="text-sm font-medium text-red-800 dark:text-red-200">{error}</p>
+          {errorDetail && errorDetail !== error && (
+            <p className="mt-2 text-xs text-red-700 dark:text-red-300">{errorDetail}</p>
+          )}
+          {retryCount >= 2 && (
+            <p className="mt-3 text-sm text-red-800 dark:text-red-200">Please try again later.</p>
+          )}
         </div>
-        <div className="flex justify-center">
+        <div className="flex flex-wrap justify-center gap-2">
+          {retryCount < 2 && (
+            <button
+              type="button"
+              onClick={() => handleRetryLoad()}
+              disabled={openingTab || !resumePath}
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-500 disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-400"
+            >
+              Retry
+            </button>
+          )}
           <button
             type="button"
             onClick={() => void handleOpenInNewTab()}
@@ -195,7 +242,7 @@ export function ResumeViewer({ path, applicationId, title = 'Resume' }) {
       <iframe
         title={title}
         src={`${blobUrl}#toolbar=1`}
-        className="min-h-[min(80vh,800px)] w-full flex-1 rounded-xl border border-gray-200 bg-gray-100 dark:border-gray-600 dark:bg-gray-900"
+        className="min-h-[min(80dvh,50rem)] w-full flex-1 rounded-xl border border-gray-200 bg-gray-100 dark:border-gray-600 dark:bg-gray-900"
       />
     </div>
   )

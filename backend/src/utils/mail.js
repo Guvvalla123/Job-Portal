@@ -28,7 +28,7 @@ async function sendMailRaw({ to, subject, html, text }) {
     return { preview: text || html?.slice(0, 100) };
   }
   return transport.sendMail({
-    from: process.env.SMTP_FROM || process.env.SMTP_USER || "noreply@jobportal.com",
+    from: process.env.SMTP_FROM || process.env.SMTP_USER || "noreply@careersync.com",
     to,
     subject,
     html: html || text,

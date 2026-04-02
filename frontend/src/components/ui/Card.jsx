@@ -1,5 +1,8 @@
+import { createElement } from 'react'
+import PropTypes from 'prop-types'
+
 /**
- * Production-grade Card with variants and hover states.
+ * Card — default elevation; glass/premium map to default/elevated for API stability.
  */
 const paddingStyles = {
   none: '',
@@ -10,17 +13,15 @@ const paddingStyles = {
 
 const variants = {
   default:
-    'bg-white shadow-sm ring-1 ring-gray-100 dark:bg-gray-800/90 dark:ring-gray-700/80',
+    'bg-white shadow-sm ring-1 ring-gray-200/80 dark:bg-gray-800/90 dark:ring-gray-700/80',
   elevated:
-    'bg-white shadow-md ring-1 ring-gray-100 dark:bg-gray-800/90 dark:ring-gray-700/80',
+    'bg-white shadow-md ring-1 ring-gray-200/80 dark:bg-gray-800/90 dark:ring-gray-700/80',
   bordered: 'bg-white ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-600',
   flat: 'bg-white dark:bg-gray-800',
-  /** Glass + depth – landing / marketing */
   glass:
-    'bg-white/70 backdrop-blur-xl shadow-lg shadow-gray-200/40 ring-1 ring-white/80 dark:bg-gray-800/70 dark:shadow-black/20 dark:ring-gray-600/60',
-  /** Premium job cards – hover glow */
+    'bg-white/80 backdrop-blur-md shadow-sm ring-1 ring-gray-200/80 dark:bg-gray-800/80 dark:ring-gray-700/80',
   premium:
-    'bg-white border border-gray-100/80 shadow-lg shadow-gray-200/50 ring-1 ring-gray-100/60 dark:border-gray-700/80 dark:bg-gray-800/95 dark:shadow-black/30 dark:ring-gray-700/50',
+    'bg-white shadow-md ring-1 ring-gray-200/80 dark:bg-gray-800/95 dark:ring-gray-700/80',
 }
 
 export function Card({
@@ -29,20 +30,14 @@ export function Card({
   hover = false,
   padding = 'default',
   variant = 'default',
-  as: Component = 'div',
+  as = 'div',
   ...props
 }) {
   const hoverStyles = hover
-    ? 'transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-indigo-500/10 hover:ring-indigo-200/60 dark:hover:shadow-indigo-900/20 dark:hover:ring-indigo-800/40 cursor-pointer motion-reduce:hover:translate-y-0'
+    ? 'transition-[transform,box-shadow] duration-200 ease-out motion-reduce:transition-none hover:-translate-y-0.5 hover:shadow-md dark:hover:shadow-lg/20 motion-reduce:hover:translate-y-0 cursor-pointer'
     : ''
-  return (
-    <Component
-      className={`rounded-xl ${variants[variant]} ${paddingStyles[padding]} ${hoverStyles} ${className}`}
-      {...props}
-    >
-      {children}
-    </Component>
-  )
+  const mergedClass = `rounded-xl ${variants[variant]} ${paddingStyles[padding]} ${hoverStyles} ${className}`
+  return createElement(as, { className: mergedClass, ...props }, children)
 }
 
 export function CardHeader({ title, subtitle, action, className = '' }) {
@@ -51,10 +46,26 @@ export function CardHeader({ title, subtitle, action, className = '' }) {
       <div className="min-w-0 flex-1">
         <h2 className="text-base font-semibold text-gray-900 dark:text-white">{title}</h2>
         {subtitle && (
-          <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">{subtitle}</p>
+          <p className="mt-0.5 text-sm font-normal text-gray-600 dark:text-gray-400">{subtitle}</p>
         )}
       </div>
       {action && <div className="shrink-0">{action}</div>}
     </div>
   )
+}
+
+Card.propTypes = {
+  children: PropTypes.node,
+  className: PropTypes.string,
+  hover: PropTypes.bool,
+  padding: PropTypes.oneOf(['none', 'sm', 'default', 'lg']),
+  variant: PropTypes.oneOf(['default', 'elevated', 'bordered', 'flat', 'glass', 'premium']),
+  as: PropTypes.oneOfType([PropTypes.string, PropTypes.elementType]),
+}
+
+CardHeader.propTypes = {
+  title: PropTypes.string.isRequired,
+  subtitle: PropTypes.string,
+  action: PropTypes.node,
+  className: PropTypes.string,
 }

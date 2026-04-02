@@ -1,7 +1,8 @@
 const { ApiError } = require("../utils/apiError");
-const { notifyAlertsForJob } = require("./jobAlertService");
+const { matchAlertsForJob } = require("./jobAlertService");
 const jobRepository = require("../repositories/jobRepository");
 const applicationRepository = require("../repositories/applicationRepository");
+const { Application } = require("../models/Application");
 const { Company } = require("../models/Company");
 const { logger } = require("../config/logger");
 const cache = require("../utils/cache");
@@ -17,12 +18,15 @@ const createJob = async (payload, userId) => {
     minSalary,
     maxSalary,
     skills,
+    isDraft,
+    expiresAt,
   } = payload;
 
   const company = await Company.findById(companyId);
   if (!company) throw new ApiError(404, "Company not found");
   if (company.createdBy.toString() !== userId) throw new ApiError(403, "You do not own this company");
 
+  const draft = Boolean(isDraft);
   const job = await jobRepository.create({
     title,
     description,
@@ -34,18 +38,25 @@ const createJob = async (payload, userId) => {
     skills: Array.isArray(skills) ? skills : [],
     company: company._id,
     postedBy: userId,
+    isDraft: draft,
+    expiresAt: expiresAt || null,
   });
 
-  cache.invalidatePattern("jobs:list").catch(() => {});
-  notifyAlertsForJob(job).catch((err) => logger.error("JobAlert", { error: err.message }));
+  invalidateJobListCache().catch(() => {});
+  if (job.isActive !== false && !draft) {
+    matchAlertsForJob(job).catch((err) => logger.error("JobAlert", { error: err.message }));
+  }
   return { job };
 };
+
+const invalidateJobListCache = () => cache.invalidatePattern("jobs:list");
 
 const listJobs = async (query) => {
   const key = cache.cacheKey("jobs:list", query);
   const cached = await cache.get(key);
-  const ttl = cache.CACHE_TTL.jobsList || 180;
-  const isCacheable = query.page === 1 && !query.q && !query.location;
+  const ttl = cache.CACHE_TTL.jobsList || 30;
+  const sortKey = query.sort || "newest";
+  const isCacheable = query.page === 1 && !query.q && !query.location && sortKey === "newest";
 
   if (cached) {
     const data = cached.data ?? cached;
@@ -61,7 +72,7 @@ const listJobs = async (query) => {
   const filter = jobRepository.buildListFilter(query);
   const { page, limit } = query;
   const [jobs, total] = await Promise.all([
-    jobRepository.findWithFilter(filter, { page, limit }),
+    jobRepository.findWithFilter(filter, { page, limit, sortKey }),
     jobRepository.count(filter),
   ]);
 
@@ -97,6 +108,8 @@ const updateJob = async (id, payload, userId) => {
   if (!job) throw new ApiError(404, "Job not found");
   if (job.postedBy.toString() !== userId) throw new ApiError(403, "Not authorized to update this job");
 
+  const wasDraft = Boolean(job.isDraft);
+
   const {
     companyId,
     title,
@@ -107,6 +120,8 @@ const updateJob = async (id, payload, userId) => {
     minSalary,
     maxSalary,
     skills,
+    isDraft,
+    expiresAt,
   } = payload;
 
   if (companyId) {
@@ -124,9 +139,14 @@ const updateJob = async (id, payload, userId) => {
   if (minSalary !== undefined) job.minSalary = minSalary;
   if (maxSalary !== undefined) job.maxSalary = maxSalary;
   if (skills !== undefined) job.skills = Array.isArray(skills) ? skills : [];
+  if (isDraft !== undefined) job.isDraft = Boolean(isDraft);
+  if (expiresAt !== undefined) job.expiresAt = expiresAt || null;
 
   await job.save();
-  cache.invalidatePattern("jobs:list").catch(() => {});
+  invalidateJobListCache().catch(() => {});
+  if (wasDraft && !job.isDraft && job.isActive !== false) {
+    matchAlertsForJob(job).catch((err) => logger.error("JobAlert", { error: err.message }));
+  }
   return { job };
 };
 
@@ -137,7 +157,7 @@ const deleteJob = async (id, userId) => {
 
   job.isActive = false;
   await job.save();
-  cache.invalidatePattern("jobs:list").catch(() => {});
+  invalidateJobListCache().catch(() => {});
   return {};
 };
 
@@ -155,12 +175,47 @@ const getRecruiterAnalytics = async (userId) => {
   };
 };
 
+/** Last N calendar months of application volume for recruiter's jobs. */
+const getRecruiterApplicationTrend = async (userId, monthCount = 6) => {
+  const jobIds = (await jobRepository.findJobIdsByPostedBy(userId)).map((j) => j._id);
+  if (jobIds.length === 0) return { series: [] };
+
+  const n = Math.min(Math.max(Number(monthCount) || 6, 1), 24);
+  const series = [];
+  for (let i = n - 1; i >= 0; i -= 1) {
+    const start = new Date();
+    start.setMonth(start.getMonth() - i);
+    start.setDate(1);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setMonth(end.getMonth() + 1);
+    const applications = await Application.countDocuments({
+      job: { $in: jobIds },
+      createdAt: { $gte: start, $lt: end },
+    });
+    // All trend metrics use createdAt for consistent time-series bucketing
+    const hired = await Application.countDocuments({
+      job: { $in: jobIds },
+      status: "hired",
+      createdAt: { $gte: start, $lt: end },
+    });
+    series.push({
+      month: start.toISOString().slice(0, 7),
+      applications,
+      hired,
+    });
+  }
+  return { series };
+};
+
 module.exports = {
   createJob,
   listJobs,
+  invalidateJobListCache,
   getJobById,
   listMyJobs,
   updateJob,
   deleteJob,
   getRecruiterAnalytics,
+  getRecruiterApplicationTrend,
 };

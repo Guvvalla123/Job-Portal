@@ -1,4 +1,5 @@
 const { z } = require("zod");
+const { PASSWORD_REGEX, PASSWORD_REQUIREMENT_MESSAGE } = require("../constants/passwordPolicy");
 
 const experienceSchema = z.object({
   title: z.string().min(1).max(200),
@@ -39,4 +40,9 @@ const updateProfileSchema = z.object({
   education: z.array(educationSchema).optional(),
 });
 
-module.exports = { updateProfileSchema };
+const changePasswordSchema = z.object({
+  oldPassword: z.string().min(1, "Current password is required"),
+  newPassword: z.string().regex(PASSWORD_REGEX, PASSWORD_REQUIREMENT_MESSAGE),
+});
+
+module.exports = { updateProfileSchema, changePasswordSchema };

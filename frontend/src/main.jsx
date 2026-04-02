@@ -1,6 +1,6 @@
-import { StrictMode, lazy, Suspense } from 'react'
+import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
 import { HelmetProvider } from 'react-helmet-async'
 import { ErrorBoundary } from 'react-error-boundary'
@@ -10,47 +10,37 @@ import App from './App.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
 import { ThemeProvider } from './context/ThemeContext.jsx'
 import { AnalyticsTracker } from './components/AnalyticsTracker.jsx'
+import { ErrorFallback } from './components/ErrorFallback.jsx'
 import { ScrollToTop } from './components/ScrollToTop.jsx'
 
 const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: (error) => {
+      const status = error?.response?.status || error?.status
+      if (status >= 500) {
+        window.location.href = '/500'
+      }
+    },
+  }),
   defaultOptions: {
     queries: {
-      staleTime: 60 * 1000,
+      staleTime: 30 * 1000,
       gcTime: 5 * 60 * 1000,
       retry: (failureCount, error) => {
         const status = error?.response?.status
         if (status === 401 || status === 403) return false
-        return failureCount < 2
+        return failureCount < 1
       },
+      retryDelay: 1000,
       /** Reduces layout thrash / surprise refetch; per-query can override (e.g. notifications). */
       refetchOnWindowFocus: false,
       refetchOnReconnect: true,
     },
+    mutations: {
+      retry: false,
+    },
   },
 })
-
-function ErrorFallback({ error, resetErrorBoundary }) {
-  return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 p-8 text-center">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Something went wrong</h1>
-      <p className="max-w-md text-sm text-gray-600 dark:text-gray-400">{error?.message}</p>
-      <div className="flex gap-3">
-        <button
-          onClick={resetErrorBoundary}
-          className="rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-        >
-          Try again
-        </button>
-        <a
-          href="/"
-          className="rounded-xl border-2 border-gray-300 px-6 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300"
-        >
-          Go home
-        </a>
-      </div>
-    </div>
-  )
-}
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

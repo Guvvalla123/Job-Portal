@@ -1,11 +1,18 @@
+/**
+ * User profile & assets — JSON handlers use `success` from apiResponse only.
+ * Binary resume streaming uses res.send (see streamMyResumePdf).
+ */
 const mongoose = require("mongoose");
 const { cloudinary } = require("../config/cloudinary");
 const { User } = require("../models/User");
-const { Job } = require("../models/Job");
 const { asyncHandler } = require("../utils/asyncHandler");
 const { ApiError } = require("../utils/apiError");
+const { success } = require("../utils/apiResponse");
 const { logger } = require("../config/logger");
 const { fetchResumePdfBuffer } = require("../services/resumeStreamService");
+const authService = require("../services/authService");
+const jobRepository = require("../repositories/jobRepository");
+const { cascadeBeforeUserDelete } = require("../utils/userDeleteCascade");
 
 /**
  * Upload image to Cloudinary using stream (works well for images).
@@ -40,16 +47,14 @@ const uploadResumeToCloudinary = (opts) =>
       .slice(0, 50);
     const publicId = `resume-${userId}-${Date.now()}-${safeName}.${ext}`;
 
-    // access_mode MUST stay "public" so backend fetch(stream) works without authenticated cookie flows.
-    // Do not use "authenticated" here — it causes 401 on unsigned delivery URLs.
+    /** Authenticated raw assets — delivery only via signed URLs (see resumeStreamService). */
     cloudinary.uploader.upload(
       dataUri,
       {
         folder,
         resource_type: "raw",
         public_id: publicId,
-        access_mode: "public",
-        type: "upload",
+        type: "authenticated",
       },
       (error, result) => {
         if (error) return reject(error);
@@ -71,6 +76,12 @@ const deleteFromCloudinary = (publicId, resourceType = "raw") =>
 
 const ALLOWED_STRING_FIELDS = ["fullName", "headline", "about", "phone", "location", "website"];
 
+const changePassword = asyncHandler(async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+  await authService.changePassword(req.user.userId, oldPassword, newPassword);
+  return success(res, {}, "Password updated successfully");
+});
+
 const updateProfile = asyncHandler(async (req, res) => {
   const updates = {};
 
@@ -85,17 +96,16 @@ const updateProfile = asyncHandler(async (req, res) => {
   const user = await User.findByIdAndUpdate(req.user.userId, updates, {
     returnDocument: "after",
     runValidators: true,
-  }).select("-password -refreshToken");
+  }).select("-password -refreshToken -resumeUrl -resumePublicId");
 
   if (!user) {
     throw new ApiError(404, "User not found");
   }
 
-  return res.status(200).json({
-    success: true,
-    message: "Profile updated",
-    data: { user },
-  });
+  const u = user.toObject ? user.toObject() : user;
+  u.hasResume = Boolean(u.resumeFileName && String(u.resumeFileName).trim());
+
+  return success(res, { user: u }, "Profile updated");
 });
 
 const uploadProfileImage = asyncHandler(async (req, res) => {
@@ -109,13 +119,12 @@ const uploadProfileImage = asyncHandler(async (req, res) => {
     req.user.userId,
     { profileImageUrl: result.secure_url },
     { returnDocument: "after", runValidators: true }
-  ).select("-password -refreshToken");
+  ).select("-password -refreshToken -resumeUrl -resumePublicId");
 
-  return res.status(200).json({
-    success: true,
-    message: "Profile image uploaded",
-    data: { user },
-  });
+  const u = user.toObject ? user.toObject() : user;
+  u.hasResume = Boolean(u.resumeFileName && String(u.resumeFileName).trim());
+
+  return success(res, { user: u }, "Profile image uploaded");
 });
 
 const uploadResume = asyncHandler(async (req, res) => {
@@ -144,7 +153,7 @@ const uploadResume = asyncHandler(async (req, res) => {
   });
 
   const resumeData = {
-    resumeUrl: result.secure_url,
+    resumeUrl: "",
     resumePublicId: result.public_id,
     resumeFileName: req.file.originalname || `resume_${Date.now()}.pdf`,
     resumeSize: req.file.size,
@@ -155,17 +164,19 @@ const uploadResume = asyncHandler(async (req, res) => {
     userId,
     resumeData,
     { returnDocument: "after", runValidators: true }
-  ).select("-password -refreshToken");
+  ).select("-password -refreshToken -resumeUrl -resumePublicId");
 
-  return res.status(200).json({
-    success: true,
-    message: "Resume uploaded successfully",
-    data: { user: updatedUser },
-  });
+  const u = updatedUser.toObject ? updatedUser.toObject() : updatedUser;
+  u.hasResume = Boolean(u.resumeFileName && String(u.resumeFileName).trim());
+
+  return success(res, { user: u }, "Resume uploaded successfully");
 });
 
+/**
+ * Streams PDF bytes — not JSON. All JSON endpoints in this controller use `success` / `created` from apiResponse.
+ */
 const streamMyResumePdf = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user.userId).select("resumeUrl resumePublicId resumeFileName");
+  const user = await User.findById(req.user.userId).select("resumePublicId resumeFileName");
   if (!user) throw new ApiError(404, "User not found");
 
   const result = await fetchResumePdfBuffer(user);
@@ -206,13 +217,12 @@ const deleteResume = asyncHandler(async (req, res) => {
       resumeUploadedAt: null,
     },
     { returnDocument: "after" }
-  ).select("-password -refreshToken");
+  ).select("-password -refreshToken -resumeUrl -resumePublicId");
 
-  return res.status(200).json({
-    success: true,
-    message: "Resume deleted successfully",
-    data: { user: updatedUser },
-  });
+  const u = updatedUser.toObject ? updatedUser.toObject() : updatedUser;
+  u.hasResume = Boolean(u.resumeFileName && String(u.resumeFileName).trim());
+
+  return success(res, { user: u }, "Resume deleted successfully");
 });
 
 const toggleSavedJob = asyncHandler(async (req, res) => {
@@ -223,9 +233,9 @@ const toggleSavedJob = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid job ID");
   }
 
-  const job = await Job.findById(jobId);
-  if (!job || job.isActive === false) {
-    throw new ApiError(404, "Job not found");
+  const job = await jobRepository.findActiveById(jobId);
+  if (!job) {
+    throw new ApiError(404, "Job not found or no longer available");
   }
 
   const user = await User.findById(userId);
@@ -235,22 +245,14 @@ const toggleSavedJob = asyncHandler(async (req, res) => {
   if (idx >= 0) {
     user.savedJobs.splice(idx, 1);
     await user.save();
-    return res.status(200).json({
-      success: true,
-      message: "Job removed from saved",
-      data: { saved: false, savedJobs: user.savedJobs },
-    });
+    return success(res, { saved: false, savedJobs: user.savedJobs }, "Job removed from saved");
   }
 
   user.savedJobs = user.savedJobs || [];
   user.savedJobs.push(jobId);
   await user.save();
 
-  return res.status(200).json({
-    success: true,
-    message: "Job saved",
-    data: { saved: true, savedJobs: user.savedJobs },
-  });
+  return success(res, { saved: true, savedJobs: user.savedJobs }, "Job saved");
 });
 
 const deleteAccount = asyncHandler(async (req, res) => {
@@ -258,12 +260,10 @@ const deleteAccount = asyncHandler(async (req, res) => {
   const user = await User.findById(userId);
   if (!user) throw new ApiError(404, "User not found");
 
+  await cascadeBeforeUserDelete(userId);
   await User.findByIdAndDelete(userId);
 
-  return res.status(200).json({
-    success: true,
-    message: "Account deleted successfully",
-  });
+  return success(res, {}, "Account deleted successfully");
 });
 
 const getSavedJobs = asyncHandler(async (req, res) => {
@@ -276,13 +276,11 @@ const getSavedJobs = asyncHandler(async (req, res) => {
     .select("savedJobs");
 
   const jobs = user?.savedJobs?.filter(Boolean) || [];
-  return res.status(200).json({
-    success: true,
-    data: { jobs },
-  });
+  return success(res, { jobs }, "Saved jobs loaded");
 });
 
 module.exports = {
+  changePassword,
   updateProfile,
   uploadProfileImage,
   uploadResume,

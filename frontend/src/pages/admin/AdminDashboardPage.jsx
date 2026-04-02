@@ -1,289 +1,267 @@
-import { useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+} from 'recharts'
+import { getStats, getStatsTrend } from '../../api/adminApi.js'
 import { queryKeys } from '../../lib/queryKeys.js'
 import { CACHE_TIERS } from '../../lib/queryOptions.js'
-import { apiClient } from '../../api/apiClient.js'
-import { toast } from 'sonner'
-import { getApiErrorMessage } from '../../utils/getApiErrorMessage.js'
+import { Card } from '../../components/ui/Card.jsx'
+import { Skeleton } from '../../components/ui/Skeleton.jsx'
+import { PageHeader } from '../../components/ui/PageHeader.jsx'
+
+function formatStat(n) {
+  if (n == null || Number.isNaN(Number(n))) return '—'
+  return Number(n).toLocaleString()
+}
+
+function formatChartMonth(isoYm) {
+  if (!isoYm || typeof isoYm !== 'string') return ''
+  const [y, m] = isoYm.split('-')
+  const d = new Date(Number(y), Number(m) - 1, 1)
+  if (Number.isNaN(d.getTime())) return isoYm
+  return d.toLocaleString(undefined, { month: 'short', year: '2-digit' })
+}
+
+const adminNav = [
+  { to: '/admin/dashboard', label: 'Overview', description: 'Platform statistics' },
+  { to: '/admin/users', label: 'Users', description: 'Roles, status, and accounts' },
+  { to: '/admin/jobs', label: 'Jobs', description: 'Listings and activation' },
+  { to: '/admin/companies', label: 'Companies', description: 'Recruiter organizations' },
+  { to: '/admin/applications', label: 'Applications', description: 'Candidate applications' },
+  { to: '/admin/audit-logs', label: 'Audit log', description: 'Security and activity' },
+]
+
+function IconUsers({ className = 'h-6 w-6' }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"
+      />
+    </svg>
+  )
+}
+
+function IconBriefcase({ className = 'h-6 w-6' }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.184 2.675-.394.633-1.163 1.085-2.086 1.085H7.02c-.923 0-1.692-.452-2.086-1.085-.397-.639-1.184-1.581-1.184-2.675v-4.25m16.5 0a2.18 2.18 0 0 0 .75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 0 0-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0 1 12 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 0 1-.673-.38m0 0A2.18 2.18 0 0 1 3 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 0 1 3.413-.387m7.5 0V5.25A2.25 2.25 0 0 0 9 3h-.75a2.25 2.25 0 0 0-2.25 2.25v.894m7.5 0a48.667 48.667 0 0 0-7.5 0M12 12.75h.008v.008H12v-.008Z"
+      />
+    </svg>
+  )
+}
+
+function IconBuilding({ className = 'h-6 w-6' }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008Zm0 3h.008v.008h-.008v-.008Zm0 3h.008v.008h-.008v-.008Z"
+      />
+    </svg>
+  )
+}
+
+function IconClipboard({ className = 'h-6 w-6' }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z"
+      />
+    </svg>
+  )
+}
+
+function IconBolt({ className = 'h-6 w-6' }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" />
+    </svg>
+  )
+}
+
+function IconCalendar({ className = 'h-6 w-6' }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5a2.25 2.25 0 0 0 2.25-2.25m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5a2.25 2.25 0 0 1 2.25 2.25v7.5"
+      />
+    </svg>
+  )
+}
+
+function IconChevron({ className = 'h-5 w-5' }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+    </svg>
+  )
+}
+
+function StatCard({ icon, label, value }) {
+  const IconGlyph = icon
+  return (
+    <Card padding="default" className="flex flex-col gap-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="rounded-lg bg-indigo-50 p-2 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-300">
+          <IconGlyph className="h-6 w-6" />
+        </div>
+      </div>
+      <div>
+        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{label}</p>
+        <p className="mt-1 text-2xl font-bold tabular-nums text-gray-900 dark:text-white">{value}</p>
+      </div>
+    </Card>
+  )
+}
+
+function StatsSkeletonGrid() {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <Card key={i} padding="default" className="space-y-3">
+          <Skeleton className="h-10 w-10 rounded-lg" />
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="h-8 w-20" />
+        </Card>
+      ))}
+    </div>
+  )
+}
 
 export function AdminDashboardPage() {
-  const [activeTab, setActiveTab] = useState('users')
-
   const statsQuery = useQuery({
     queryKey: queryKeys.admin.stats(),
-    queryFn: async () => {
-      const response = await apiClient.get('/admin/stats')
-      return response.data.data
-    },
+    queryFn: () => getStats(),
+    staleTime: CACHE_TIERS.dashboard.staleTime,
+    gcTime: CACHE_TIERS.dashboard.gcTime,
+  })
+
+  const trendQuery = useQuery({
+    queryKey: queryKeys.admin.statsTrend(),
+    queryFn: () => getStatsTrend(),
     staleTime: CACHE_TIERS.dashboard.staleTime,
     gcTime: CACHE_TIERS.dashboard.gcTime,
   })
 
   const stats = statsQuery.data || {}
+  const showSkeleton = statsQuery.isPending
+  const trendSeries = trendQuery.data?.series ?? []
+  const chartData = trendSeries.map((s) => ({
+    month: formatChartMonth(s.month),
+    users: s.users,
+    jobs: s.jobs,
+  }))
 
   return (
-    <section className="space-y-5">
-      <div className="rounded-2xl bg-gradient-to-r from-indigo-600 to-blue-600 px-5 py-6 shadow-lg sm:px-8">
-        <h1 className="text-xl font-semibold text-white sm:text-2xl">Admin Dashboard</h1>
-        <p className="mt-1 text-sm text-indigo-100">Manage users, jobs, and platform moderation.</p>
+    <section className="space-y-8">
+      <PageHeader
+        label="Administration"
+        title="Admin Dashboard"
+        description="Manage users, jobs, companies, applications, and audit activity from one place."
+      />
+
+      <div className="rounded-xl bg-indigo-600 px-5 py-6 shadow-md sm:px-8 dark:bg-indigo-800">
+        <p className="text-xs font-semibold uppercase tracking-wide text-indigo-200">At a glance</p>
+        <p className="mt-1 text-sm text-indigo-100">
+          Totals reflect live data from the API. Use the sections below to drill into each area.
+        </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100">
-          <p className="text-sm font-medium text-gray-500">Total Users</p>
-          <p className="mt-1 text-2xl font-bold text-gray-900">{stats.totalUsers ?? '—'}</p>
+      {statsQuery.isError && (
+        <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+          Could not load platform statistics. Refresh the page or try again later.
+        </p>
+      )}
+
+      {showSkeleton ? (
+        <StatsSkeletonGrid />
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <StatCard icon={IconUsers} label="Total users" value={formatStat(stats.totalUsers)} />
+          <StatCard icon={IconBriefcase} label="Total jobs" value={formatStat(stats.totalJobs)} />
+          <StatCard icon={IconBuilding} label="Total companies" value={formatStat(stats.totalCompanies)} />
+          <StatCard icon={IconClipboard} label="Total applications" value={formatStat(stats.totalApplications)} />
+          <StatCard icon={IconBolt} label="Active jobs" value={formatStat(stats.activeJobs)} />
+          <StatCard icon={IconCalendar} label="New users this month" value={formatStat(stats.newUsersThisMonth)} />
         </div>
-        <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100">
-          <p className="text-sm font-medium text-gray-500">Total Jobs</p>
-          <p className="mt-1 text-2xl font-bold text-gray-900">{stats.totalJobs ?? '—'}</p>
+      )}
+
+      <Card padding="default" className="space-y-3">
+        <div>
+          <h2 className="text-base font-semibold text-gray-900 dark:text-white">New users & jobs (6 months)</h2>
+          <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">Monthly counts from the platform.</p>
         </div>
-        <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100">
-          <p className="text-sm font-medium text-gray-500">Total Applications</p>
-          <p className="mt-1 text-2xl font-bold text-gray-900">{stats.totalApplications ?? '—'}</p>
-        </div>
-        <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100">
-          <p className="text-sm font-medium text-gray-500">Total Companies</p>
-          <p className="mt-1 text-2xl font-bold text-gray-900">{stats.totalCompanies ?? '—'}</p>
+        {trendQuery.isError && (
+          <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+            Could not load trend data.
+          </p>
+        )}
+        {trendQuery.isPending ? (
+          <Skeleton className="h-64 w-full rounded-lg" />
+        ) : chartData.length > 0 ? (
+          <div className="h-64 w-full min-h-[16rem]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+                <XAxis dataKey="month" tick={{ fontSize: 11 }} className="text-gray-500" />
+                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} className="text-gray-500" />
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: '0.5rem',
+                    border: '1px solid rgb(229 231 235)',
+                    fontSize: '0.75rem',
+                  }}
+                />
+                <Legend wrapperStyle={{ fontSize: '0.75rem' }} />
+                <Line type="monotone" dataKey="users" name="Users" stroke="#4f46e5" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="jobs" name="Jobs" stroke="#059669" strokeWidth={2} dot={{ r: 3 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500 dark:text-gray-400">No trend data yet.</p>
+        )}
+      </Card>
+
+      <div className="space-y-4">
+        <PageHeader title="Admin sections" description="Jump to a management area." />
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {adminNav.map((item) => (
+            <Link key={item.to} to={item.to} className="group block min-w-0">
+              <Card
+                as="article"
+                hover
+                padding="default"
+                className="flex h-full items-center justify-between gap-3 ring-gray-100 dark:ring-gray-700"
+              >
+                <div className="min-w-0">
+                  <p className="font-semibold text-gray-900 dark:text-white">{item.label}</p>
+                  <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">{item.description}</p>
+                </div>
+                <IconChevron className="h-5 w-5 shrink-0 text-gray-400 transition-transform group-hover:translate-x-0.5 dark:text-gray-500" />
+              </Card>
+            </Link>
+          ))}
         </div>
       </div>
-
-      <div className="flex gap-1 rounded-xl bg-white p-1 shadow-sm ring-1 ring-gray-100">
-        {['users', 'jobs'].map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            onClick={() => setActiveTab(tab)}
-            className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-medium capitalize transition-colors ${activeTab === tab ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
-
-      {activeTab === 'users' && <UsersPanel />}
-      {activeTab === 'jobs' && <JobsPanel />}
     </section>
-  )
-}
-
-function UsersPanel() {
-  const [page, setPage] = useState(1)
-  const queryClient = useQueryClient()
-
-  const usersQuery = useQuery({
-    queryKey: queryKeys.admin.users(page),
-    queryFn: async () => {
-      const response = await apiClient.get('/admin/users', { params: { page, limit: 15 } })
-      return response.data.data
-    },
-    staleTime: CACHE_TIERS.dashboard.staleTime,
-    gcTime: CACHE_TIERS.dashboard.gcTime,
-  })
-
-  const toggleMutation = useMutation({
-    mutationFn: (userId) => apiClient.patch(`/admin/users/${userId}/toggle-status`),
-    onSuccess: async (response) => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.admin.users() })
-      toast.success(response.data?.message || 'User status updated.')
-    },
-    onError: (error) => {
-      toast.error(getApiErrorMessage(error, 'Could not update user status.'))
-    },
-  })
-
-  const { users = [], pagination = {} } = usersQuery.data || {}
-
-  return (
-    <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
-      <h2 className="border-l-4 border-indigo-600 pl-4 text-lg font-semibold text-gray-900">All Users</h2>
-      {usersQuery.isLoading && <p className="mt-3 text-sm text-gray-500">Loading users...</p>}
-      {usersQuery.isError && <p className="mt-3 text-sm text-red-600">Could not load users.</p>}
-
-      <div className="mt-4 overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500">
-              <th className="px-3 py-3">Name</th>
-              <th className="px-3 py-3">Email</th>
-              <th className="px-3 py-3">Role</th>
-              <th className="px-3 py-3">Status</th>
-              <th className="px-3 py-3">Joined</th>
-              <th className="px-3 py-3">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((u) => (
-              <tr key={u._id} className="border-b border-gray-100 transition-colors hover:bg-gray-50">
-                <td className="px-3 py-3 font-medium text-gray-900">{u.fullName}</td>
-                <td className="px-3 py-3 text-gray-600">{u.email}</td>
-                <td className="px-3 py-3">
-                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                    u.role === 'admin' ? 'bg-purple-50 text-purple-700 ring-1 ring-purple-600/20'
-                    : u.role === 'recruiter' ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-600/20'
-                    : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20'
-                  }`}>
-                    {u.role}
-                  </span>
-                </td>
-                <td className="px-3 py-3">
-                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${u.isActive !== false ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20' : 'bg-red-50 text-red-700 ring-1 ring-red-600/20'}`}>
-                    {u.isActive !== false ? 'Active' : 'Inactive'}
-                  </span>
-                </td>
-                <td className="px-3 py-3 text-gray-500">{new Date(u.createdAt).toLocaleDateString()}</td>
-                <td className="px-3 py-3">
-                  <button
-                    type="button"
-                    disabled={toggleMutation.isPending}
-                    onClick={() => toggleMutation.mutate(u._id)}
-                    className={`rounded-lg px-3 py-1.5 text-xs font-medium disabled:opacity-60 ${
-                      u.isActive !== false
-                        ? 'border border-red-300 text-red-600 hover:bg-red-50'
-                        : 'border border-emerald-300 text-emerald-600 hover:bg-emerald-50'
-                    }`}
-                  >
-                    {u.isActive !== false ? 'Deactivate' : 'Activate'}
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {pagination.totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between">
-          <p className="text-sm text-gray-600">
-            Page {pagination.page} of {pagination.totalPages} ({pagination.total} users)
-          </p>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={page <= 1}
-              onClick={() => setPage((p) => p - 1)}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
-            >
-              Previous
-            </button>
-            <button
-              type="button"
-              disabled={page >= pagination.totalPages}
-              onClick={() => setPage((p) => p + 1)}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function JobsPanel() {
-  const [page, setPage] = useState(1)
-  const queryClient = useQueryClient()
-
-  const jobsQuery = useQuery({
-    queryKey: queryKeys.admin.jobs(page),
-    queryFn: async () => {
-      const response = await apiClient.get('/admin/jobs', { params: { page, limit: 15 } })
-      return response.data.data
-    },
-    staleTime: CACHE_TIERS.dashboard.staleTime,
-    gcTime: CACHE_TIERS.dashboard.gcTime,
-  })
-
-  const toggleMutation = useMutation({
-    mutationFn: (jobId) => apiClient.patch(`/admin/jobs/${jobId}/toggle-status`),
-    onSuccess: async (response) => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.admin.jobs() })
-      toast.success(response.data?.message || 'Job status updated.')
-    },
-    onError: (error) => {
-      toast.error(getApiErrorMessage(error, 'Could not update job status.'))
-    },
-  })
-
-  const { jobs = [], pagination = {} } = jobsQuery.data || {}
-
-  return (
-    <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
-      <h2 className="border-l-4 border-indigo-600 pl-4 text-lg font-semibold text-gray-900">All Jobs</h2>
-      {jobsQuery.isLoading && <p className="mt-3 text-sm text-gray-500">Loading jobs...</p>}
-      {jobsQuery.isError && <p className="mt-3 text-sm text-red-600">Could not load jobs.</p>}
-
-      <div className="mt-4 overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500">
-              <th className="px-3 py-3">Title</th>
-              <th className="px-3 py-3">Company</th>
-              <th className="px-3 py-3">Posted By</th>
-              <th className="px-3 py-3">Type</th>
-              <th className="px-3 py-3">Status</th>
-              <th className="px-3 py-3">Posted</th>
-              <th className="px-3 py-3">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {jobs.map((job) => (
-              <tr key={job._id} className="border-b border-gray-100 transition-colors hover:bg-gray-50">
-                <td className="px-3 py-3 font-medium text-gray-900">{job.title}</td>
-                <td className="px-3 py-3 text-gray-600">{job.company?.name || '—'}</td>
-                <td className="px-3 py-3 text-gray-600">{job.postedBy?.fullName || '—'}</td>
-                <td className="px-3 py-3 capitalize text-gray-600">{job.employmentType}</td>
-                <td className="px-3 py-3">
-                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${job.isActive ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20' : 'bg-red-50 text-red-700 ring-1 ring-red-600/20'}`}>
-                    {job.isActive ? 'Active' : 'Inactive'}
-                  </span>
-                </td>
-                <td className="px-3 py-3 text-gray-500">{new Date(job.createdAt).toLocaleDateString()}</td>
-                <td className="px-3 py-3">
-                  <button
-                    type="button"
-                    disabled={toggleMutation.isPending}
-                    onClick={() => toggleMutation.mutate(job._id)}
-                    className={`rounded-lg px-3 py-1.5 text-xs font-medium disabled:opacity-60 ${
-                      job.isActive
-                        ? 'border border-red-300 text-red-600 hover:bg-red-50'
-                        : 'border border-emerald-300 text-emerald-600 hover:bg-emerald-50'
-                    }`}
-                  >
-                    {job.isActive ? 'Deactivate' : 'Activate'}
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {pagination.totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between">
-          <p className="text-sm text-gray-600">
-            Page {pagination.page} of {pagination.totalPages} ({pagination.total} jobs)
-          </p>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={page <= 1}
-              onClick={() => setPage((p) => p - 1)}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
-            >
-              Previous
-            </button>
-            <button
-              type="button"
-              disabled={page >= pagination.totalPages}
-              onClick={() => setPage((p) => p + 1)}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
   )
 }

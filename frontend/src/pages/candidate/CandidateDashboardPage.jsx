@@ -11,7 +11,17 @@ import { ResumeSection } from '../../components/ResumeSection.jsx'
 import { CandidateDashboardSkeleton } from '../../components/CandidateDashboardSkeleton.jsx'
 import { Tabs, EmptyState, EmptyStateIcons, ApplicationRowSkeleton } from '../../components/ui/index.js'
 import { toast } from 'sonner'
-import { apiClient } from '../../api/apiClient.js'
+import {
+  getMe,
+  updateProfile,
+  uploadProfileImage,
+  getSavedJobs,
+  deleteAccount,
+  changePassword,
+} from '../../api/userApi.js'
+import { listMyApplications } from '../../api/applicationsApi.js'
+import { listPublicJobs } from '../../api/jobsApi.js'
+import { createJobAlert, deleteJobAlert, listJobAlerts } from '../../api/jobAlertsApi.js'
 import { useAuth } from '../../context/useAuth.jsx'
 import { getApiErrorMessage } from '../../utils/getApiErrorMessage.js'
 import { queryKeys } from '../../lib/queryKeys.js'
@@ -29,15 +39,23 @@ const profileSchema = z.object({
 })
 
 const STATUS_CONFIG = {
-  applied: { label: 'Applied', color: 'bg-blue-50 text-blue-700 ring-1 ring-blue-600/20', dot: 'bg-blue-500' },
-  shortlisted: { label: 'Shortlisted', color: 'bg-amber-50 text-amber-700 ring-1 ring-amber-600/20', dot: 'bg-amber-500' },
+  applied: {
+    label: 'Applied',
+    color: 'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-600/20 dark:bg-indigo-950/50 dark:text-indigo-300',
+    dot: 'bg-indigo-500',
+  },
+  screening: { label: 'Screening', color: 'bg-amber-50 text-amber-700 ring-1 ring-amber-600/20', dot: 'bg-amber-500' },
+  /** Legacy API responses before DB migration */
+  shortlisted: { label: 'Screening', color: 'bg-amber-50 text-amber-700 ring-1 ring-amber-600/20', dot: 'bg-amber-500' },
+  interview: { label: 'Interview', color: 'bg-violet-50 text-violet-700 ring-1 ring-violet-600/20', dot: 'bg-violet-500' },
+  offer: { label: 'Offer', color: 'bg-teal-50 text-teal-700 ring-1 ring-teal-600/20', dot: 'bg-teal-500' },
   rejected: { label: 'Rejected', color: 'bg-red-50 text-red-700 ring-1 ring-red-600/20', dot: 'bg-red-500' },
   hired: { label: 'Hired', color: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20', dot: 'bg-emerald-500' },
 }
 
 const TYPE_COLORS = {
   'full-time': 'bg-emerald-50 text-emerald-700',
-  'part-time': 'bg-blue-50 text-blue-700',
+  'part-time': 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300',
   contract: 'bg-amber-50 text-amber-700',
   internship: 'bg-purple-50 text-purple-700',
 }
@@ -75,10 +93,7 @@ export function CandidateDashboardPage() {
 
   const meQuery = useQuery({
     queryKey: queryKeys.auth.me(),
-    queryFn: async () => {
-      const response = await apiClient.get('/auth/me')
-      return response.data.data.user
-    },
+    queryFn: () => getMe(),
     staleTime: CACHE_TIERS.auth.staleTime,
     gcTime: CACHE_TIERS.auth.gcTime,
   })
@@ -104,13 +119,13 @@ export function CandidateDashboardPage() {
       setProjects(meQuery.data.projects || [])
       setEducation(meQuery.data.education || [])
     }
-  }, [meQuery.data])
+  }, [meQuery.data, profileForm])
 
   const applicationsQuery = useQuery({
     queryKey: queryKeys.user.applications(),
     queryFn: async () => {
-      const response = await apiClient.get('/applications/me')
-      return response.data.data.applications
+      const d = await listMyApplications({ page: 1, limit: 50 })
+      return d.applications ?? []
     },
     staleTime: CACHE_TIERS.userActivity.staleTime,
     gcTime: CACHE_TIERS.userActivity.gcTime,
@@ -119,8 +134,8 @@ export function CandidateDashboardPage() {
   const recommendedJobsQuery = useQuery({
     queryKey: queryKeys.jobs.recommended(6),
     queryFn: async () => {
-      const response = await apiClient.get('/jobs', { params: { limit: 6 } })
-      return response.data.data.jobs
+      const data = await listPublicJobs({ limit: 6, page: 1 })
+      return data.jobs ?? []
     },
     staleTime: CACHE_TIERS.public.staleTime,
     gcTime: CACHE_TIERS.public.gcTime,
@@ -129,8 +144,8 @@ export function CandidateDashboardPage() {
   const savedJobsQuery = useQuery({
     queryKey: queryKeys.user.savedJobs(),
     queryFn: async () => {
-      const response = await apiClient.get('/users/saved-jobs')
-      return response.data.data.jobs || []
+      const d = await getSavedJobs()
+      return d.jobs || []
     },
     staleTime: CACHE_TIERS.userActivity.staleTime,
     gcTime: CACHE_TIERS.userActivity.gcTime,
@@ -138,18 +153,15 @@ export function CandidateDashboardPage() {
 
   const jobAlertsQuery = useQuery({
     queryKey: queryKeys.user.jobAlerts(),
-    queryFn: async () => {
-      const response = await apiClient.get('/job-alerts')
-      return response.data.data.alerts || []
-    },
+    queryFn: () => listJobAlerts(),
     staleTime: CACHE_TIERS.userActivity.staleTime,
     gcTime: CACHE_TIERS.userActivity.gcTime,
   })
 
   const updateProfileMutation = useMutation({
-    mutationFn: (payload) => apiClient.patch('/users/profile', payload),
-    onSuccess: async (response) => {
-      updateUser(response.data.data.user)
+    mutationFn: (payload) => updateProfile(payload),
+    onSuccess: async (result) => {
+      updateUser(result.user)
       await queryClient.invalidateQueries({ queryKey: queryKeys.auth.me() })
       toast.success('Profile updated successfully.')
     },
@@ -160,12 +172,8 @@ export function CandidateDashboardPage() {
 
   const uploadImageMutation = useMutation({
     mutationFn: async (file) => {
-      const formData = new FormData()
-      formData.append('image', file)
-      const response = await apiClient.post('/users/profile/image', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
-      return response.data.data.user
+      const r = await uploadProfileImage(file)
+      return r.user
     },
     onSuccess: async (nextUser) => {
       updateUser(nextUser)
@@ -178,7 +186,7 @@ export function CandidateDashboardPage() {
   })
 
   const createAlertMutation = useMutation({
-    mutationFn: (payload) => apiClient.post('/job-alerts', payload),
+    mutationFn: (payload) => createJobAlert(payload),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.user.jobAlerts() })
       toast.success('Job alert created. You\'ll get emails when matching jobs are posted.')
@@ -187,7 +195,7 @@ export function CandidateDashboardPage() {
   })
 
   const deleteAlertMutation = useMutation({
-    mutationFn: (id) => apiClient.delete(`/job-alerts/${id}`),
+    mutationFn: (id) => deleteJobAlert(id),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.user.jobAlerts() })
       toast.success('Alert deleted.')
@@ -196,7 +204,7 @@ export function CandidateDashboardPage() {
   })
 
   const deleteAccountMutation = useMutation({
-    mutationFn: () => apiClient.delete('/users/account'),
+    mutationFn: () => deleteAccount(),
     onSuccess: () => {
       logout()
       toast.success('Your account has been deleted.')
@@ -205,6 +213,17 @@ export function CandidateDashboardPage() {
     onError: (error) => {
       toast.error(getApiErrorMessage(error, 'Could not delete account.'))
     },
+  })
+
+  const [pwdForm, setPwdForm] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' })
+
+  const changePasswordMutation = useMutation({
+    mutationFn: (body) => changePassword(body),
+    onSuccess: () => {
+      setPwdForm({ oldPassword: '', newPassword: '', confirmPassword: '' })
+      toast.success('Password updated.')
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error, 'Could not update password.')),
   })
 
   const me = meQuery.data || user
@@ -229,7 +248,7 @@ export function CandidateDashboardPage() {
     <div className="space-y-5">
       {/* Profile banner — full width */}
       <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-100">
-        <div className="h-28 bg-gradient-to-r from-indigo-600 via-indigo-500 to-blue-500 sm:h-36" />
+        <div className="h-28 bg-indigo-600 sm:h-36" />
         <div className="relative px-4 pb-5 sm:px-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:gap-5">
             <div className="-mt-12 sm:-mt-14">
@@ -237,7 +256,7 @@ export function CandidateDashboardPage() {
                 {me?.profileImageUrl ? (
                   <img src={me.profileImageUrl} alt={me.fullName} className="h-24 w-24 rounded-full border-4 border-white object-cover shadow-md sm:h-28 sm:w-28" />
                 ) : (
-                  <div className="flex h-24 w-24 items-center justify-center rounded-full border-4 border-white bg-gradient-to-br from-indigo-400 to-indigo-600 text-2xl font-bold text-white shadow-md sm:h-28 sm:w-28 sm:text-3xl">
+                  <div className="flex h-24 w-24 items-center justify-center rounded-full border-4 border-white bg-indigo-600 text-2xl font-semibold text-white shadow-md sm:h-28 sm:w-28 sm:text-3xl">
                     {me?.fullName?.charAt(0)?.toUpperCase() || 'U'}
                   </div>
                 )}
@@ -357,7 +376,7 @@ export function CandidateDashboardPage() {
                   const isApplied = appliedIds.has(job._id)
                   return (
                     <div key={job._id} className="flex flex-col gap-3 px-5 py-4 transition-colors hover:bg-gray-50/50 sm:flex-row sm:items-start sm:gap-4">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-100 to-blue-100 text-sm font-bold text-indigo-600">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-sm font-semibold text-indigo-600">
                         {job.company?.name?.charAt(0)?.toUpperCase() || 'C'}
                       </div>
                       <div className="min-w-0 flex-1">
@@ -619,7 +638,7 @@ export function CandidateDashboardPage() {
               const cfg = STATUS_CONFIG[app.status] || STATUS_CONFIG.applied
               return (
                 <div key={app._id} className="flex items-center gap-3 px-4 py-3.5">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-100 to-blue-100 text-xs font-bold text-indigo-600">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-xs font-semibold text-indigo-600">
                     {app.job?.company?.name?.charAt(0)?.toUpperCase() || 'C'}
                   </div>
                   <div className="min-w-0 flex-1">
@@ -672,7 +691,7 @@ export function CandidateDashboardPage() {
                   {me?.profileImageUrl ? (
                     <img src={me.profileImageUrl} alt={me.fullName} className="h-20 w-20 rounded-full object-cover ring-2 ring-indigo-100" />
                   ) : (
-                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-indigo-600 text-2xl font-bold text-white">{me?.fullName?.charAt(0)?.toUpperCase() || 'U'}</div>
+                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-indigo-600 text-2xl font-semibold text-white">{me?.fullName?.charAt(0)?.toUpperCase() || 'U'}</div>
                   )}
                   <label className="cursor-pointer rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50">
                     {uploadImageMutation.isPending ? 'Uploading...' : 'Change photo'}
@@ -870,6 +889,74 @@ export function CandidateDashboardPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-100 dark:bg-gray-900 dark:ring-gray-800">
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Change password</h2>
+            <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Use your current password to set a new one.</p>
+            <div className="mt-4 grid max-w-md gap-3">
+              <div>
+                <label htmlFor="cd-old-pw" className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-300">
+                  Current password
+                </label>
+                <input
+                  id="cd-old-pw"
+                  type="password"
+                  autoComplete="current-password"
+                  value={pwdForm.oldPassword}
+                  onChange={(e) => setPwdForm((p) => ({ ...p, oldPassword: e.target.value }))}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm dark:border-gray-600 dark:bg-gray-950"
+                />
+              </div>
+              <div>
+                <label htmlFor="cd-new-pw" className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-300">
+                  New password
+                </label>
+                <input
+                  id="cd-new-pw"
+                  type="password"
+                  autoComplete="new-password"
+                  value={pwdForm.newPassword}
+                  onChange={(e) => setPwdForm((p) => ({ ...p, newPassword: e.target.value }))}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm dark:border-gray-600 dark:bg-gray-950"
+                />
+              </div>
+              <div>
+                <label htmlFor="cd-confirm-pw" className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-300">
+                  Confirm new password
+                </label>
+                <input
+                  id="cd-confirm-pw"
+                  type="password"
+                  autoComplete="new-password"
+                  value={pwdForm.confirmPassword}
+                  onChange={(e) => setPwdForm((p) => ({ ...p, confirmPassword: e.target.value }))}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm dark:border-gray-600 dark:bg-gray-950"
+                />
+              </div>
+              <button
+                type="button"
+                disabled={
+                  changePasswordMutation.isPending ||
+                  !pwdForm.oldPassword ||
+                  !pwdForm.newPassword ||
+                  pwdForm.newPassword !== pwdForm.confirmPassword
+                }
+                onClick={() => {
+                  if (pwdForm.newPassword !== pwdForm.confirmPassword) {
+                    toast.error('New passwords do not match.')
+                    return
+                  }
+                  changePasswordMutation.mutate({
+                    oldPassword: pwdForm.oldPassword,
+                    newPassword: pwdForm.newPassword,
+                  })
+                }}
+                className="w-fit rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-800 disabled:opacity-50 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+              >
+                {changePasswordMutation.isPending ? 'Updating…' : 'Update password'}
+              </button>
             </div>
           </div>
 

@@ -1,28 +1,30 @@
+import PropTypes from 'prop-types'
+
 /**
- * Production-grade Button with variants, sizes, and states.
- * LinkedIn/Naukri style - clear hierarchy and feedback.
+ * Button — primary / secondary / ghost hierarchy; gradient variant aliases to primary.
  */
 const variants = {
   primary:
-    'bg-indigo-600 text-white shadow-md shadow-indigo-900/10 hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-500/20 active:scale-[0.98] active:bg-indigo-800 focus-visible:ring-indigo-500 motion-reduce:active:scale-100 motion-reduce:hover:shadow-md',
+    'bg-indigo-600 text-white shadow-sm shadow-indigo-950/10 hover:bg-indigo-700 hover:shadow-md active:opacity-90 focus-visible:ring-indigo-500 dark:shadow-indigo-950/30',
+  /** @deprecated Use primary — kept for backward compatibility */
   gradient:
-    'bg-gradient-to-r from-indigo-600 via-blue-600 to-indigo-600 text-white shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30 hover:scale-[1.02] active:scale-[0.98] focus-visible:ring-indigo-500 motion-reduce:hover:scale-100 motion-reduce:active:scale-100',
+    'bg-indigo-600 text-white shadow-sm shadow-indigo-950/10 hover:bg-indigo-700 hover:shadow-md active:opacity-90 focus-visible:ring-indigo-500 dark:shadow-indigo-950/30',
   secondary:
-    'border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 hover:border-gray-400 hover:shadow-md active:scale-[0.98] active:bg-gray-100 focus-visible:ring-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 motion-reduce:active:scale-100',
+    'border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 hover:border-gray-400 active:opacity-90 focus-visible:ring-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700',
   ghost:
-    'text-gray-700 hover:bg-gray-100 active:scale-[0.98] active:bg-gray-200 focus-visible:ring-gray-400 dark:text-gray-200 dark:hover:bg-gray-800 motion-reduce:active:scale-100',
+    'text-gray-700 hover:bg-gray-100 active:bg-gray-200/80 focus-visible:ring-gray-400 dark:text-gray-200 dark:hover:bg-gray-800',
   danger:
-    'bg-red-600 text-white shadow-sm hover:bg-red-700 hover:shadow-md active:scale-[0.98] active:bg-red-800 focus-visible:ring-red-500 motion-reduce:active:scale-100',
+    'bg-red-600 text-white shadow-sm hover:bg-red-700 hover:shadow-md active:opacity-90 focus-visible:ring-red-500',
   'primary-outline':
-    'border-2 border-indigo-600 text-indigo-600 bg-transparent hover:bg-indigo-50 active:scale-[0.98] active:bg-indigo-100 focus-visible:ring-indigo-500 dark:text-indigo-400 dark:hover:bg-indigo-950/50 motion-reduce:active:scale-100',
+    'border-2 border-indigo-600 text-indigo-600 bg-transparent hover:bg-indigo-50 active:bg-indigo-100/80 focus-visible:ring-indigo-500 dark:text-indigo-400 dark:hover:bg-indigo-950/50',
   success:
-    'bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 hover:shadow-md active:scale-[0.98] active:bg-emerald-800 focus-visible:ring-emerald-500 motion-reduce:active:scale-100',
+    'bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 active:opacity-90 focus-visible:ring-emerald-500',
 }
 
 const sizes = {
   sm: 'px-3 py-1.5 text-xs font-semibold rounded-lg gap-1.5',
   md: 'px-4 py-2.5 text-sm font-semibold rounded-lg gap-2',
-  lg: 'px-6 py-3 text-sm font-semibold rounded-xl gap-2',
+  lg: 'px-6 py-3 text-sm font-semibold rounded-lg gap-2',
   icon: 'p-2 rounded-lg',
   'icon-sm': 'p-1.5 rounded-md',
 }
@@ -41,7 +43,7 @@ export function Button({
   ...props
 }) {
   const base =
-    'inline-flex items-center justify-center transition-all duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none'
+    'inline-flex items-center justify-center transition-[color,background-color,border-color,opacity,box-shadow] duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-950 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none'
 
   const sizeClass = sizes[size] || sizes.md
   const variantClass = variants[variant] || variants.primary
@@ -92,4 +94,26 @@ export function Button({
       )}
     </button>
   )
+}
+
+Button.propTypes = {
+  children: PropTypes.node,
+  variant: PropTypes.oneOf([
+    'primary',
+    'gradient',
+    'secondary',
+    'ghost',
+    'danger',
+    'primary-outline',
+    'success',
+  ]),
+  size: PropTypes.oneOf(['sm', 'md', 'lg', 'icon', 'icon-sm']),
+  disabled: PropTypes.bool,
+  loading: PropTypes.bool,
+  loadingText: PropTypes.string,
+  type: PropTypes.string,
+  className: PropTypes.string,
+  icon: PropTypes.node,
+  iconPosition: PropTypes.oneOf(['left', 'right']),
+  onClick: PropTypes.func,
 }

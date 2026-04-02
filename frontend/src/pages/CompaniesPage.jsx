@@ -6,6 +6,7 @@ import { CACHE_TIERS } from '../lib/queryOptions.js'
 import { Link } from 'react-router-dom'
 import { apiClient } from '../api/apiClient.js'
 import { CompanyCardSkeleton } from '../components/CompanyCardSkeleton.jsx'
+import { PageHeader, EmptyState, EmptyStateIcons } from '../components/ui/index.js'
 
 export function CompaniesPage() {
   const [search, setSearch] = useState('')
@@ -29,16 +30,16 @@ export function CompaniesPage() {
   return (
     <section className="space-y-6">
       <Helmet>
-        <title>Companies | JobPortal</title>
-        <meta name="description" content="Explore companies hiring on JobPortal. Find your next employer." />
+        <title>Companies | CareerSync</title>
+        <meta name="description" content="Explore companies hiring on CareerSync. Find your next employer." />
         <link rel="canonical" href="/companies" />
       </Helmet>
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Companies</h1>
-        <p className="mt-1 text-gray-500">Explore companies hiring on JobPortal</p>
-      </div>
+      <PageHeader
+        title="Companies"
+        description="Explore teams hiring on CareerSync — filter by name to narrow the list."
+      />
 
-      <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100">
+      <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-200/80 dark:bg-gray-800/90 dark:ring-gray-700/80">
         <div className="relative">
           <svg className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -62,34 +63,40 @@ export function CompaniesPage() {
       {query.isError && <div className="rounded-lg bg-red-50 p-4 text-center text-red-600">Could not load companies.</div>}
       {!query.isLoading && !query.isError && (
       <>
+      {companies.length > 0 ? (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {companies.map((company) => (
           <Link
-            key={company._id}
-            to={`/companies/${company._id}`}
-            className="flex items-start gap-4 rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-100 transition-shadow hover:shadow-md"
+            key={String(company.id ?? company._id)}
+            to={`/companies/${company.id ?? company._id}`}
+            className="flex items-start gap-4 rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200/80 transition-shadow duration-200 hover:shadow-md dark:bg-gray-800/90 dark:ring-gray-700/80"
           >
             {company.logoUrl ? (
               <img src={company.logoUrl} alt="" className="h-12 w-12 rounded-lg object-cover" loading="lazy" />
             ) : (
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-lg font-bold text-indigo-600">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-lg font-semibold text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-300">
                 {company.name?.charAt(0)?.toUpperCase() || 'C'}
               </div>
             )}
             <div className="min-w-0 flex-1">
-              <h2 className="font-semibold text-gray-900">{company.name}</h2>
-              {company.location && <p className="mt-0.5 text-sm text-gray-500">{company.location}</p>}
+              <h2 className="font-semibold text-gray-900 dark:text-white">{company.name}</h2>
+              {company.location && <p className="mt-0.5 text-sm text-gray-600 dark:text-gray-400">{company.location}</p>}
               {company.description && (
-                <p className="mt-1 line-clamp-2 text-sm text-gray-600">{company.description}</p>
+                <p className="mt-1 line-clamp-2 text-sm text-gray-600 dark:text-gray-400">{company.description}</p>
               )}
             </div>
           </Link>
         ))}
       </div>
-
-      {companies.length === 0 && (
-        <div className="rounded-xl bg-white py-16 text-center shadow-sm ring-1 ring-gray-100">
-          <p className="text-gray-500">No companies found.</p>
+      ) : (
+        <div className="overflow-hidden rounded-xl border border-dashed border-gray-200 bg-gray-50/80 dark:border-gray-700 dark:bg-gray-900/40">
+          <EmptyState
+            icon={EmptyStateIcons.search}
+            title="No companies match"
+            description={search ? 'Try a different search term or clear filters to see all employers.' : 'No employers are listed yet. Browse open roles instead.'}
+            actionLabel={search ? 'Clear search' : 'Browse jobs'}
+            {...(search ? { onAction: () => setSearch('') } : { actionHref: '/jobs' })}
+          />
         </div>
       )}
 
