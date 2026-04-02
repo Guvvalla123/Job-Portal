@@ -12,10 +12,11 @@ import { Button, Input } from '../components/ui/index.js'
 import { prefetchDashboardForRole } from '../lib/prefetchDashboard.js'
 import { getPostLoginPath } from '../lib/postLoginRedirect.js'
 import { AuthLayout } from '../components/layout/AuthLayout.jsx'
+import { SITE_LOGO_MARK, SITE_NAME } from '../config/site.js'
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  password: z.string().min(1, 'Password is required'),
 })
 
 const BULLETS = [
@@ -36,6 +37,16 @@ export function LoginPage() {
     }
   }, [location.state?.sessionExpired, location.pathname, navigate])
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    if (params.get('session') === 'expired') {
+      toast.info('Your session has expired. Please sign in again.')
+      params.delete('session')
+      const next = params.toString()
+      navigate(`${location.pathname}${next ? `?${next}` : ''}`, { replace: true })
+    }
+  }, [location.search, location.pathname, navigate])
+
   const {
     register,
     handleSubmit,
@@ -47,12 +58,16 @@ export function LoginPage() {
   const { login } = useAuth()
 
   const loginMutation = useMutation({
-    mutationFn: (payload) => apiClient.post('/auth/login', payload),
+    mutationFn: (payload) => apiClient.post('/auth/login', payload, { skipGlobalErrorToast: true }),
     onSuccess: async (response) => {
-      const { user: userData, accessToken, refreshToken } = response.data.data
-      login({ user: userData, accessToken, refreshToken })
+      const { user: userData, accessToken } = response.data.data
+      login({ user: userData, accessToken })
       toast.success(response.data?.message || 'Login successful.')
-
+      try {
+        await apiClient.get('/auth/csrf-token')
+      } catch {
+        /* best-effort */
+      }
       try {
         await prefetchDashboardForRole(queryClient, userData.role)
       } catch {
@@ -77,14 +92,14 @@ export function LoginPage() {
       bullets={BULLETS}
     >
       <div className="text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-600 text-lg font-bold text-white shadow-lg shadow-indigo-500/30 lg:hidden">
-          JP
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-indigo-600 text-lg font-semibold text-white shadow-md lg:hidden">
+          {SITE_LOGO_MARK}
         </div>
         <h2 className="mt-4 text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl lg:mt-0">
           Sign in
         </h2>
         <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-          Use your JobPortal account credentials
+          Use your {SITE_NAME} account credentials
         </p>
       </div>
       <form className="mt-8 space-y-5" onSubmit={handleSubmit((v) => loginMutation.mutate(v))}>

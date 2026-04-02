@@ -4,9 +4,12 @@ const { env } = require("./config/env");
 const { connectDB } = require("./config/db");
 const { logger } = require("./config/logger");
 const cache = require("./utils/cache");
+const { closeQueue } = require("./queues/emailQueue");
 
 let server = null;
 let isShuttingDown = false;
+
+const DRAIN_MS = 10000;
 
 const shutdown = async (signal) => {
   if (isShuttingDown) return;
@@ -15,13 +18,24 @@ const shutdown = async (signal) => {
 
   try {
     if (server) {
-      await new Promise((resolve) => {
-        server.close(() => {
-          logger.info("HTTP server closed");
-          resolve();
-        });
-      });
+      await Promise.race([
+        new Promise((resolve) => {
+          server.close(() => {
+            logger.info("HTTP server closed");
+            resolve();
+          });
+        }),
+        new Promise((resolve) => {
+          setTimeout(() => {
+            logger.warn(`HTTP close timed out after ${DRAIN_MS}ms; continuing shutdown`);
+            resolve();
+          }, DRAIN_MS);
+        }),
+      ]);
     }
+
+    await closeQueue().catch((err) => logger.warn("Email queue close failed", { error: err.message }));
+
     await mongoose.disconnect();
     logger.info("MongoDB disconnected");
     process.exit(0);

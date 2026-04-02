@@ -1,4 +1,9 @@
 import { Link } from 'react-router-dom'
+import PropTypes from 'prop-types'
+import { Button } from './Button.jsx'
+
+const primaryLinkClass =
+  'inline-flex items-center justify-center rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-[background-color,box-shadow] duration-200 hover:bg-indigo-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-950'
 
 /**
  * Empty state with icon, message, and optional CTA
@@ -13,36 +18,41 @@ export function EmptyState({
   className = '',
 }) {
   return (
-    <div className={`flex flex-col items-center justify-center py-12 px-6 text-center ${className}`}>
+    <div
+      className={`flex flex-col items-center justify-center px-6 py-14 text-center sm:py-16 ${className}`}
+    >
       {Icon && (
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-gray-400">
-          <Icon className="h-7 w-7" />
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-gray-500 ring-1 ring-gray-200/80 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-700">
+          <Icon className="h-7 w-7" aria-hidden />
         </div>
       )}
-      <h3 className="mt-4 text-base font-semibold text-gray-900">{title}</h3>
-      <p className="mt-1 max-w-sm text-sm text-gray-500">{description}</p>
-      {(actionLabel && (actionHref || onAction)) && (
-        <div className="mt-6">
+      <h3 className="mt-4 text-base font-semibold text-gray-900 dark:text-white">{title}</h3>
+      <p className="type-body-sm mt-2 max-w-sm text-gray-600 dark:text-gray-400">{description}</p>
+      {actionLabel && (actionHref || onAction) && (
+        <div className="mt-8">
           {actionHref ? (
-            <Link
-              to={actionHref}
-              className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700"
-            >
+            <Link to={actionHref} className={primaryLinkClass}>
               {actionLabel}
             </Link>
           ) : (
-            <button
-              type="button"
-              onClick={onAction}
-              className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700"
-            >
+            <Button type="button" onClick={onAction}>
               {actionLabel}
-            </button>
+            </Button>
           )}
         </div>
       )}
     </div>
   )
+}
+
+EmptyState.propTypes = {
+  icon: PropTypes.elementType,
+  title: PropTypes.string.isRequired,
+  description: PropTypes.string.isRequired,
+  actionLabel: PropTypes.string,
+  actionHref: PropTypes.string,
+  onAction: PropTypes.func,
+  className: PropTypes.string,
 }
 
 const icons = {

@@ -41,7 +41,8 @@ const userSchema = new mongoose.Schema(
   {
     fullName: { type: String, required: true, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-    password: { type: String, required: true, minlength: 6 },
+    /** Plain text at registration/reset (validated in route); stored value is bcrypt hash (always long). */
+    password: { type: String, required: true, minlength: 8 },
     role: {
       type: String,
       enum: [ROLES.CANDIDATE, ROLES.RECRUITER, ROLES.ADMIN],
@@ -66,9 +67,6 @@ const userSchema = new mongoose.Schema(
     isActive: { type: Boolean, default: true },
     passwordResetToken: { type: String, default: "" },
     passwordResetExpires: { type: Date },
-    isEmailVerified: { type: Boolean, default: false },
-    emailVerificationToken: { type: String, default: "" },
-    emailVerificationExpires: { type: Date },
     savedJobs: [{ type: mongoose.Schema.Types.ObjectId, ref: "Job" }],
   },
   { timestamps: true }
@@ -76,11 +74,24 @@ const userSchema = new mongoose.Schema(
 
 userSchema.pre("save", async function preSave() {
   if (!this.isModified("password")) return;
-  this.password = await bcrypt.hash(this.password, 10);
+  /** cost 12: ~4× CPU vs 10; aligns with OWASP guidance for sensitive credentials. */
+  this.password = await bcrypt.hash(this.password, 12);
 });
 
 userSchema.methods.comparePassword = function comparePassword(plainTextPassword) {
   return bcrypt.compare(plainTextPassword, this.password);
 };
+
+userSchema.set("toJSON", {
+  virtuals: true,
+  transform(_doc, ret) {
+    ret.id = ret._id;
+    delete ret._id;
+    delete ret.__v;
+    delete ret.password;
+    delete ret.refreshToken;
+    return ret;
+  },
+});
 
 module.exports = { User: mongoose.model("User", userSchema) };

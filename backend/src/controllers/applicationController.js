@@ -1,12 +1,12 @@
-const { Readable } = require("stream");
 const { asyncHandler } = require("../utils/asyncHandler");
 const { created, success } = require("../utils/apiResponse");
 const { ApiError } = require("../utils/apiError");
 const applicationService = require("../services/applicationService");
 const { Application } = require("../models/Application");
 const { User } = require("../models/User");
-const { fetchResumePdfBuffer } = require("../services/resumeStreamService");
 const { logger } = require("../config/logger");
+const { pipeResumePdfToResponse } = require("../services/resumeStreamService");
+const auditLogService = require("../services/auditLogService");
 
 const applyToJob = asyncHandler(async (req, res) => {
   const { jobId, coverLetter } = req.body;
@@ -15,7 +15,7 @@ const applyToJob = asyncHandler(async (req, res) => {
 });
 
 const listMyApplications = asyncHandler(async (req, res) => {
-  const result = await applicationService.listMyApplications(req.user.userId);
+  const result = await applicationService.listMyApplications(req.user.userId, req.query);
   return success(res, result);
 });
 
@@ -36,8 +36,33 @@ const listApplicationsForJob = asyncHandler(async (req, res) => {
   const result = await applicationService.listApplicationsForJob(
     jobId,
     req.user.userId,
-    req.user.role
+    req.user.role,
+    req.query
   );
+  return success(res, result);
+});
+
+const getApplicationById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const result = await applicationService.getApplicationDetail(id, req.user.userId, req.user.role);
+  return success(res, result);
+});
+
+const updateRecruiterNotes = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { recruiterNotes } = req.body;
+  const result = await applicationService.updateRecruiterNotes(id, recruiterNotes, req.user.userId, req.user.role);
+  return success(res, result, "Notes saved");
+});
+
+const updateInterview = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const result = await applicationService.updateInterview(id, req.body, req.user.userId, req.user.role);
+  return success(res, result, "Interview updated");
+});
+
+const listUpcomingInterviews = asyncHandler(async (req, res) => {
+  const result = await applicationService.listUpcomingInterviews(req.user.userId, req.user.role);
   return success(res, result);
 });
 
@@ -82,10 +107,14 @@ function candidateOrApplicantId(application) {
 }
 
 const streamApplicationResume = asyncHandler(async (req, res) => {
-  const axios = require("axios");
-  const { v2: cloudinary } = require("cloudinary");
+  auditLogService.log({
+    userId: req.user.userId,
+    action: "resume_viewed",
+    resourceType: "application",
+    resourceId: String(req.application._id),
+    req,
+  });
 
-  // Find application and populate candidate resume fields
   const application = await Application.findById(req.application._id).populate(
     "candidate",
     "resumeUrl resumePublicId resumeFileName"
@@ -95,7 +124,6 @@ const streamApplicationResume = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Application not found");
   }
 
-  // Resolve resume source from multiple possible locations
   let resumeSource = resumePayloadFromDoc(application);
 
   const applicantDoc = application.candidate || application.applicant;
@@ -123,80 +151,11 @@ const streamApplicationResume = asyncHandler(async (req, res) => {
     hasResumePublicId: Boolean(resumeSource.resumePublicId),
   });
 
-  let buffer = null;
   const filename = resumeSource.resumeFileName || "resume.pdf";
-
-  // Try fetching resume using direct URL first
-  if (resumeSource.resumeUrl) {
-    try {
-      const response = await axios.get(resumeSource.resumeUrl, {
-        responseType: "arraybuffer",
-      });
-      buffer = response.data;
-    } catch (err) {
-      logger.warn("Failed to fetch resume via URL, will try publicId", {
-        error: err.message,
-      });
-    }
-  }
-
-  // Fallback to Cloudinary publicId if URL fetch fails
-  // Fallback to Cloudinary publicId if URL fetch fails
-  if (!buffer && resumeSource.resumePublicId) {
-    try {
-      // Try BOTH delivery types
-
-      const urls = [
-        cloudinary.url(resumeSource.resumePublicId, {
-          resource_type: "raw",
-          type: "upload",
-          secure: true,
-        }),
-        cloudinary.url(resumeSource.resumePublicId, {
-          resource_type: "raw",
-          type: "authenticated",
-          sign_url: true,
-          secure: true,
-        }),
-      ];
-
-      for (const fileUrl of urls) {
-        try {
-          const response = await axios.get(fileUrl, {
-            responseType: "arraybuffer",
-          });
-          buffer = response.data;
-          break;
-        } catch (err) {
-          logger.warn("Cloudinary URL failed", {
-            url: fileUrl,
-            error: err.message,
-          });
-        }
-      }
-    } catch (err) {
-      logger.error("Failed to fetch resume via publicId", {
-        error: err.message,
-      });
-    }
-  }
-
-  // If both methods fail, return error
-  if (!buffer) {
+  const ok = await pipeResumePdfToResponse(res, resumeSource, filename);
+  if (!ok) {
     throw new ApiError(404, "Resume not available");
   }
-
-  // Send PDF response
-  res.setHeader("Content-Type", "application/pdf");
-  res.setHeader(
-    "Content-Disposition",
-    `inline; filename*=UTF-8''${encodeURIComponent(filename)}`
-  );
-  res.setHeader("Content-Length", String(buffer.length));
-  res.setHeader("Cache-Control", "private, no-store");
-  res.setHeader("X-Content-Type-Options", "nosniff");
-
-  return Readable.from(buffer).pipe(res);
 });
 
 module.exports = {
@@ -204,5 +163,9 @@ module.exports = {
   listMyApplications,
   updateApplicationStatus,
   listApplicationsForJob,
+  getApplicationById,
+  updateRecruiterNotes,
+  updateInterview,
+  listUpcomingInterviews,
   streamApplicationResume,
 };

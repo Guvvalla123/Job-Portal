@@ -1,38 +1,30 @@
-const mongoose = require("mongoose");
 const { JobAlert } = require("../models/JobAlert");
-const { Job } = require("../models/Job");
-const { User } = require("../models/User");
 const { asyncHandler } = require("../utils/asyncHandler");
 const { ApiError } = require("../utils/apiError");
-const { ROLES } = require("../constants/roles");
+const { success, created } = require("../utils/apiResponse");
 
 const createAlert = asyncHandler(async (req, res) => {
-  const { keywords, location, employmentType } = req.body;
+  const { keywords, location, employmentType, salaryMin, frequency } = req.body;
   const alert = await JobAlert.create({
     user: req.user.userId,
-    keywords: keywords || "",
-    location: location || "",
-    employmentType: employmentType || "",
+    keywords: keywords ?? [],
+    location: location ?? "",
+    employmentType: employmentType ?? "",
+    salaryMin: salaryMin != null ? salaryMin : undefined,
+    frequency: frequency ?? "IMMEDIATE",
   });
 
-  return res.status(201).json({
-    success: true,
-    message: "Job alert created",
-    data: { alert },
-  });
+  return created(res, { alert }, "Job alert created");
 });
 
 const listAlerts = asyncHandler(async (req, res) => {
   const alerts = await JobAlert.find({ user: req.user.userId }).sort({ createdAt: -1 });
-  return res.status(200).json({
-    success: true,
-    data: { alerts },
-  });
+  return success(res, { alerts }, "Job alerts loaded");
 });
 
 const updateAlert = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { keywords, location, employmentType, isActive } = req.body;
+  const { keywords, location, employmentType, salaryMin, frequency, isActive } = req.body;
 
   const alert = await JobAlert.findOne({ _id: id, user: req.user.userId });
   if (!alert) throw new ApiError(404, "Alert not found");
@@ -40,14 +32,12 @@ const updateAlert = asyncHandler(async (req, res) => {
   if (keywords !== undefined) alert.keywords = keywords;
   if (location !== undefined) alert.location = location;
   if (employmentType !== undefined) alert.employmentType = employmentType;
+  if (salaryMin !== undefined) alert.salaryMin = salaryMin == null ? undefined : salaryMin;
+  if (frequency !== undefined) alert.frequency = frequency;
   if (isActive !== undefined) alert.isActive = isActive;
   await alert.save();
 
-  return res.status(200).json({
-    success: true,
-    message: "Alert updated",
-    data: { alert },
-  });
+  return success(res, { alert }, "Alert updated");
 });
 
 const deleteAlert = asyncHandler(async (req, res) => {
@@ -55,10 +45,7 @@ const deleteAlert = asyncHandler(async (req, res) => {
   const result = await JobAlert.findOneAndDelete({ _id: id, user: req.user.userId });
   if (!result) throw new ApiError(404, "Alert not found");
 
-  return res.status(200).json({
-    success: true,
-    message: "Alert deleted",
-  });
+  return success(res, {}, "Alert deleted");
 });
 
 module.exports = {

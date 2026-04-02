@@ -1,3 +1,4 @@
+/** Access tokens verified with HS256 + pinned algorithms in `utils/jwt.js`. */
 const { verifyAccessToken } = require("../utils/jwt");
 const { ApiError } = require("../utils/apiError");
 const { isBlacklisted } = require("../utils/tokenBlacklist");

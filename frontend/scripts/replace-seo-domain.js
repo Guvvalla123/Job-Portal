@@ -8,8 +8,8 @@ import { dirname, join } from 'path'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const publicDir = join(__dirname, '..', 'public')
-const domain = process.env.VITE_SITE_URL || 'https://jobportal.example.com'
-const placeholder = 'https://jobportal.example.com'
+const domain = process.env.VITE_SITE_URL || 'https://careersync.example.com'
+const placeholder = 'https://careersync.example.com'
 
 ;[ 'sitemap.xml', 'robots.txt' ].forEach((file) => {
   const path = join(publicDir, file)

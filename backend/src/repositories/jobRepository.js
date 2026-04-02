@@ -7,11 +7,31 @@ const create = (data) => Job.create(data);
 const findById = (id) =>
   Job.findById(id).populate("company", "name logoUrl location description website");
 
+const publicJobVisibilityFilter = () => {
+  const now = new Date();
+  return {
+    isActive: true,
+    isDraft: false,
+    $or: [{ expiresAt: null }, { expiresAt: { $exists: false } }, { expiresAt: { $gt: now } }],
+  };
+};
+
 const findActiveById = (id) =>
-  Job.findOne({ _id: id, isActive: true }).populate("company", "name logoUrl location description website");
+  Job.findOne({ _id: id, ...publicJobVisibilityFilter() }).populate(
+    "company",
+    "name logoUrl location description website"
+  );
+
+const SORT_MAP = {
+  newest: { createdAt: -1 },
+  oldest: { createdAt: 1 },
+  salary_high: { maxSalary: -1, createdAt: -1 },
+  salary_low: { minSalary: 1, createdAt: -1 },
+};
 
 const findWithFilter = (filter, options = {}) => {
-  const { page = 1, limit = 10, sort = { createdAt: -1 } } = options;
+  const { page = 1, limit = 10, sortKey = "newest" } = options;
+  const sort = SORT_MAP[sortKey] || SORT_MAP.newest;
   const skip = (page - 1) * limit;
   return Job.find(filter)
     .populate("company", "name logoUrl location")
@@ -31,7 +51,8 @@ const findJobIdsByPostedBy = (userId) => Job.find({ postedBy: userId }).select("
 const updateById = (id, updates) => Job.findByIdAndUpdate(id, updates, { returnDocument: "after" });
 
 const buildListFilter = (query) => {
-  const filter = { isActive: true };
+  const visibility = publicJobVisibilityFilter();
+  const filter = { ...visibility };
   if (query.location) filter.location = new RegExp(escapeRegex(query.location), "i");
   if (query.employmentType) filter.employmentType = query.employmentType;
   if (query.experienceLevel) filter.experienceLevel = query.experienceLevel;
@@ -42,8 +63,10 @@ const buildListFilter = (query) => {
 module.exports = {
   create,
   findById,
+  publicJobVisibilityFilter,
   findActiveById,
   findWithFilter,
+  SORT_MAP,
   count,
   findByPostedBy,
   findJobIdsByPostedBy,

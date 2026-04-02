@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "backend:dev": "npm --prefix ../backend run dev",
     "build": "node scripts/replace-seo-domain.js && vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext js,jsx",
@@ -13,7 +14,8 @@
     "format:check": "prettier --check \"src/**/*.{js,jsx,json,css}\"",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "analyze": "npx vite-bundle-visualizer"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -25,7 +27,9 @@
     "react-error-boundary": "^4.0.14",
     "react-helmet-async": "^3.0.0",
     "react-hook-form": "^7.71.2",
+    "prop-types": "^15.8.1",
     "react-router-dom": "^7.13.1",
+    "recharts": "^3.8.1",
     "sonner": "^2.0.7",
     "zod": "^4.3.6"
   },

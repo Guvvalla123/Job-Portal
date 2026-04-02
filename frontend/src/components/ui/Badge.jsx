@@ -1,3 +1,5 @@
+import PropTypes from 'prop-types'
+
 /**
  * Badge for tags, status, and labels.
  */
@@ -7,7 +9,7 @@ const variants = {
   success: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300',
   warning: 'bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300',
   danger: 'bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-300',
-  info: 'bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300',
+  info: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300',
 }
 
 const sizes = {
@@ -30,4 +32,11 @@ export function Badge({
       {children}
     </span>
   )
+}
+
+Badge.propTypes = {
+  children: PropTypes.node,
+  variant: PropTypes.oneOf(['default', 'primary', 'success', 'warning', 'danger', 'info']),
+  size: PropTypes.oneOf(['sm', 'md']),
+  className: PropTypes.string,
 }

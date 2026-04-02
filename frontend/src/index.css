@@ -2,12 +2,12 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Design tokens - Production-grade job portal branding */
+/* Design tokens — indigo-600 primary (single source; matches Tailwind indigo scale) */
 :root {
-  --color-primary: 37 99 235;
-  --color-primary-hover: 29 78 216;
-  --color-primary-muted: 239 246 255;
-  --color-primary-dark: 30 64 175;
+  --color-primary: 79 70 229;
+  --color-primary-hover: 67 56 202;
+  --color-primary-muted: 238 242 255;
+  --color-primary-foreground: 255 255 255;
   --color-success: 16 185 129;
   --color-warning: 245 158 11;
   --color-danger: 239 68 68;
@@ -27,19 +27,59 @@
   --font-display: 'DM Sans', 'Inter', system-ui, sans-serif;
 }
 
+html {
+  @apply h-full;
+}
+
 body {
-  @apply bg-gray-50 text-gray-900 antialiased dark:bg-gray-950 dark:text-gray-100;
+  @apply min-h-dvh bg-gray-50 text-gray-900 antialiased dark:bg-gray-950 dark:text-gray-100;
   font-family: var(--font-sans);
 }
 
-/* Typography scale – section titles (use with text-balance where supported) */
+#root {
+  @apply flex min-h-dvh min-w-0 flex-col;
+}
+
+/* Typography scale — weights: 400 / 500 / 600 only */
 .text-display {
   font-family: var(--font-display);
   letter-spacing: -0.02em;
 }
 
-input:focus, select:focus, textarea:focus {
-  @apply outline-none ring-2 ring-blue-500/40 border-blue-500;
+.type-hero {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+  @apply text-4xl font-semibold tracking-tight text-white sm:text-5xl md:text-6xl md:leading-[1.08];
+}
+
+.type-page-title {
+  @apply text-2xl font-semibold tracking-tight text-gray-900 dark:text-white;
+}
+
+.type-section-label {
+  @apply text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400;
+}
+
+.type-body {
+  @apply text-base font-normal leading-relaxed text-gray-600 dark:text-gray-400;
+}
+
+.type-body-sm {
+  @apply text-sm font-normal leading-relaxed text-gray-600 dark:text-gray-400;
+}
+
+.link-primary {
+  @apply font-medium text-indigo-600 transition-colors hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300;
+}
+
+.section-y {
+  @apply py-16 sm:py-20;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  @apply outline-none ring-2 ring-indigo-500/40 border-indigo-500 dark:border-indigo-400;
 }
 
 @keyframes fadeIn {
@@ -156,14 +196,15 @@ input:focus, select:focus, textarea:focus {
     transition: all var(--transition-base) cubic-bezier(0.4, 0, 0.2, 1);
   }
   .hover-lift {
-    transition: transform var(--transition-base), box-shadow var(--transition-base);
+    transition: transform var(--transition-base) cubic-bezier(0.4, 0, 0.2, 1),
+      box-shadow var(--transition-base) cubic-bezier(0.4, 0, 0.2, 1);
   }
   .hover-lift:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
   }
   .focus-ring {
-    @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+    @apply focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-gray-950;
   }
   .animate-hero-float {
     animation: hero-float 14s ease-in-out infinite;
@@ -208,8 +249,12 @@ html {
 
 /* Button/link tap feedback */
 @media (hover: hover) {
-  a, button {
-    transition: color var(--transition-fast), background-color var(--transition-fast),
-      border-color var(--transition-fast), transform var(--transition-fast);
+  a,
+  button {
+    transition: color var(--transition-fast) cubic-bezier(0.4, 0, 0.2, 1),
+      background-color var(--transition-fast) cubic-bezier(0.4, 0, 0.2, 1),
+      border-color var(--transition-fast) cubic-bezier(0.4, 0, 0.2, 1),
+      opacity var(--transition-fast) cubic-bezier(0.4, 0, 0.2, 1),
+      box-shadow var(--transition-fast) cubic-bezier(0.4, 0, 0.2, 1);
   }
 }

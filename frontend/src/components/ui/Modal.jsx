@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import PropTypes from 'prop-types'
 
 /**
  * Accessible modal with backdrop, focus trap, and escape key
@@ -79,4 +80,12 @@ export function Modal({ open, onClose, title, children, size = 'md' }) {
       </div>
     </div>
   )
+}
+
+Modal.propTypes = {
+  open: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  title: PropTypes.string,
+  children: PropTypes.node,
+  size: PropTypes.oneOf(['sm', 'md', 'lg', 'xl']),
 }

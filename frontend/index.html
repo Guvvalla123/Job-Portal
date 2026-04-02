@@ -7,12 +7,129 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap" rel="stylesheet" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="JobPortal - Find your dream job. Connect with top employers, discover opportunities that match your skills, and take the next step in your career." />
-    <meta name="theme-color" content="#2563eb" />
-    <title>JobPortal | Find Your Dream Job</title>
+    <meta name="description" content="CareerSync - Find your dream job. Connect with top employers, discover opportunities that match your skills, and take the next step in your career." />
+    <meta name="theme-color" content="#4f46e5" />
+    <title>CareerSync | Find Your Dream Job</title>
+    <script>
+      ;(function () {
+        try {
+          var key = 'careersync-theme'
+          var stored = localStorage.getItem(key)
+          var dark =
+            stored === 'dark' || (stored !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+          var root = document.documentElement
+          if (dark) {
+            root.classList.add('dark')
+            root.style.backgroundColor = '#030712'
+            document.body.style.backgroundColor = '#030712'
+          } else {
+            root.classList.remove('dark')
+            root.style.backgroundColor = '#f9fafb'
+            document.body.style.backgroundColor = '#f9fafb'
+          }
+        } catch (e) {}
+      })()
+    </script>
+    <style>
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        font-family: 'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      }
+      #app-loading {
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background-color: #f9fafb;
+      }
+      .dark #app-loading {
+        background-color: #030712;
+      }
+      #app-loading .app-loading-bar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 56px;
+        display: flex;
+        align-items: center;
+        padding: 0 16px;
+        gap: 12px;
+        background: rgba(49, 46, 129, 0.97);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        box-sizing: border-box;
+      }
+      @media (min-width: 640px) {
+        #app-loading .app-loading-bar {
+          padding: 0 24px;
+        }
+      }
+      #app-loading .app-loading-logo {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.2);
+        flex-shrink: 0;
+      }
+      #app-loading .app-loading-title {
+        height: 14px;
+        width: 112px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.28);
+      }
+      #app-loading .app-loading-center {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+        margin-top: 48px;
+      }
+      #app-loading .app-loading-spinner {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        border: 3px solid #e0e7ff;
+        border-top-color: #4f46e5;
+        animation: app-loading-spin 0.75s linear infinite;
+        box-sizing: border-box;
+      }
+      .dark #app-loading .app-loading-spinner {
+        border-color: #312e81;
+        border-top-color: #818cf8;
+      }
+      #app-loading .app-loading-label {
+        font-size: 14px;
+        letter-spacing: 0.025em;
+        color: #6b7280;
+      }
+      .dark #app-loading .app-loading-label {
+        color: #9ca3af;
+      }
+      @keyframes app-loading-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
   </head>
-  <body>
-    <div id="root"></div>
+  <body class="antialiased">
+    <div id="root">
+      <div id="app-loading">
+        <div class="app-loading-bar" aria-hidden="true">
+          <div class="app-loading-logo"></div>
+          <div class="app-loading-title"></div>
+        </div>
+        <div class="app-loading-center">
+          <div class="app-loading-spinner" role="presentation"></div>
+          <div class="app-loading-label">CareerSync</div>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

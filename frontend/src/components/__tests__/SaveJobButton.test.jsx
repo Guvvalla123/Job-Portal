@@ -14,8 +14,8 @@ vi.mock('../../context/useAuth.jsx', () => ({
   }),
 }))
 
-vi.mock('../../api/apiClient.js', () => ({
-  apiClient: { post: vi.fn(() => Promise.resolve({ data: { data: { savedJobs: [] } } })) },
+vi.mock('../../api/userApi.js', () => ({
+  toggleSavedJob: vi.fn(() => Promise.resolve({ saved: true, savedJobs: [] })),
 }))
 
 const queryClient = new QueryClient({
@@ -40,7 +40,7 @@ describe('SaveJobButton', () => {
         <SaveJobButton jobId="job1" />
       </Wrapper>
     )
-    expect(screen.getByRole('button', { name: /save job/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /bookmark job/i })).toBeInTheDocument()
   })
 
 })

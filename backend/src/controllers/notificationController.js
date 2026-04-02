@@ -1,41 +1,38 @@
-const { Notification } = require("../models/Notification");
+const notificationService = require("../services/notificationService");
 const { asyncHandler } = require("../utils/asyncHandler");
-
-async function createNotification({ userId, type, title, message, link, meta }) {
-  await Notification.create({ user: userId, type, title, message, link, meta });
-}
+const { success } = require("../utils/apiResponse");
 
 const listMyNotifications = asyncHandler(async (req, res) => {
-  const { limit = "20" } = req.query;
-  const notifications = await Notification.find({ user: req.user.userId })
-    .sort({ createdAt: -1 })
-    .limit(Math.min(Number(limit), 50));
+  const { page = "1", limit = "20" } = req.query;
+  const data = await notificationService.getNotifications(req.user.userId, page, limit);
+  return success(res, data, "Notifications loaded");
+});
 
-  const unreadCount = await Notification.countDocuments({ user: req.user.userId, read: false });
-
-  return res.status(200).json({
-    success: true,
-    data: { notifications, unreadCount },
-  });
+const getUnreadCount = asyncHandler(async (req, res) => {
+  const data = await notificationService.getUnreadCount(req.user.userId);
+  return success(res, data, "Unread count loaded");
 });
 
 const markAsRead = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  await Notification.findOneAndUpdate(
-    { _id: id, user: req.user.userId },
-    { read: true }
-  );
-  return res.status(200).json({ success: true, message: "Marked as read" });
+  const notification = await notificationService.markAsRead(id, req.user.userId);
+  return success(res, { notification }, "Marked as read");
 });
 
 const markAllAsRead = asyncHandler(async (req, res) => {
-  await Notification.updateMany({ user: req.user.userId }, { read: true });
-  return res.status(200).json({ success: true, message: "All marked as read" });
+  await notificationService.markAllAsRead(req.user.userId);
+  return success(res, {}, "All marked as read");
+});
+
+const deleteNotification = asyncHandler(async (req, res) => {
+  await notificationService.deleteNotification(req.params.id, req.user.userId);
+  return success(res, {}, "Notification deleted");
 });
 
 module.exports = {
-  createNotification,
   listMyNotifications,
+  getUnreadCount,
   markAsRead,
   markAllAsRead,
+  deleteNotification,
 };

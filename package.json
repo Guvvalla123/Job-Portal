@@ -4,9 +4,15 @@
   "version": "1.0.0",
   "description": "Naukri-like job portal using MERN + Tailwind",
   "scripts": {
+    "dev": "concurrently -n api,web -c cyan,magenta \"npm run backend:dev\" \"node scripts/wait-for-api.cjs && npm run frontend:dev\"",
+    "dev:open": "concurrently -n api,web -c cyan,magenta \"npm run backend:dev\" \"node scripts/wait-for-api.cjs && npm run frontend:dev -- --open\"",
     "frontend:dev": "npm --prefix frontend run dev",
     "backend:dev": "npm --prefix backend run dev",
     "frontend:build": "npm --prefix frontend run build",
     "backend:start": "npm --prefix backend run start"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "wait-on": "^8.0.5"
   }
 }

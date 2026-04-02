@@ -1,6 +1,6 @@
 import { toast } from 'sonner'
-import { apiClient } from '../api/apiClient.js'
-import { AUTH_KEYS } from './authConstants.js'
+import { getAccessToken } from '../api/apiClient.js'
+import { fetchApplicationResume } from '../api/applicationsApi.js'
 import { getApiErrorMessage } from '../utils/getApiErrorMessage.js'
 
 const REVOKE_TAB_URL_MS = 180_000
@@ -32,8 +32,7 @@ async function pdfBlobFromResumeResponse(res) {
  * Fetches GET /applications/:id/resume with JWT, opens PDF in a new tab (native viewer).
  */
 export async function openApplicationResumeInNewTab(applicationId) {
-  const token = localStorage.getItem(AUTH_KEYS.ACCESS_TOKEN)
-  if (!token) {
+  if (!getAccessToken()) {
     toast.error('Please sign in to view this resume.')
     return
   }
@@ -46,11 +45,7 @@ export async function openApplicationResumeInNewTab(applicationId) {
 
   let tabUrl = null
   try {
-    const res = await apiClient.get(`/applications/${id}/resume`, {
-      responseType: 'blob',
-      timeout: 120000,
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    const res = await fetchApplicationResume(id)
 
     const blob = await pdfBlobFromResumeResponse(res)
     tabUrl = URL.createObjectURL(blob)
@@ -66,5 +61,42 @@ export async function openApplicationResumeInNewTab(applicationId) {
   } catch (err) {
     if (tabUrl) URL.revokeObjectURL(tabUrl)
     toast.error(getApiErrorMessage(err, 'Could not open resume.'))
+  }
+}
+
+/**
+ * Fetches GET /applications/:id/resume with JWT and triggers a file download.
+ */
+export async function downloadApplicationResume(applicationId, suggestedFileName = 'resume.pdf') {
+  if (!getAccessToken()) {
+    toast.error('Please sign in to download this resume.')
+    return
+  }
+
+  const id = String(applicationId ?? '').trim()
+  if (!id) {
+    toast.error('Invalid application.')
+    return
+  }
+
+  let blobUrl = null
+  try {
+    const res = await fetchApplicationResume(id)
+
+    const blob = await pdfBlobFromResumeResponse(res)
+    blobUrl = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = blobUrl
+    a.download = suggestedFileName.endsWith('.pdf') ? suggestedFileName : `${suggestedFileName}.pdf`
+    a.rel = 'noopener'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    window.setTimeout(() => {
+      if (blobUrl) URL.revokeObjectURL(blobUrl)
+    }, REVOKE_TAB_URL_MS)
+  } catch (err) {
+    if (blobUrl) URL.revokeObjectURL(blobUrl)
+    toast.error(getApiErrorMessage(err, 'Could not download resume.'))
   }
 }

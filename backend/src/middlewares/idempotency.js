@@ -13,7 +13,9 @@ const idempotency = async (req, res, next) => {
     return next(); // Optional: skip idempotency when header absent
   }
 
-  const cacheKey = `${PREFIX}${key}`;
+  const uid = req.user?.userId || "anon";
+  const path = req.baseUrl ? `${req.baseUrl}${req.path}` : req.path || "";
+  const cacheKey = `${PREFIX}${uid}:${req.method}:${path}:${key}`;
 
   try {
     const cached = await cache.get(cacheKey);

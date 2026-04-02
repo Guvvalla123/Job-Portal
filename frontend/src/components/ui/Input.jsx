@@ -1,3 +1,5 @@
+import PropTypes from 'prop-types'
+
 /**
  * Production-grade Input with error, success, and icon support.
  */
@@ -82,4 +84,17 @@ export function Input({
       )}
     </div>
   )
+}
+
+Input.propTypes = {
+  id: PropTypes.string,
+  label: PropTypes.string,
+  error: PropTypes.string,
+  success: PropTypes.bool,
+  hint: PropTypes.string,
+  icon: PropTypes.node,
+  iconPosition: PropTypes.oneOf(['left', 'right']),
+  className: PropTypes.string,
+  containerClassName: PropTypes.string,
+  disabled: PropTypes.bool,
 }

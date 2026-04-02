@@ -2,13 +2,18 @@ import { createContext, useContext, useEffect, useState } from 'react'
 
 const ThemeContext = createContext(null)
 
-const THEME_KEY = 'jobportal-theme'
+const THEME_KEY = 'careersync-theme'
+
+function readInitialDark() {
+  if (typeof window === 'undefined') return false
+  const stored = localStorage.getItem(THEME_KEY)
+  if (stored === 'dark') return true
+  if (stored === 'light') return false
+  return window.matchMedia('(prefers-color-scheme: dark)').matches
+}
 
 export function ThemeProvider({ children }) {
-  const [dark, setDark] = useState(() => {
-    if (typeof window === 'undefined') return false
-    return localStorage.getItem(THEME_KEY) === 'dark'
-  })
+  const [dark, setDark] = useState(() => readInitialDark())
 
   useEffect(() => {
     const root = document.documentElement

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { SOCIAL_LINKS } from '../config/site.js'
+import { SITE_LOGO_MARK, SITE_NAME, SOCIAL_LINKS } from '../config/site.js'
 import { ThemeToggleFooter } from './ThemeToggle.jsx'
 
 const FOOTER_LINKS = {
@@ -61,7 +61,7 @@ export function Footer() {
 
   return (
     <footer
-      className="relative isolate overflow-hidden border-t border-indigo-200/30 bg-gradient-to-b from-slate-50 via-white to-slate-100/80 dark:border-indigo-900/40 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950"
+      className="relative isolate overflow-hidden border-t border-indigo-200/30 bg-linear-to-b from-slate-50 via-white to-slate-100/80 dark:border-indigo-900/40 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950"
       role="contentinfo"
     >
       <div
@@ -69,17 +69,17 @@ export function Footer() {
         aria-hidden
       />
       <div
-        className="pointer-events-none absolute -right-24 top-20 h-64 w-64 rounded-full bg-blue-400/10 blur-3xl dark:bg-indigo-600/10"
+        className="pointer-events-none absolute -right-24 top-20 h-64 w-64 rounded-full bg-indigo-400/10 blur-3xl dark:bg-indigo-600/10"
         aria-hidden
       />
       <div className="relative mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8 lg:py-16">
         <div className="grid gap-10 lg:grid-cols-12 lg:gap-8">
           <div className="lg:col-span-4">
             <Link to="/" className="inline-flex items-center gap-3 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-600 text-lg font-bold text-white shadow-lg shadow-indigo-500/30">
-                JP
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-600 text-lg font-semibold text-white shadow-md">
+                {SITE_LOGO_MARK}
               </div>
-              <span className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">JobPortal</span>
+              <span className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">{SITE_NAME}</span>
             </Link>
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-gray-600 dark:text-gray-400">
               The modern way to hire and get hired. Search roles, build your profile, and connect with employers who
@@ -102,7 +102,7 @@ export function Footer() {
                   />
                   <button
                     type="submit"
-                    className="shrink-0 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:shadow-lg hover:brightness-105 active:scale-[0.98]"
+                    className="shrink-0 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-[box-shadow,opacity] duration-200 hover:shadow-md active:opacity-90"
                   >
                     Subscribe
                   </button>
@@ -177,7 +177,7 @@ export function Footer() {
 
         <div className="mt-14 flex flex-col items-center justify-between gap-6 border-t border-gray-200/80 pt-10 dark:border-gray-800 sm:flex-row">
           <p className="text-sm text-gray-500 dark:text-gray-500">
-            &copy; {new Date().getFullYear()} JobPortal. All rights reserved.
+            &copy; {new Date().getFullYear()} {SITE_NAME}. All rights reserved.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4">
             <ThemeToggleFooter />

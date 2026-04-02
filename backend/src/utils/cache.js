@@ -90,7 +90,7 @@ const invalidatePattern = async (prefix) => {
 const cacheKey = (prefix, params) => `${prefix}:${JSON.stringify(params)}`;
 
 const CACHE_TTL = {
-  jobsList: 180,
+  jobsList: 30,
   jobDetail: 300,
 };
 

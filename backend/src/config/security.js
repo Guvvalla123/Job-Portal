@@ -6,6 +6,9 @@ const { env } = require("./env");
 
 const isDev = env.NODE_ENV === "development";
 
+/** Rate limits in production, or when RATE_LIMIT_ENABLED=true (e.g. staging). */
+const rateLimitingEnabled = env.NODE_ENV === "production" || env.RATE_LIMIT_ENABLED === true;
+
 /**
  * CORS origins - support comma-separated for multiple frontends (e.g. web + admin)
  */
@@ -23,16 +26,29 @@ const corsOptions = {
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Request-Id"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Request-Id", "X-CSRF-Token", "X-Metrics-Token"],
   maxAge: 86400,
 };
 
+const cloudinaryMediaOrigin = "https://res.cloudinary.com";
+const cloudinaryApiOrigin = "https://api.cloudinary.com";
+
 /**
  * Helmet - secure HTTP headers
- * API-only: no need for strict CSP on HTML; focus on XSS, clickjacking, etc.
+ * CSP allowlist: no default wildcards; frontend + Cloudinary only for connect/img.
  */
 const helmetOptions = {
-  contentSecurityPolicy: false,
+  contentSecurityPolicy: {
+    useDefaults: false,
+    directives: {
+      defaultSrc: ["'none'"],
+      frameAncestors: ["'none'"],
+      baseUri: ["'none'"],
+      connectSrc: ["'self'", ...getAllowedOrigins(), cloudinaryMediaOrigin, cloudinaryApiOrigin],
+      imgSrc: ["'self'", "data:", "blob:", cloudinaryMediaOrigin, ...getAllowedOrigins()],
+      fontSrc: ["'self'", ...getAllowedOrigins()],
+    },
+  },
   crossOriginEmbedderPolicy: false,
   crossOriginResourcePolicy: { policy: "cross-origin" },
   hsts: {
@@ -50,7 +66,25 @@ const helmetOptions = {
  * Prevents duplicate params (e.g. ?id=1&id=2) from causing unexpected behavior
  */
 const hppOptions = {
-  whitelist: ["page", "limit", "q", "location", "employmentType", "experienceLevel", "sort"],
+  whitelist: [
+    "page",
+    "limit",
+    "q",
+    "location",
+    "employmentType",
+    "experienceLevel",
+    "sort",
+    "fields",
+    "populate",
+    "userId",
+    "dateFrom",
+    "dateTo",
+    "action",
+    "status",
+    "role",
+    "search",
+    "months",
+  ],
 };
 
 /**
@@ -90,4 +124,6 @@ module.exports = {
   helmetOptions,
   hppOptions,
   RATE_LIMITS,
+  isDev,
+  rateLimitingEnabled,
 };

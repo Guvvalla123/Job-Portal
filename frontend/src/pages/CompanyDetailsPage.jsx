@@ -9,7 +9,7 @@ import { formatSalaryRange } from '../utils/formatSalary.js'
 
 const TYPE_COLORS = {
   'full-time': 'bg-emerald-50 text-emerald-700',
-  'part-time': 'bg-blue-50 text-blue-700',
+  'part-time': 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300',
   contract: 'bg-amber-50 text-amber-700',
   internship: 'bg-purple-50 text-purple-700',
 }
@@ -35,7 +35,7 @@ export function CompanyDetailsPage() {
   return (
     <>
       <Helmet>
-        <title>{company?.name} | JobPortal</title>
+        <title>{company?.name} | CareerSync</title>
         <meta name="description" content={company?.description?.slice(0, 160) || `Jobs at ${company?.name}`} />
       </Helmet>
     <div className="space-y-6">

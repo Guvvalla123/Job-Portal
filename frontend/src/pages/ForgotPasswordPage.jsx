@@ -8,6 +8,7 @@ import { apiClient } from '../api/apiClient.js'
 import { getApiErrorMessage } from '../utils/getApiErrorMessage.js'
 import { Button, Input } from '../components/ui/index.js'
 import { AuthLayout } from '../components/layout/AuthLayout.jsx'
+import { SITE_LOGO_MARK } from '../config/site.js'
 
 const schema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -46,8 +47,8 @@ export function ForgotPasswordPage() {
       bullets={BULLETS}
     >
       <div className="text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-600 text-lg font-bold text-white shadow-lg shadow-indigo-500/30 lg:hidden">
-          JP
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-indigo-600 text-lg font-semibold text-white shadow-md lg:hidden">
+          {SITE_LOGO_MARK}
         </div>
         <h2 className="mt-4 text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl lg:mt-0">
           Forgot password?

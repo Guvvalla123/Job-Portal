@@ -1,5 +1,14 @@
 const express = require("express");
-const { createJob, listJobs, getJobById, listMyJobs, updateJob, deleteJob, getRecruiterAnalytics } = require("../controllers/jobController");
+const {
+  createJob,
+  listJobs,
+  getJobById,
+  listMyJobs,
+  updateJob,
+  deleteJob,
+  getRecruiterAnalytics,
+  getRecruiterApplicationTrend,
+} = require("../controllers/jobController");
 const { requireAuth, requireRole } = require("../middlewares/auth");
 const { requireJobOwner } = require("../middlewares/authorize");
 const { audit } = require("../middlewares/audit");
@@ -13,6 +22,7 @@ const router = express.Router();
 router.get("/", validateQuery(listJobsQuerySchema), listJobs);
 router.get("/me", requireAuth, requireRole(ROLES.RECRUITER, ROLES.ADMIN), listMyJobs);
 router.get("/analytics", requireAuth, requireRole(ROLES.RECRUITER, ROLES.ADMIN), getRecruiterAnalytics);
+router.get("/analytics/trend", requireAuth, requireRole(ROLES.RECRUITER, ROLES.ADMIN), getRecruiterApplicationTrend);
 router.get("/:id", validateParams(mongoIdParam("id")), getJobById);
 router.post(
   "/",

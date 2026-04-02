@@ -1,11 +1,5 @@
 /**
- * Enterprise-grade query key factory for React Query.
- *
- * WHY: Flat keys like ['me'] or ['jobs'] are fragile. A factory provides:
- * - Single source of truth for all keys
- * - Hierarchical invalidation (e.g. invalidate all user.* with one call)
- * - Type-safe, discoverable keys
- * - Easy to add user-scoping later if needed
+ * Centralized query key factory — ensures consistent cache keys across all TanStack Query usage.
  *
  * @see https://tanstack.com/query/latest/docs/framework/react/guides/query-keys
  */
@@ -19,6 +13,8 @@ export const queryKeys = {
   /** Public job listings - safe to cache longer */
   jobs: {
     list: (filters) => ['jobs', 'list', filters],
+    /** Filters without `page` — for useInfiniteQuery */
+    infiniteList: (filters) => ['jobs', 'list', 'infinite', filters],
     detail: (id) => ['jobs', 'detail', id],
     recommended: (limit = 6) => ['jobs', 'recommended', limit],
   },
@@ -41,19 +37,51 @@ export const queryKeys = {
     companies: () => ['recruiter', 'companies'],
     jobs: () => ['recruiter', 'jobs'],
     analytics: () => ['recruiter', 'analytics'],
-    jobApplications: (jobId) => ['recruiter', 'job-applications', jobId],
+    analyticsTrend: () => ['recruiter', 'analytics-trend'],
+    /** @param {Record<string, string | undefined>} [filters] q, status, skill */
+    jobApplications: (jobId, filters = {}) => ['recruiter', 'job-applications', jobId, filters],
+    applicationDetail: (applicationId) => ['recruiter', 'application', applicationId],
+    upcomingInterviews: () => ['recruiter', 'upcoming-interviews'],
   },
 
   /** Admin-specific */
   admin: {
     stats: () => ['admin', 'stats'],
-    users: (page) => (page != null ? ['admin', 'users', page] : ['admin', 'users']),
-    jobs: (page) => (page != null ? ['admin', 'jobs', page] : ['admin', 'jobs']),
+    statsTrend: () => ['admin', 'stats-trend'],
+    /** @param {number} [page]
+     *  @param {string} [search] */
+    users: (page, search) => {
+      if (page == null && search == null) return ['admin', 'users']
+      return ['admin', 'users', Number(page) || 1, search ?? '']
+    },
+    jobs: (page, search) => {
+      if (page == null && search == null) return ['admin', 'jobs']
+      return ['admin', 'jobs', Number(page) || 1, search ?? '']
+    },
+    companies: (page, search) => {
+      if (page == null && search == null) return ['admin', 'companies']
+      return ['admin', 'companies', Number(page) || 1, search ?? '']
+    },
+    applications: (page, status) => {
+      if (page == null && status == null) return ['admin', 'applications']
+      return ['admin', 'applications', Number(page) || 1, status ?? '']
+    },
+    auditLogs: (page, action, userId, dateFrom, dateTo) => {
+      if (page == null && action == null && userId == null && dateFrom == null && dateTo == null) {
+        return ['admin', 'audit-logs']
+      }
+      return ['admin', 'audit-logs', Number(page) || 1, action ?? '', userId ?? '', dateFrom ?? '', dateTo ?? '']
+    },
   },
 
   /** Notifications - short stale for near real-time feel */
   notifications: {
     all: () => ['notifications'],
+    /** @param {number} page */
+    list: (page) => ['notifications', 'list', Number(page) || 1],
+    /** TanStack useInfiniteQuery — single key for paged feed */
+    infiniteList: () => ['notifications', 'list', 'infinite'],
+    unreadCount: () => ['notifications', 'unreadCount'],
   },
 }
 

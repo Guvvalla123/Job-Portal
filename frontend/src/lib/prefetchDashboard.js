@@ -1,3 +1,7 @@
+import { getMe } from '../api/userApi.js'
+import { listMyApplications } from '../api/applicationsApi.js'
+import { listPublicJobs, listMyJobs } from '../api/jobsApi.js'
+import { listMyCompanies } from '../api/companyApi.js'
 import { apiClient } from '../api/apiClient.js'
 import { queryKeys } from './queryKeys.js'
 import { CACHE_TIERS } from './queryOptions.js'
@@ -14,18 +18,15 @@ export async function prefetchDashboardForRole(queryClient, role) {
     await Promise.allSettled([
       queryClient.prefetchQuery({
         queryKey: queryKeys.auth.me(),
-        queryFn: async () => {
-          const res = await apiClient.get('/auth/me')
-          return res.data.data.user
-        },
+        queryFn: () => getMe(),
         staleTime: auth.staleTime,
         gcTime: auth.gcTime,
       }),
       queryClient.prefetchQuery({
         queryKey: queryKeys.user.applications(),
         queryFn: async () => {
-          const res = await apiClient.get('/applications/me')
-          return res.data.data.applications
+          const d = await listMyApplications({ page: 1, limit: 50 })
+          return d.applications ?? []
         },
         staleTime: dashboard.staleTime,
         gcTime: dashboard.gcTime,
@@ -33,8 +34,8 @@ export async function prefetchDashboardForRole(queryClient, role) {
       queryClient.prefetchQuery({
         queryKey: queryKeys.jobs.recommended(6),
         queryFn: async () => {
-          const res = await apiClient.get('/jobs', { params: { limit: 6 } })
-          return res.data.data.jobs
+          const d = await listPublicJobs({ limit: 6, page: 1 })
+          return d.jobs ?? []
         },
         staleTime: CACHE_TIERS.public.staleTime,
         gcTime: CACHE_TIERS.public.gcTime,
@@ -46,19 +47,13 @@ export async function prefetchDashboardForRole(queryClient, role) {
     await Promise.allSettled([
       queryClient.prefetchQuery({
         queryKey: queryKeys.recruiter.companies(),
-        queryFn: async () => {
-          const res = await apiClient.get('/companies/me')
-          return res.data.data.companies || []
-        },
+        queryFn: () => listMyCompanies(),
         staleTime: dashboard.staleTime,
         gcTime: dashboard.gcTime,
       }),
       queryClient.prefetchQuery({
         queryKey: queryKeys.recruiter.jobs(),
-        queryFn: async () => {
-          const res = await apiClient.get('/jobs/me')
-          return res.data.data.jobs || []
-        },
+        queryFn: () => listMyJobs(),
         staleTime: dashboard.staleTime,
         gcTime: dashboard.gcTime,
       }),

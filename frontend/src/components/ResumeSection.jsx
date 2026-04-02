@@ -1,12 +1,12 @@
 import { useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { apiClient } from '../api/apiClient.js'
+import { uploadResume, deleteResume } from '../api/userApi.js'
 import { useAuth } from '../context/useAuth.jsx'
 import { getApiErrorMessage } from '../utils/getApiErrorMessage.js'
 import { queryKeys } from '../lib/queryKeys.js'
 import { Button, Modal } from './ui/index.js'
-import { ResumeViewer } from './resume/ResumeViewer.jsx'
+import { LazyResumeViewer } from './resume/LazyResumeViewer.jsx'
 
 const RESUME_MAX_SIZE = 2 * 1024 * 1024 // 2MB
 
@@ -39,12 +39,8 @@ export function ResumeSection({ user, onUserUpdate, compact = false }) {
       if (file.type !== 'application/pdf') {
         throw new Error('Only PDF files are allowed')
       }
-      const formData = new FormData()
-      formData.append('resume', file)
-      const response = await apiClient.post('/users/profile/resume', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
-      return response.data.data.user
+      const r = await uploadResume(file)
+      return r.user
     },
     onSuccess: async (nextUser) => {
       onUserUpdate?.(nextUser)
@@ -60,8 +56,8 @@ export function ResumeSection({ user, onUserUpdate, compact = false }) {
 
   const deleteResumeMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiClient.delete('/users/profile/resume')
-      return response.data.data.user
+      const r = await deleteResume()
+      return r.user
     },
     onSuccess: async (nextUser) => {
       onUserUpdate?.(nextUser)
@@ -236,7 +232,7 @@ export function ResumeSection({ user, onUserUpdate, compact = false }) {
         size="xl"
       >
         {previewOpen && hasResume ? (
-          <ResumeViewer path="/users/profile/resume/file" title={displayName || 'Resume'} />
+          <LazyResumeViewer path="/users/profile/resume/file" title={displayName || 'Resume'} />
         ) : null}
       </Modal>
     </div>

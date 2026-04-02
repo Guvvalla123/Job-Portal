@@ -8,10 +8,17 @@ import { apiClient } from '../api/apiClient.js'
 import { getApiErrorMessage } from '../utils/getApiErrorMessage.js'
 import { Button, Input } from '../components/ui/index.js'
 import { AuthLayout } from '../components/layout/AuthLayout.jsx'
+import { SITE_LOGO_MARK } from '../config/site.js'
 
 const schema = z
   .object({
-    password: z.string().min(6, 'Password must be at least 6 characters'),
+    password: z
+      .string()
+      .min(8, 'Password must be at least 8 characters')
+      .regex(
+        /^(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).+$/,
+        'Include one uppercase letter, one number, and one special character',
+      ),
     confirmPassword: z.string(),
   })
   .refine((d) => d.password === d.confirmPassword, {
@@ -55,8 +62,8 @@ export function ResetPasswordPage() {
       bullets={BULLETS}
     >
       <div className="text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-600 text-lg font-bold text-white shadow-lg shadow-indigo-500/30 lg:hidden">
-          JP
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-indigo-600 text-lg font-semibold text-white shadow-md lg:hidden">
+          {SITE_LOGO_MARK}
         </div>
         <h2 className="mt-4 text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl lg:mt-0">
           Set new password

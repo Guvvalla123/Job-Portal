@@ -9,7 +9,11 @@ export function ProfileCompletion({ user }) {
     { key: 'skills', label: 'Skills', done: Array.isArray(user.skills) && user.skills.length > 0 },
     { key: 'experience', label: 'Work experience', done: Array.isArray(user.experience) && user.experience.length > 0 },
     { key: 'education', label: 'Education', done: Array.isArray(user.education) && user.education.length > 0 },
-    { key: 'resume', label: 'Resume', done: Boolean(user.resumeUrl) },
+    {
+      key: 'resume',
+      label: 'Resume',
+      done: Boolean(user.resumeUrl || user.hasResume || user.resumeFileName),
+    },
     { key: 'photo', label: 'Profile photo', done: Boolean(user.profileImageUrl) },
   ]
 

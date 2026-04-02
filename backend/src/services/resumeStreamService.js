@@ -1,9 +1,10 @@
 const { cloudinary } = require("../config/cloudinary");
 const { logger } = require("../config/logger");
+const { pipeline } = require("stream/promises");
+const { Readable } = require("stream");
 
 /**
  * Build signed delivery URLs for a raw resume public_id.
- * Tries type "upload" (public / standard) then "authenticated" (legacy private uploads).
  */
 function signedRawUrls(publicId) {
   const urls = [];
@@ -24,14 +25,8 @@ function signedRawUrls(publicId) {
   return urls;
 }
 
-/**
- * Fetches resume bytes from Cloudinary.
- * Signed URLs first (works for authenticated access_mode + restricted delivery), then stored secure_url.
- * @param {{ resumeUrl?: string, resumePublicId?: string }} user
- * @returns {Promise<{ buffer: Buffer, contentType: string } | null>}
- */
-async function fetchResumePdfBuffer(user) {
-  if (!user?.resumeUrl && !user?.resumePublicId) return null;
+function collectResumeUrls(user) {
+  if (!user?.resumeUrl && !user?.resumePublicId) return [];
 
   const urls = [];
   if (user.resumePublicId) {
@@ -42,7 +37,52 @@ async function fetchResumePdfBuffer(user) {
   if (user.resumeUrl && !urls.includes(user.resumeUrl)) {
     urls.push(user.resumeUrl);
   }
+  return urls;
+}
 
+/**
+ * Try each URL and pipe the first successful PDF response to Express `res` (no full buffering in Node).
+ * @returns {Promise<boolean>} true if streaming started and completed
+ */
+async function pipeResumePdfToResponse(res, user, filename = "resume.pdf") {
+  const urls = collectResumeUrls(user);
+  if (!urls.length) return false;
+
+  for (const url of urls) {
+    if (res.headersSent) return false;
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        redirect: "follow",
+        headers: { Accept: "application/pdf,*/*" },
+      });
+      if (!response.ok) continue;
+      const upstream = response.body;
+      if (!upstream) continue;
+
+      const safeName = filename || "resume.pdf";
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `inline; filename*=UTF-8''${encodeURIComponent(safeName)}`);
+      res.setHeader("Cache-Control", "private, no-store");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      const len = response.headers.get("content-length");
+      if (len) res.setHeader("Content-Length", len);
+
+      await pipeline(Readable.fromWeb(upstream), res);
+      return true;
+    } catch (err) {
+      logger.warn("resumeStream: pipe failed", { url: url?.slice(0, 96), error: err.message });
+      if (res.headersSent) return false;
+    }
+  }
+  return false;
+}
+
+/**
+ * @deprecated Prefer pipeResumePdfToResponse for HTTP responses.
+ */
+async function fetchResumePdfBuffer(user) {
+  const urls = collectResumeUrls(user);
   for (const url of urls) {
     try {
       const res = await fetch(url, {
@@ -61,4 +101,4 @@ async function fetchResumePdfBuffer(user) {
   return null;
 }
 
-module.exports = { fetchResumePdfBuffer };
+module.exports = { pipeResumePdfToResponse, fetchResumePdfBuffer, collectResumeUrls };

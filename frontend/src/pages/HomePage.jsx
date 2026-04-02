@@ -6,10 +6,11 @@ import { queryKeys } from '../lib/queryKeys.js'
 import { CACHE_TIERS } from '../lib/queryOptions.js'
 import { apiClient } from '../api/apiClient.js'
 import { SaveJobButton } from '../components/SaveJobButton.jsx'
-import { Card, Badge, JobCardSkeleton } from '../components/ui/index.js'
+import { Card, Badge, JobCardSkeleton, Skeleton, EmptyState, EmptyStateIcons } from '../components/ui/index.js'
 import { SectionWave } from '../components/SectionWave.jsx'
 import { useCountUp } from '../hooks/useCountUp.js'
 import { formatSalaryRange } from '../utils/formatSalary.js'
+import { filterPublicJobs } from '../utils/filterPublicJobs.js'
 
 const TYPE_BADGE = { 'full-time': 'success', 'part-time': 'info', contract: 'warning', internship: 'primary' }
 
@@ -20,12 +21,14 @@ const HERO_IMAGE =
 const CAREER_ILLUSTRATION =
   'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=800&q=80'
 
+/** Subtle tints — no full-card gradients */
 const JOB_CATEGORIES = [
   {
     title: 'Engineering',
     blurb: 'Backend, frontend, DevOps & more',
     href: '/jobs?q=engineering',
-    gradient: 'from-violet-500 to-purple-600',
+    iconWrap:
+      'bg-violet-500/10 text-violet-700 ring-1 ring-violet-500/15 dark:bg-violet-500/15 dark:text-violet-300 dark:ring-violet-500/25',
     icon: (
       <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
@@ -36,7 +39,8 @@ const JOB_CATEGORIES = [
     title: 'Product & Design',
     blurb: 'UX, UI, product management',
     href: '/jobs?q=product',
-    gradient: 'from-pink-500 to-rose-600',
+    iconWrap:
+      'bg-rose-500/10 text-rose-700 ring-1 ring-rose-500/15 dark:bg-rose-500/15 dark:text-rose-300 dark:ring-rose-500/25',
     icon: (
       <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -47,7 +51,8 @@ const JOB_CATEGORIES = [
     title: 'Data & AI',
     blurb: 'Analytics, ML, data science',
     href: '/jobs?q=data',
-    gradient: 'from-cyan-500 to-blue-600',
+    iconWrap:
+      'bg-sky-500/10 text-sky-800 ring-1 ring-sky-500/15 dark:bg-sky-500/15 dark:text-sky-300 dark:ring-sky-500/25',
     icon: (
       <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -58,7 +63,8 @@ const JOB_CATEGORIES = [
     title: 'Marketing',
     blurb: 'Growth, content, brand',
     href: '/jobs?q=marketing',
-    gradient: 'from-amber-500 to-orange-600',
+    iconWrap:
+      'bg-amber-500/10 text-amber-800 ring-1 ring-amber-500/15 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/25',
     icon: (
       <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
@@ -70,7 +76,8 @@ const JOB_CATEGORIES = [
     title: 'Sales & CS',
     blurb: 'Account execs, success, support',
     href: '/jobs?q=sales',
-    gradient: 'from-emerald-500 to-teal-600',
+    iconWrap:
+      'bg-emerald-500/10 text-emerald-800 ring-1 ring-emerald-500/15 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/25',
     icon: (
       <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -81,7 +88,8 @@ const JOB_CATEGORIES = [
     title: 'Finance & Ops',
     blurb: 'Accounting, HR, operations',
     href: '/jobs?q=finance',
-    gradient: 'from-slate-600 to-slate-800',
+    iconWrap:
+      'bg-slate-500/10 text-slate-800 ring-1 ring-slate-500/15 dark:bg-slate-500/20 dark:text-slate-300 dark:ring-slate-500/25',
     icon: (
       <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -174,7 +182,7 @@ const TESTIMONIALS = [
     seed: 'sarah-m',
   },
   {
-    quote: 'We hired 15+ people through JobPortal last year. Quality of applicants stayed consistently high.',
+    quote: 'We hired 15+ people through CareerSync last year. Quality of applicants stayed consistently high.',
     author: 'James K.',
     role: 'Head of Talent',
     seed: 'james-k',
@@ -191,13 +199,35 @@ function testimonialAvatar(seed) {
   return `https://api.dicebear.com/7.x/notionists/svg?seed=${encodeURIComponent(seed)}&backgroundColor=c7d2fe`
 }
 
+function StatCardSkeleton() {
+  return (
+    <div className="rounded-xl border border-gray-200/80 bg-white p-6 text-center shadow-sm ring-1 ring-gray-100 dark:border-gray-700/80 dark:bg-gray-800/90 dark:ring-gray-700/80">
+      <Skeleton className="mx-auto mb-4 h-14 w-14 rounded-xl" />
+      <Skeleton className="mx-auto h-7 w-32 sm:h-8 sm:w-36" />
+      <Skeleton className="mx-auto mt-2 h-4 w-44" />
+    </div>
+  )
+}
+
+function CompanySpotlightSkeleton() {
+  return (
+    <div className="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
+      <Skeleton className="h-12 w-12 shrink-0 rounded-xl bg-white/20! dark:bg-white/10!" />
+      <div className="min-w-0 flex-1 space-y-2">
+        <Skeleton className="h-4 w-3/4 bg-white/20! dark:bg-white/10!" />
+        <Skeleton className="h-3 w-1/2 bg-white/15! dark:bg-white/10!" />
+      </div>
+    </div>
+  )
+}
+
 export function HomePage() {
   const { isAuthenticated, user } = useAuth()
 
   const featuredJobsQuery = useQuery({
-    queryKey: queryKeys.jobs.list({ page: 1, limit: 6 }),
+    queryKey: queryKeys.jobs.list({ page: 1, limit: 6, sort: 'newest' }),
     queryFn: async () => {
-      const { data } = await apiClient.get('/jobs', { params: { page: 1, limit: 6 } })
+      const { data } = await apiClient.get('/jobs', { params: { page: 1, limit: 6, sort: 'newest' } })
       return data.data
     },
     staleTime: CACHE_TIERS.public.staleTime,
@@ -214,10 +244,11 @@ export function HomePage() {
     gcTime: CACHE_TIERS.public.gcTime,
   })
 
-  const featuredJobs = featuredJobsQuery.data?.jobs || []
+  const featuredJobs = filterPublicJobs(featuredJobsQuery.data?.jobs || [])
   const companies = companiesQuery.data?.companies || []
   const jobCount = featuredJobsQuery.data?.pagination?.total ?? 0
   const companyCount = companiesQuery.data?.pagination?.total ?? 0
+  const statsPending = featuredJobsQuery.isPending || companiesQuery.isPending
 
   const jobTarget = jobCount > 0 ? Math.min(jobCount, 999999) : STAT_META[0].fallback
   const companyTarget = companyCount > 0 ? Math.min(companyCount, 999999) : STAT_META[1].fallback
@@ -227,42 +258,37 @@ export function HomePage() {
   return (
     <>
       <Helmet>
-        <title>JobPortal | Find Your Dream Job – Connect with Top Employers</title>
-        <meta name="description" content="Find your dream job on JobPortal. Browse thousands of jobs from top companies. Search by role, location, and skills. Free for job seekers." />
-        <meta property="og:title" content="JobPortal | Find Your Dream Job" />
+        <title>CareerSync | Find Your Dream Job – Connect with Top Employers</title>
+        <meta name="description" content="Find your dream job on CareerSync. Browse thousands of jobs from top companies. Search by role, location, and skills. Free for job seekers." />
+        <meta property="og:title" content="CareerSync | Find Your Dream Job" />
         <meta property="og:description" content="Connect with top employers, discover opportunities that match your skills, and take the next step in your career." />
         <meta property="og:type" content="website" />
       </Helmet>
 
       <main className="overflow-hidden">
-        {/* Hero */}
-        <section className="relative isolate min-h-[min(92vh,720px)] overflow-hidden px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
+        {/* Hero — full first screen below header (no 45rem cap) so light main/bg does not show until scroll */}
+        <section className="relative isolate flex min-h-[calc(100dvh-3.5rem)] flex-col justify-center overflow-hidden px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
           <div className="absolute inset-0 -z-20">
             <img
               src={HERO_IMAGE}
               alt=""
               width={2400}
               height={1350}
-              className="h-full min-h-[520px] w-full scale-105 object-cover object-[center_30%] motion-safe:transition-transform motion-safe:duration-[20s] motion-safe:ease-out motion-safe:hover:scale-100"
+              className="h-full min-h-130 w-full scale-105 object-cover object-[center_30%] motion-safe:transition-transform motion-safe:duration-[20s] motion-safe:ease-out motion-safe:hover:scale-100"
               fetchPriority="high"
               decoding="async"
             />
           </div>
-          <div className="absolute inset-0 -z-10 bg-gradient-to-br from-blue-950/93 via-indigo-900/88 to-slate-950/92" aria-hidden />
-          <div className="absolute inset-0 -z-10 bg-gradient-to-t from-black/55 via-blue-950/20 to-indigo-800/35" aria-hidden />
+          <div className="absolute inset-0 -z-10 bg-linear-to-br from-indigo-950/92 via-slate-950/90 to-indigo-950/94" aria-hidden />
+          <div className="absolute inset-0 -z-10 bg-linear-to-t from-black/50 via-transparent to-indigo-900/25" aria-hidden />
           <div
             className="absolute inset-0 -z-10 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNyI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-70"
             aria-hidden
           />
-          <div className="pointer-events-none absolute -left-24 top-1/4 h-[28rem] w-[28rem] rounded-full bg-cyan-400/20 blur-[100px] motion-safe:animate-hero-float" aria-hidden />
+          <div className="pointer-events-none absolute -left-24 top-1/4 size-112 rounded-full bg-indigo-500/20 blur-[100px] motion-safe:animate-hero-float" aria-hidden />
           <div
-            className="pointer-events-none absolute -right-20 bottom-1/4 h-80 w-80 rounded-full bg-violet-500/25 blur-[90px] motion-safe:animate-hero-float"
+            className="pointer-events-none absolute -right-20 bottom-1/4 h-80 w-80 rounded-full bg-indigo-600/15 blur-[90px] motion-safe:animate-hero-float"
             style={{ animationDelay: '-7s' }}
-            aria-hidden
-          />
-          <div
-            className="pointer-events-none absolute left-1/3 top-1/2 h-64 w-64 -translate-y-1/2 rounded-full bg-blue-400/15 blur-[80px] motion-safe:animate-hero-float"
-            style={{ animationDelay: '-3.5s' }}
             aria-hidden
           />
 
@@ -274,14 +300,13 @@ export function HomePage() {
               Trusted by teams hiring at scale
             </span>
             <h1
-              className="text-display mt-6 animate-fade-in-up text-4xl font-bold tracking-tight text-white drop-shadow-md sm:text-5xl md:text-6xl md:leading-[1.1]"
+              className="type-hero mt-6 animate-fade-in-up drop-shadow-sm"
               style={{ animationDelay: '0.12s' }}
             >
-              Find work that fits your{' '}
-              <span className="bg-gradient-to-r from-cyan-200 to-white bg-clip-text text-transparent">ambition</span>
+              Find work that fits your ambition
             </h1>
             <p
-              className="mx-auto mt-6 max-w-2xl animate-fade-in-up text-lg leading-8 text-blue-50/95"
+              className="mx-auto mt-6 max-w-2xl animate-fade-in-up text-base font-normal leading-relaxed text-indigo-100/95 sm:text-lg"
               style={{ animationDelay: '0.2s' }}
             >
               Premium job discovery — rich company profiles, transparent roles, and applications that respect your time.
@@ -289,14 +314,14 @@ export function HomePage() {
             <div className="mt-10 flex flex-wrap justify-center gap-4 animate-fade-in-up" style={{ animationDelay: '0.28s' }}>
               <Link
                 to="/jobs"
-                className="inline-flex items-center rounded-2xl bg-gradient-to-r from-white to-blue-50 px-8 py-3.5 text-base font-semibold text-blue-800 shadow-xl shadow-black/20 transition-all hover:scale-[1.03] hover:shadow-2xl focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-900"
+                className="inline-flex items-center rounded-lg bg-white px-8 py-3.5 text-base font-semibold text-indigo-700 shadow-md transition-[background-color,box-shadow,opacity] duration-200 hover:bg-indigo-50 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-indigo-950"
               >
                 Explore jobs
               </Link>
               {!isAuthenticated && (
                 <Link
                   to="/register"
-                  className="inline-flex items-center rounded-2xl border-2 border-white/50 bg-white/10 px-8 py-3.5 text-base font-semibold text-white backdrop-blur-md transition-all hover:scale-[1.03] hover:border-white/80 hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-900"
+                  className="inline-flex items-center rounded-lg border border-white/40 bg-white/10 px-8 py-3.5 text-base font-semibold text-white backdrop-blur-md transition-colors duration-200 hover:border-white/60 hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-indigo-950"
                 >
                   Create free account
                 </Link>
@@ -304,7 +329,7 @@ export function HomePage() {
               {user?.role === 'recruiter' && (
                 <Link
                   to="/recruiter/dashboard"
-                  className="inline-flex items-center rounded-2xl border-2 border-white/50 bg-white/10 px-8 py-3.5 text-base font-semibold text-white backdrop-blur-md transition-all hover:scale-[1.03] hover:bg-white/20"
+                  className="inline-flex items-center rounded-lg border border-white/40 bg-white/10 px-8 py-3.5 text-base font-semibold text-white backdrop-blur-md transition-colors duration-200 hover:bg-white/15"
                 >
                   Post a role
                 </Link>
@@ -316,36 +341,37 @@ export function HomePage() {
         <SectionWave />
 
         {/* Stats */}
-        <section className="relative bg-gray-50 py-16 dark:bg-gray-900">
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-indigo-300/50 to-transparent dark:via-indigo-600/30" aria-hidden />
+        <section className="section-y relative bg-gray-50 dark:bg-gray-900">
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gray-200/80 dark:bg-gray-800" aria-hidden />
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {STAT_META.map((item, i) => {
-                const isJobs = item.key === 'jobs'
-                const isCompanies = item.key === 'companies'
-                let headline
-                if (isJobs) {
-                  headline = `${jobsAnimated.toLocaleString()}+ Jobs`
-                } else if (isCompanies) {
-                  headline = `${companiesAnimated.toLocaleString()}+ Companies`
-                } else {
-                  headline = item.display
-                }
-                return (
-                  <div
-                    key={item.key}
-                    className="group relative overflow-hidden rounded-2xl border border-white/80 bg-gradient-to-br from-white to-indigo-50/40 p-6 text-center shadow-lg shadow-indigo-500/5 ring-1 ring-indigo-100/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-indigo-500/10 dark:border-gray-700/80 dark:from-gray-800/90 dark:to-indigo-950/40 dark:ring-indigo-900/30 dark:hover:shadow-indigo-900/20 motion-reduce:hover:translate-y-0"
-                    style={{ animationDelay: `${i * 0.06}s` }}
-                  >
-                    <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-indigo-400/10 blur-2xl transition-opacity group-hover:opacity-100 dark:bg-indigo-400/20" aria-hidden />
-                    <div className="relative mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 text-white shadow-lg shadow-indigo-500/30 transition-transform duration-300 group-hover:scale-110">
-                      {item.icon}
-                    </div>
-                    <p className="relative text-xl font-bold text-indigo-900 dark:text-indigo-200 sm:text-2xl">{headline}</p>
-                    <p className="relative mt-2 text-sm font-medium text-gray-600 dark:text-gray-400">{item.sub}</p>
-                  </div>
-                )
-              })}
+              {statsPending
+                ? [...Array(4)].map((_, i) => <StatCardSkeleton key={`stat-skel-${i}`} />)
+                : STAT_META.map((item, i) => {
+                    const isJobs = item.key === 'jobs'
+                    const isCompanies = item.key === 'companies'
+                    let headline
+                    if (isJobs) {
+                      headline = `${jobsAnimated.toLocaleString()}+ Jobs`
+                    } else if (isCompanies) {
+                      headline = `${companiesAnimated.toLocaleString()}+ Companies`
+                    } else {
+                      headline = item.display
+                    }
+                    return (
+                      <div
+                        key={item.key}
+                        className="rounded-xl border border-gray-200/80 bg-white p-6 text-center shadow-sm ring-1 ring-gray-100 transition-shadow duration-200 hover:shadow-md dark:border-gray-700/80 dark:bg-gray-800/90 dark:ring-gray-700/80"
+                        style={{ animationDelay: `${i * 0.06}s` }}
+                      >
+                        <div className="relative mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm">
+                          {item.icon}
+                        </div>
+                        <p className="relative text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">{headline}</p>
+                        <p className="relative mt-2 text-sm font-normal text-gray-600 dark:text-gray-400">{item.sub}</p>
+                      </div>
+                    )
+                  })}
             </div>
           </div>
         </section>
@@ -353,24 +379,26 @@ export function HomePage() {
         <SectionWave flip className="text-gray-50 dark:text-gray-900" />
 
         {/* Featured jobs */}
-        <section className="relative bg-gradient-to-b from-gray-50 via-white to-gray-50 py-20 dark:from-gray-900 dark:via-gray-950 dark:to-gray-900">
+        <section className="section-y relative border-y border-gray-200/80 bg-white dark:border-gray-800 dark:bg-gray-950">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <p className="text-sm font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Live listings</p>
-                <h2 className="text-display mt-1 text-3xl font-bold text-gray-900 dark:text-white">Featured roles</h2>
-                <p className="mt-2 max-w-xl text-gray-600 dark:text-gray-400">Hand-picked openings with salary clarity and stack tags — updated as teams post.</p>
+                <p className="type-section-label">Live listings</p>
+                <h2 className="text-display mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">
+                  Featured roles
+                </h2>
+                <p className="type-body-sm mt-2 max-w-xl">Hand-picked openings with salary clarity and stack tags — updated as teams post.</p>
               </div>
               <Link
                 to="/jobs"
-                className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-white px-4 py-2.5 text-sm font-semibold text-indigo-700 shadow-sm transition-all hover:border-indigo-300 hover:bg-indigo-50 dark:border-indigo-800 dark:bg-gray-800 dark:text-indigo-300 dark:hover:bg-indigo-950/50"
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-indigo-700 shadow-sm transition-colors duration-200 hover:border-indigo-200 hover:bg-indigo-50 dark:border-gray-600 dark:bg-gray-800 dark:text-indigo-300 dark:hover:border-indigo-800 dark:hover:bg-indigo-950/40"
               >
                 View all jobs
                 <span aria-hidden>→</span>
               </Link>
             </div>
 
-            {featuredJobsQuery.isLoading ? (
+            {featuredJobsQuery.isPending ? (
               <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {[...Array(6)].map((_, i) => (
                   <JobCardSkeleton key={i} />
@@ -379,7 +407,7 @@ export function HomePage() {
             ) : featuredJobs.length > 0 ? (
               <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {featuredJobs.map((job) => (
-                  <Card key={job._id} variant="premium" hover padding="default" className="group/card flex flex-col">
+                  <Card key={job.id ?? job._id} variant="default" hover padding="default" className="group/card flex flex-col">
                     <div className="flex gap-4">
                       {job.company?.logoUrl ? (
                         <img
@@ -389,14 +417,14 @@ export function HomePage() {
                           loading="lazy"
                         />
                       ) : (
-                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-100 to-blue-100 text-lg font-bold text-indigo-700 dark:from-indigo-900/50 dark:to-blue-900/50 dark:text-indigo-300">
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-lg font-semibold text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300">
                           {job.company?.name?.charAt(0)?.toUpperCase() || 'C'}
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
                         <Link
-                          to={`/jobs/${job._id}`}
-                          className="line-clamp-2 text-lg font-semibold text-gray-900 transition-colors group-hover/card:text-indigo-600 dark:text-white dark:group-hover/card:text-indigo-400"
+                          to={`/jobs/${job.id ?? job._id}`}
+                          className="line-clamp-2 text-base font-semibold text-gray-900 transition-colors group-hover/card:text-indigo-600 dark:text-white dark:group-hover/card:text-indigo-400"
                         >
                           {job.title}
                         </Link>
@@ -431,54 +459,56 @@ export function HomePage() {
                     )}
                     <div className="mt-auto flex items-center justify-between gap-3 border-t border-gray-100 pt-5 dark:border-gray-700/80">
                       <Link
-                        to={`/jobs/${job._id}`}
-                        className="text-sm font-bold text-indigo-600 transition-colors hover:text-indigo-800 dark:text-indigo-400"
+                        to={`/jobs/${job.id ?? job._id}`}
+                        className="link-primary text-sm"
                       >
                         View role →
                       </Link>
-                      <SaveJobButton jobId={job._id} />
+                      <SaveJobButton jobId={job.id ?? job._id} />
                     </div>
                   </Card>
                 ))}
               </div>
             ) : (
-              <div className="mt-12 rounded-3xl border border-dashed border-gray-200 bg-white/80 p-14 text-center dark:border-gray-700 dark:bg-gray-800/50">
-                <p className="text-gray-600 dark:text-gray-400">Fresh roles are on the way. Browse the full directory.</p>
-                <Link
-                  to="/jobs"
-                  className="mt-4 inline-flex rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-indigo-500"
-                >
-                  Browse jobs
-                </Link>
+              <div className="mt-12 overflow-hidden rounded-xl border border-dashed border-gray-200 bg-gray-50/80 dark:border-gray-700 dark:bg-gray-900/50">
+                <EmptyState
+                  icon={EmptyStateIcons.jobs}
+                  title="Featured roles coming soon"
+                  description="Browse the full job directory — new listings appear as teams post."
+                  actionLabel="Browse all jobs"
+                  actionHref="/jobs"
+                />
               </div>
             )}
           </div>
         </section>
 
         {/* Categories */}
-        <section className="border-y border-gray-200/80 bg-white py-20 dark:border-gray-800 dark:bg-gray-950">
+        <section className="section-y border-y border-gray-200/80 bg-gray-50 dark:border-gray-800 dark:bg-gray-900">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="text-center">
-              <p className="text-sm font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Browse by craft</p>
-              <h2 className="text-display mt-2 text-3xl font-bold text-gray-900 dark:text-white">Job categories</h2>
-              <p className="mx-auto mt-2 max-w-2xl text-gray-600 dark:text-gray-400">Jump into the discipline that matches your skills — we&apos;ll surface relevant employers.</p>
+              <p className="type-section-label">Browse by craft</p>
+              <h2 className="text-display mt-2 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">
+                Job categories
+              </h2>
+              <p className="type-body-sm mx-auto mt-2 max-w-2xl">
+                Jump into the discipline that matches your skills — we&apos;ll surface relevant employers.
+              </p>
             </div>
             <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {JOB_CATEGORIES.map((cat) => (
                 <Link
                   key={cat.title}
                   to={cat.href}
-                  className="group relative overflow-hidden rounded-2xl border border-gray-100 bg-gray-50/80 p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-indigo-200 hover:shadow-lg dark:border-gray-800 dark:bg-gray-900/80 dark:hover:border-indigo-800 motion-reduce:hover:translate-y-0"
+                  className="group rounded-xl border border-gray-200/80 bg-white p-6 shadow-sm ring-1 ring-gray-100 transition-[box-shadow,transform,border-color] duration-200 hover:-translate-y-0.5 hover:border-indigo-200/80 hover:shadow-md dark:border-gray-700/80 dark:bg-gray-800/50 dark:ring-gray-700/60 dark:hover:border-indigo-800/80 motion-reduce:hover:translate-y-0"
                 >
-                  <div
-                    className={`inline-flex rounded-xl bg-gradient-to-br ${cat.gradient} p-3 text-white shadow-lg transition-transform group-hover:scale-110`}
-                  >
+                  <div className={`inline-flex rounded-lg p-3 transition-opacity duration-200 group-hover:opacity-90 ${cat.iconWrap}`}>
                     {cat.icon}
                   </div>
-                  <h3 className="mt-4 text-lg font-bold text-gray-900 dark:text-white">{cat.title}</h3>
-                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{cat.blurb}</p>
-                  <span className="mt-4 inline-flex items-center text-sm font-semibold text-indigo-600 dark:text-indigo-400">
-                    Explore roles <span className="ml-1 transition-transform group-hover:translate-x-1">→</span>
+                  <h3 className="mt-4 text-base font-semibold text-gray-900 dark:text-white">{cat.title}</h3>
+                  <p className="type-body-sm mt-1">{cat.blurb}</p>
+                  <span className="link-primary mt-4 inline-flex items-center text-sm">
+                    Explore roles <span className="ml-1 transition-transform duration-200 group-hover:translate-x-0.5">→</span>
                   </span>
                 </Link>
               ))}
@@ -487,17 +517,19 @@ export function HomePage() {
         </section>
 
         {/* Companies + illustration strip */}
-        <section className="relative overflow-hidden bg-gradient-to-br from-indigo-950 via-slate-900 to-blue-950 py-20 text-white">
-          <div className="pointer-events-none absolute inset-0 opacity-30" aria-hidden>
+        <section className="section-y relative overflow-hidden bg-slate-950 text-white">
+          <div className="pointer-events-none absolute inset-0 opacity-25" aria-hidden>
             <img src={CAREER_ILLUSTRATION} alt="" className="h-full w-full object-cover object-center" />
           </div>
-          <div className="absolute inset-0 bg-gradient-to-r from-indigo-950/95 via-indigo-900/90 to-blue-950/95" aria-hidden />
+          <div className="absolute inset-0 bg-indigo-950/88" aria-hidden />
           <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
               <div className="max-w-xl">
-                <p className="text-sm font-bold uppercase tracking-wider text-indigo-300">Employer spotlight</p>
-                <h2 className="text-display mt-2 text-3xl font-bold">Companies hiring now</h2>
-                <p className="mt-2 text-indigo-100/90">Discover teams with open reqs — logos, locations, and culture in one place.</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-indigo-200">Employer spotlight</p>
+                <h2 className="text-display mt-2 text-3xl font-semibold tracking-tight">Companies hiring now</h2>
+                <p className="mt-2 text-base font-normal text-indigo-100/90">
+                  Discover teams with open reqs — logos, locations, and culture in one place.
+                </p>
               </div>
               <Link
                 to="/companies"
@@ -508,69 +540,73 @@ export function HomePage() {
             </div>
 
             <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {(companies.length > 0 ? companies.slice(0, 8) : [...Array(8)]).map((company, idx) =>
-                company ? (
-                  <Link
-                    key={company._id}
-                    to={`/companies/${company._id}`}
-                    className="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md transition-all hover:border-white/25 hover:bg-white/10 hover:shadow-lg"
-                  >
-                    {company.logoUrl ? (
-                      <img src={company.logoUrl} alt="" className="h-12 w-12 rounded-xl object-cover ring-2 ring-white/20" loading="lazy" />
+              {companiesQuery.isPending
+                ? [...Array(8)].map((_, idx) => <CompanySpotlightSkeleton key={`co-skel-${idx}`} />)
+                : (companies.length > 0 ? companies.slice(0, 8) : [...Array(8)]).map((company, idx) =>
+                    company ? (
+                      <Link
+                        key={String(company.id ?? company._id)}
+                        to={`/companies/${company.id ?? company._id}`}
+                        className="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md transition-all hover:border-white/25 hover:bg-white/10 hover:shadow-lg"
+                      >
+                        {company.logoUrl ? (
+                          <img src={company.logoUrl} alt="" className="h-12 w-12 rounded-xl object-cover ring-2 ring-white/20" loading="lazy" />
+                        ) : (
+                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-lg font-semibold text-white">
+                            {company.name?.charAt(0)?.toUpperCase() || 'C'}
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <h3 className="truncate font-semibold text-white">{company.name}</h3>
+                          {company.location && <p className="truncate text-sm text-indigo-200">{company.location}</p>}
+                        </div>
+                      </Link>
                     ) : (
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-400 to-blue-500 text-lg font-bold text-white">
-                        {company.name?.charAt(0)?.toUpperCase() || 'C'}
+                      <div
+                        key={`placeholder-${idx}`}
+                        className="flex items-center gap-4 rounded-2xl border border-dashed border-white/15 bg-white/5 p-4 backdrop-blur-sm"
+                      >
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 text-sm font-bold text-indigo-200">
+                          ?
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-indigo-100">Your company here</p>
+                          <p className="text-xs text-indigo-300/80">Post a job to appear</p>
+                        </div>
                       </div>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <h3 className="truncate font-semibold text-white">{company.name}</h3>
-                      {company.location && <p className="truncate text-sm text-indigo-200">{company.location}</p>}
-                    </div>
-                  </Link>
-                ) : (
-                  <div
-                    key={`placeholder-${idx}`}
-                    className="flex items-center gap-4 rounded-2xl border border-dashed border-white/15 bg-white/5 p-4 backdrop-blur-sm"
-                  >
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 text-sm font-bold text-indigo-200">
-                      ?
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-indigo-100">Your company here</p>
-                      <p className="text-xs text-indigo-300/80">Post a job to appear</p>
-                    </div>
-                  </div>
-                ),
-              )}
+                    ),
+                  )}
             </div>
           </div>
         </section>
 
         {/* How it works – timeline */}
-        <section className="bg-gray-50 py-20 dark:bg-gray-900">
+        <section className="section-y bg-gray-50 dark:bg-gray-900">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="text-center">
-              <p className="text-sm font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Simple pipeline</p>
-              <h2 className="text-display mt-2 text-3xl font-bold text-gray-900 dark:text-white">How JobPortal works</h2>
+              <p className="type-section-label">Simple pipeline</p>
+              <h2 className="text-display mt-2 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">
+                How CareerSync works
+              </h2>
             </div>
             <div className="relative mt-16">
-              <div className="absolute left-0 top-8 hidden h-0.5 w-full bg-gradient-to-r from-indigo-200 via-indigo-400 to-indigo-200 md:block dark:from-indigo-900 dark:via-indigo-600 dark:to-indigo-900" aria-hidden />
+              <div className="absolute left-0 top-8 hidden h-px w-full bg-indigo-200 md:block dark:bg-indigo-800" aria-hidden />
               <div className="grid gap-10 md:grid-cols-3 md:gap-6">
                 {HOW_IT_WORKS.map(({ step, icon, title, description }, i) => (
                   <div key={title} className="relative">
-                    <div className="relative z-10 mx-auto flex max-w-sm flex-col rounded-3xl border border-gray-100 bg-white p-8 shadow-xl shadow-indigo-500/5 ring-1 ring-gray-100/80 transition-all hover:-translate-y-1 hover:shadow-2xl dark:border-gray-700 dark:bg-gray-800 dark:ring-gray-700 motion-reduce:hover:translate-y-0 md:mx-0">
-                      <span className="absolute -top-3 left-8 rounded-full bg-gradient-to-r from-indigo-600 to-blue-600 px-3 py-0.5 text-xs font-bold text-white shadow-md">
+                    <div className="relative z-10 mx-auto flex max-w-sm flex-col rounded-xl border border-gray-200/80 bg-white p-8 shadow-sm ring-1 ring-gray-100 transition-shadow duration-200 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:ring-gray-700 md:mx-0">
+                      <span className="absolute -top-3 left-8 rounded-full bg-indigo-600 px-3 py-0.5 text-xs font-semibold text-white">
                         {step}
                       </span>
-                      <div className="mt-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-300">
+                      <div className="mt-4 flex h-14 w-14 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-300">
                         {icon}
                       </div>
-                      <h3 className="mt-6 text-xl font-bold text-gray-900 dark:text-white">{title}</h3>
-                      <p className="mt-2 text-sm leading-relaxed text-gray-600 dark:text-gray-400">{description}</p>
+                      <h3 className="mt-6 text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
+                      <p className="type-body-sm mt-2">{description}</p>
                     </div>
                     {i < 2 && (
                       <div className="my-6 flex justify-center md:hidden" aria-hidden>
-                        <div className="h-8 w-px bg-gradient-to-b from-indigo-300 to-transparent dark:from-indigo-600" />
+                        <div className="h-8 w-px bg-indigo-200 dark:bg-indigo-800" />
                       </div>
                     )}
                   </div>
@@ -581,17 +617,19 @@ export function HomePage() {
         </section>
 
         {/* Testimonials */}
-        <section className="border-t border-gray-200 bg-white py-20 dark:border-gray-800 dark:bg-gray-950">
+        <section className="section-y border-t border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="text-center">
-              <p className="text-sm font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Social proof</p>
-              <h2 className="text-display mt-2 text-3xl font-bold text-gray-900 dark:text-white">Loved by seekers & hiring teams</h2>
+              <p className="type-section-label">Social proof</p>
+              <h2 className="text-display mt-2 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">
+                Loved by seekers & hiring teams
+              </h2>
             </div>
             <div className="mt-14 grid gap-8 md:grid-cols-3">
               {TESTIMONIALS.map(({ quote, author, role, seed }) => (
                 <blockquote
                   key={author}
-                  className="group relative flex flex-col rounded-3xl border border-gray-100 bg-gradient-to-b from-white to-gray-50/80 p-8 shadow-lg transition-all hover:-translate-y-1 hover:border-indigo-200 hover:shadow-xl dark:border-gray-800 dark:from-gray-900 dark:to-gray-900/80 dark:hover:border-indigo-800 motion-reduce:hover:translate-y-0"
+                  className="flex flex-col rounded-xl border border-gray-200/80 bg-white p-8 shadow-sm ring-1 ring-gray-100 transition-shadow duration-200 hover:shadow-md dark:border-gray-800 dark:bg-gray-800/40 dark:ring-gray-700"
                 >
                   <div className="mb-4 flex gap-1 text-amber-400" aria-hidden>
                     {[1, 2, 3, 4, 5].map((s) => (
@@ -600,8 +638,8 @@ export function HomePage() {
                       </svg>
                     ))}
                   </div>
-                  <p className="flex-1 text-gray-700 dark:text-gray-300">&ldquo;{quote}&rdquo;</p>
-                  <footer className="mt-8 flex items-center gap-4 border-t border-gray-100 pt-6 dark:border-gray-800">
+                  <p className="flex-1 text-base font-normal text-gray-700 dark:text-gray-300">&ldquo;{quote}&rdquo;</p>
+                  <footer className="mt-8 flex items-center gap-4 border-t border-gray-100 pt-6 dark:border-gray-700">
                     <img
                       src={testimonialAvatar(seed)}
                       alt=""
@@ -611,7 +649,7 @@ export function HomePage() {
                       loading="lazy"
                     />
                     <div>
-                      <cite className="not-italic font-bold text-gray-900 dark:text-white">{author}</cite>
+                      <cite className="not-italic font-semibold text-gray-900 dark:text-white">{author}</cite>
                       <p className="text-sm text-gray-500 dark:text-gray-400">{role}</p>
                     </div>
                   </footer>
@@ -623,28 +661,28 @@ export function HomePage() {
 
         {/* CTA */}
         {!isAuthenticated && (
-          <section className="relative overflow-hidden py-20">
-            <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-blue-600 to-violet-700" aria-hidden />
+          <section className="section-y relative overflow-hidden bg-indigo-700 dark:bg-indigo-900">
             <div
-              className="absolute inset-0 opacity-40 mix-blend-overlay bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')]"
+              className="absolute inset-0 opacity-[0.12] mix-blend-overlay bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')]"
               aria-hidden
             />
-            <div className="pointer-events-none absolute -left-20 top-1/2 h-72 w-72 -translate-y-1/2 rounded-full bg-white/20 blur-3xl" aria-hidden />
             <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6">
-              <h2 className="text-display text-3xl font-bold text-white sm:text-4xl">Ready for your next chapter?</h2>
-              <p className="mx-auto mt-4 max-w-xl text-lg text-indigo-100">
-                Join professionals who use JobPortal to discover roles worth their skills — free for candidates.
+              <h2 className="text-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+                Ready for your next chapter?
+              </h2>
+              <p className="mx-auto mt-4 max-w-xl text-base font-normal text-indigo-100">
+                Join professionals who use CareerSync to discover roles worth their skills — free for candidates.
               </p>
-              <div className="mt-10 flex flex-wrap justify-center gap-4">
+              <div className="mt-10 flex flex-wrap justify-center gap-3">
                 <Link
                   to="/register"
-                  className="inline-flex items-center rounded-2xl bg-white px-8 py-3.5 text-base font-bold text-indigo-700 shadow-xl transition-all hover:scale-[1.03] hover:shadow-2xl"
+                  className="inline-flex items-center rounded-lg bg-white px-8 py-3.5 text-base font-semibold text-indigo-700 shadow-md transition-[background-color,box-shadow] duration-200 hover:bg-indigo-50 hover:shadow-lg"
                 >
                   Create free account
                 </Link>
                 <Link
                   to="/jobs"
-                  className="inline-flex items-center rounded-2xl border-2 border-white/40 bg-white/10 px-8 py-3.5 text-base font-semibold text-white backdrop-blur-sm transition-all hover:bg-white/20"
+                  className="inline-flex items-center rounded-lg border border-white/35 bg-white/10 px-8 py-3.5 text-base font-semibold text-white backdrop-blur-sm transition-colors duration-200 hover:bg-white/15"
                 >
                   Browse open roles
                 </Link>
