@@ -483,6 +483,9 @@ npm run build
 | `README.md` | Quick start + overview (this file) |
 | `docs/PROJECT_REFERENCE.md` | Full technical reference |
 | `docs/DEPLOYMENT.md` | Deployment guide |
+| `docs/PRE_LAUNCH_CHECKLIST.md` | CORS, cookies, Redis/workers, metrics — run before go-live |
+| `docs/PRIVACY_AND_DATA.md` | PII / GDPR stance |
+| `docs/openapi.yaml` | OpenAPI 3 snapshot (`npm run openapi:validate`) |
 | `docs/ARCHITECTURE.md` | System architecture |
 | `docs/PACKAGES_AND_SCRIPTS.md` | Package and script notes |
 | `postman/README.md` | API collection usage |

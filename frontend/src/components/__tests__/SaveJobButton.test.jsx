@@ -2,10 +2,20 @@
  * Unit test: SaveJobButton component
  * Run: npm test
  */
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { SaveJobButton } from '../SaveJobButton.jsx'
+
+vi.mock('sonner', () => ({
+  toast: Object.assign(vi.fn(), {
+    success: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+    warning: vi.fn(),
+    message: vi.fn(),
+  }),
+}))
 
 vi.mock('../../context/useAuth.jsx', () => ({
   useAuth: () => ({
@@ -20,9 +30,14 @@ vi.mock('../../api/userApi.js', () => ({
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { retry: false },
-    mutations: { retry: false },
+    // Avoid gc timers that keep Vitest/Node from exiting after tests.
+    queries: { retry: false, gcTime: 0 },
+    mutations: { retry: false, gcTime: 0 },
   },
+})
+
+afterEach(() => {
+  queryClient.clear()
 })
 
 function Wrapper({ children }) {

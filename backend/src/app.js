@@ -17,6 +17,13 @@ const { env } = require("./config/env");
 
 const app = express();
 
+/**
+ * Behind Render/nginx, req.ip and express-rate-limit must see the real client (X-Forwarded-For).
+ * 0 = do not trust (local/test default); production defaults to 1 hop via env.trustProxyHops.
+ * @see https://expressjs.com/en/guide/behind-proxies.html
+ */
+app.set("trust proxy", env.trustProxyHops === 0 ? false : env.trustProxyHops);
+
 app.use(requestId);
 app.use(logRequest);
 app.use(cors(corsOptions));

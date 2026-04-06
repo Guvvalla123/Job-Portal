@@ -1,6 +1,8 @@
 /**
- * Idempotency middleware - prevents duplicate processing of critical operations.
- * Client sends Idempotency-Key header; server caches response for replay.
+ * Idempotency middleware — replays cached success responses for the same key.
+ * Uses `utils/cache`: **shared Redis** when `REDIS_URL` is set and `cache.initRedis()`
+ * runs at server startup (`server.js`); otherwise **in-memory per Node process** only.
+ * See docs/DEPLOYMENT.md ("Idempotency & horizontal scale").
  */
 const cache = require("../utils/cache");
 

@@ -5,6 +5,7 @@ import {
   CSRF_COOKIE_NAME,
   clearPersistedAuthKeys,
   isSessionIntentionallyEnded,
+  setSessionEndedFlag,
 } from '../lib/authConstants.js'
 import { toPersistedSessionUser } from '../lib/sessionUser.js'
 import { emitSessionExpired } from '../lib/authEvents.js'
@@ -56,26 +57,26 @@ function resolveApiBase() {
 const API_BASE = resolveApiBase()
 
 /**
- * Gate: blocks apiClient requests until restoreSessionFromCookie() finishes (success, fail, or session-ended).
- * Prevents parallel 401 → parallel refresh during bootstrap.
+ * Blocks apiClient requests until restoreSessionFromCookie() finishes (success, fail, or session-ended).
+ * `startBootstrap` is idempotent so concurrent callers share one gate.
  */
-let sessionBootstrapGate = null
-let sessionBootstrapGateResolve = null
+let bootstrapPromise = null
+let resolveBootstrap = null
 
-function openSessionBootstrapGate() {
-  if (!sessionBootstrapGate) {
-    sessionBootstrapGate = new Promise((resolve) => {
-      sessionBootstrapGateResolve = resolve
+export function startBootstrap() {
+  if (!bootstrapPromise) {
+    bootstrapPromise = new Promise((resolve) => {
+      resolveBootstrap = resolve
     })
   }
 }
 
-function closeSessionBootstrapGate() {
-  if (sessionBootstrapGateResolve) {
-    sessionBootstrapGateResolve()
-    sessionBootstrapGateResolve = null
+export function endBootstrap() {
+  if (resolveBootstrap) {
+    resolveBootstrap()
+    resolveBootstrap = null
   }
-  sessionBootstrapGate = null
+  bootstrapPromise = null
 }
 
 /** Single-flight POST /auth/refresh during initial restore (avoids StrictMode / parallel refresh races). */
@@ -128,7 +129,7 @@ const notifyRefreshSubscribers = (token, err) => {
   })
 }
 
-const addRefreshSubscriber = (cb) => {
+const subscribeToRefresh = (cb) => {
   refreshSubscribers.push(cb)
 }
 
@@ -192,7 +193,7 @@ function shouldSkipGlobalToast(config) {
  * Single-flight refresh + session gate so no apiClient traffic runs until restore completes.
  */
 async function restoreSessionFromCookie() {
-  openSessionBootstrapGate()
+  startBootstrap()
   try {
     if (isSessionIntentionallyEnded()) {
       clearSession()
@@ -231,14 +232,14 @@ async function restoreSessionFromCookie() {
 
     return await authBootstrapInFlight
   } finally {
-    closeSessionBootstrapGate()
+    endBootstrap()
   }
 }
 
 apiClient.interceptors.request.use(
   async (config) => {
-    if (sessionBootstrapGate && config.skipAuthBootstrapWait !== true) {
-      await sessionBootstrapGate.catch(() => {})
+    if (bootstrapPromise && config.skipAuthBootstrapWait !== true) {
+      await bootstrapPromise.catch(() => {})
     }
     if (authBootstrapInFlight && config.skipAuthBootstrapWait !== true) {
       await authBootstrapInFlight.catch(() => {})
@@ -275,7 +276,16 @@ apiClient.interceptors.response.use(
     const originalRequest = error.config
     const status = error.response?.status
 
-    if (status === 401 && originalRequest && !isAuthUrl(originalRequest.url)) {
+    if (status === 401 && originalRequest) {
+      const url = originalRequest.url || ''
+      if (
+        url.includes('/auth/refresh') ||
+        url.includes('/auth/login') ||
+        url.includes('/auth/register')
+      ) {
+        return Promise.reject(error)
+      }
+
       if (originalRequest._retry) {
         clearSession()
         try {
@@ -300,8 +310,8 @@ apiClient.interceptors.response.use(
         return Promise.reject(error)
       }
 
-      if (sessionBootstrapGate) {
-        await sessionBootstrapGate.catch(() => {})
+      if (bootstrapPromise) {
+        await bootstrapPromise.catch(() => {})
       }
       if (authBootstrapInFlight) {
         await authBootstrapInFlight.catch(() => {})
@@ -317,7 +327,7 @@ apiClient.interceptors.response.use(
 
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
-          addRefreshSubscriber((token, err) => {
+          subscribeToRefresh((token, err) => {
             if (err) {
               reject(err instanceof Error ? err : new Error(String(err)))
               return
@@ -353,6 +363,12 @@ apiClient.interceptors.response.use(
       } catch (refreshErr) {
         notifyRefreshSubscribers(null, refreshErr)
         clearSession()
+        try {
+          clearPersistedAuthKeys()
+        } catch {
+          /* ignore */
+        }
+        setSessionEndedFlag()
         if (!shouldSkipGlobalToast(originalRequest)) {
           toast.error(apiErrorMessage(refreshErr, 'Your session has expired. Please sign in again.'))
         }
@@ -383,4 +399,11 @@ apiClient.interceptors.response.use(
   },
 )
 
-export { apiClient, API_BASE, setAccessToken, getAccessToken, clearSession, restoreSessionFromCookie }
+export {
+  apiClient,
+  API_BASE,
+  setAccessToken,
+  getAccessToken,
+  clearSession,
+  restoreSessionFromCookie,
+}

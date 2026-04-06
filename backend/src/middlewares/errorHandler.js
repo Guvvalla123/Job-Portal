@@ -1,6 +1,7 @@
 const { ApiError } = require("../utils/apiError");
 const { child } = require("../config/logger");
 const { env } = require("../config/env");
+const { captureException } = require("../config/sentry");
 
 const statusToDefaultCode = (status) => {
   const map = {
@@ -55,6 +56,11 @@ const errorHandler = (err, req, res, _next) => {
     return errorPayload(401, "Token expired", "TOKEN_EXPIRED", []);
   }
 
+  /** MongoDB duplicate key (e.g. unique job+candidate on applications) */
+  if (err.name === "MongoServerError" && err.code === 11000) {
+    return errorPayload(409, "Resource already exists", "DUPLICATE_KEY", []);
+  }
+
   if (err.name === "MulterError") {
     const msg =
       err.code === "LIMIT_FILE_SIZE"
@@ -66,17 +72,23 @@ const errorHandler = (err, req, res, _next) => {
   }
 
   if (err instanceof ApiError) {
+    if (err.statusCode >= 500 && env.NODE_ENV !== "test") {
+      captureException(err, { requestId });
+    }
     const code = err.code || statusToDefaultCode(err.statusCode);
     return errorPayload(err.statusCode, err.message, code, err.errors || []);
   }
 
-  const statusCode = err.statusCode || 500;
+  const fallbackStatus = err.statusCode || 500;
+  if (fallbackStatus >= 500 && env.NODE_ENV !== "test") {
+    captureException(err, { requestId });
+  }
   const message =
-    statusCode === 500 && env.NODE_ENV === "production"
+    fallbackStatus === 500 && env.NODE_ENV === "production"
       ? "Internal server error"
       : err.message || "Internal server error";
 
-  return errorPayload(statusCode, message, statusToDefaultCode(statusCode), []);
+  return errorPayload(fallbackStatus, message, statusToDefaultCode(fallbackStatus), []);
 };
 
 module.exports = { errorHandler };

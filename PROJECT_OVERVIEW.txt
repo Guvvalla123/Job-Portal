@@ -1,282 +1,203 @@
-════════════════════════════════════════
-JOB PORTAL MERN — PROJECT OVERVIEW
-Last Updated: March 27, 2026
-════════════════════════════════════════
+══════════════════════════════════════════════════════════════════════════════
+JOB PORTAL MERN — PROJECT SUMMARY (CURRENT STATE)
+Last updated: March 27, 2026
+══════════════════════════════════════════════════════════════════════════════
 
-WHAT IT IS
-──────────
-Job Portal MERN is a full-stack job board similar in spirit to Naukri: candidates
-search and apply to jobs, manage profiles and PDF resumes, and configure email
-alerts; recruiters and admins manage companies, job postings, and application
-pipelines with analytics; admins moderate the platform and review audit logs.
+This file is the high-level picture of what exists in the repo today: product,
+stack, structure, security, ops, tests, and docs. For deep detail use the linked
+documents under DOCUMENTATION INDEX at the end.
 
-TECH STACK
-──────────
-Backend:  Node.js (engines >=18 in backend/package.json) + Express ^5.2.1 +
-          MongoDB/Mongoose ^9.3.0 + JWT (jsonwebtoken ^9.0.3) + Cloudinary ^2.9.0 +
-          BullMQ ^5.71.0 + ioredis ^5.4.1 + Winston ^3.17.0 + Zod ^4.3.6 +
-          Nodemailer ^8.0.2 + bcryptjs ^3.0.3 + Helmet ^8.1.0 + express-rate-limit ^
-          8.3.1 + prom-client ^15.1.3 + cookie-parser + multer + others (see
-          backend/package.json).
-Frontend: React ^19.2.0 + Vite ^7.3.1 + Tailwind CSS ^4.2.1 (@tailwindcss/vite) +
-          TanStack React Query ^5.90.21 + React Router ^7.13.1 +
-          React Hook Form ^7.71.2 + Zod ^4.3.6 + Framer Motion ^12.38.0 +
-          Recharts ^3.8.1 + axios ^1.13.6 + sonner + react-helmet-async +
-          react-error-boundary + prop-types (see frontend/package.json).
 
-USER ROLES
-──────────
-Candidate: Browse jobs and companies; apply (once per job); dashboard; profile
-           with skills/experience/projects/education; profile image; PDF resume;
-           saved jobs; notifications; job alerts (IMMEDIATE/DAILY/WEEKLY).
-Recruiter: Companies (CRUD, logo); jobs (CRUD, drafts, expiry); analytics and
-           trend; applications for own jobs (status, notes, interview); resume
-           PDF stream for own applicants; notifications.
-Admin:     Stats and trends; list/toggle/delete users; patch user role; list and
-           moderate jobs (toggle status, set status, delete); companies delete;
-           all applications; audit logs (paginated).
+1. WHAT THIS APPLICATION IS
+───────────────────────────
+A full-stack job board (Naukri-style): candidates discover jobs and companies,
+apply once per job, maintain profiles and PDF resumes, save jobs, get in-app
+notifications, and configure job alerts (immediate / daily / weekly). Recruiters
+own companies and jobs, manage application pipelines (status, notes, interviews),
+view analytics, and stream applicant resumes they are allowed to see. Admins
+moderate users, jobs, and companies; see all applications; and read paginated
+audit logs.
 
-REPOSITORY STRUCTURE
-────────────────────
-backend/src/
-  config/       Environment validation, logger, Prometheus metrics, security
-                (CORS, Helmet, HPP, rate limit presets).
-  constants/    Roles, application statuses, cookie names, etc.
-  controllers/  HTTP handlers wired from routes.
-  middlewares/  Auth, CSRF, validation, audit, idempotency, sanitize, errors.
-  models/       Mongoose schemas (User, Job, Application, Company, etc.).
-  queues/       BullMQ email queue; direct-send fallback when no REDIS_URL.
-  repositories/ Thin data-access wrappers around models.
-  routes/       Express routers; v1 aggregated under routes/v1/index.js.
-  services/     Business logic (auth, jobs, applications, admin, etc.).
-  utils/        JWT, cookies, mail, token blacklist, API errors/responses, etc.
-  validations/  Zod schemas for request bodies and queries.
-  workers/      emailWorker.js, jobAlertDigestWorker.js (BullMQ consumers).
+Data handled includes PII (names, emails, phones, profile text, resumes). There
+are no payments in-repo; treat compliance as general PII (see docs/PRIVACY_AND_DATA.md).
 
-frontend/src/
-  api/          Axios apiClient (withCredentials) and domain API modules.
-  components/   Shared UI, layout pieces, resume viewer, route guards.
-  context/      AuthProvider (session restore, login, logout).
-  features/     Larger UI slices by area (e.g. recruiter panels).
-  hooks/        Reusable React hooks.
-  layouts/      AppLayout shell (nav, mobile sheet).
-  lib/          Query keys, auth constants, helpers.
-  pages/        Route-level pages (home, jobs, dashboards, admin, legal).
 
-Root: package.json runs concurrently backend:dev + frontend:dev (see scripts);
-scripts/wait-for-api.cjs gates the web dev server until the API is up.
-
-DATABASE MODELS
-───────────────
-User:         fullName, email, password (bcrypt cost 12), role (candidate|
-              recruiter|admin), profile fields (headline, about, phone, location,
-              website, skills), experience[], projects[], education[],
-              profileImageUrl, resumeUrl/resumePublicId/resumeFileName/
-              resumeSize/resumeUploadedAt, refreshToken (server-only; unset on
-              logout), isActive, password reset fields, savedJobs[].
-Job:          title, description, location, employmentType, experienceLevel,
-              minSalary/maxSalary, skills[], company ref, postedBy, isActive,
-              isDraft, expiresAt; timestamps.
-Application:  job ref, candidate ref, coverLetter, status (APPLICATION_STATUSES),
-              recruiterNotes, interview (scheduledAt, timezone, durationMinutes,
-              notes, status); unique index job+candidate; timestamps.
-Company:      name, website, location, description, logoUrl, createdBy; timestamps.
-Notification: user ref, type (APPLICATION_RECEIVED|APPLICATION_STATUS_CHANGED|
-              INTERVIEW_SCHEDULED|JOB_ALERT_MATCH|GENERAL), title, message, link,
-              read, readAt, meta; timestamps.
-JobAlert:     user ref, keywords[], location, employmentType, salaryMin,
-              frequency (IMMEDIATE|DAILY|WEEKLY), isActive, lastSentAt; timestamps.
-AuditLog:     userId, action enum (create|update|delete|login|logout|register|
-              resume_viewed), resourceType, resourceId, changes, ip, userAgent;
-              TTL index on createdAt from AUDIT_LOG_TTL_DAYS (default 365).
-
-API BASE PATH
+2. TECH STACK
 ─────────────
-Versioned REST: /api/v1/...
-System:         GET /api/health
-                GET /api/ready (Mongo connectivity)
-                GET /api/metrics (X-Metrics-Token when METRICS_TOKEN set)
+Backend (backend/):
+  Node.js ≥18, Express 5, Mongoose 9, MongoDB
+  Auth: JWT access + httpOnly refresh cookie, CSRF double-submit for mutating API calls
+  Validation: Zod
+  Security: Helmet, CORS (CLIENT_URL allowlist), express-rate-limit, HPP, sanitizeInput
+  Files: Cloudinary; uploads: multer (memory), size limits on resume/logo
+  Email: Nodemailer; optional Redis + BullMQ queue + dedicated workers
+  Observability: Winston (JSON in prod), request IDs, optional Sentry (@sentry/node),
+                Prometheus metrics at GET /api/metrics (X-Metrics-Token when set)
+  Other: compression, cookie-parser, bcryptjs, opossum (mail circuit breaker)
 
-KEY API ENDPOINTS
-─────────────────
-AUTH:
-  GET  /api/v1/auth/csrf-token
-  POST /api/v1/auth/register
-  POST /api/v1/auth/login
-  POST /api/v1/auth/logout
-  POST /api/v1/auth/refresh
-  GET  /api/v1/auth/me
-  POST /api/v1/auth/forgot-password
-  POST /api/v1/auth/reset-password/:token
+Frontend (frontend/):
+  React 19, Vite 7, Tailwind CSS 4 (@tailwindcss/vite)
+  TanStack Query, React Router 7, React Hook Form + Zod, axios (withCredentials)
+  UX: Framer Motion, Recharts, sonner, react-helmet-async, react-error-boundary
+  Optional: @sentry/react, web-vitals (VITE_ENABLE_WEB_VITALS=true)
 
-JOBS:
-  GET    /api/v1/jobs
-  GET    /api/v1/jobs/me
-  GET    /api/v1/jobs/analytics
-  GET    /api/v1/jobs/analytics/trend
-  GET    /api/v1/jobs/:id
-  POST   /api/v1/jobs
-  PUT    /api/v1/jobs/:id
-  DELETE /api/v1/jobs/:id
+Tooling:
+  Root: concurrently + wait-for-api for local dev
+  CI: GitHub Actions — backend lint/test, frontend lint/test/build, OpenAPI validate,
+      E2E (Mongo seed, API, Vite preview, Playwright)
+  Deploy blueprints: render.yaml (API + workers), vercel.json (SPA)
 
-APPLICATIONS:
-  POST   /api/v1/applications
-  GET    /api/v1/applications/me
-  GET    /api/v1/applications/interviews/upcoming
-  GET    /api/v1/applications/job/:jobId
-  GET    /api/v1/applications/:id/resume
-  GET    /api/v1/applications/:id
-  PATCH  /api/v1/applications/:id/status
-  PATCH  /api/v1/applications/:id/notes
-  PATCH  /api/v1/applications/:id/interview
 
-COMPANIES:
-  GET    /api/v1/companies
-  GET    /api/v1/companies/me
-  POST   /api/v1/companies
-  PATCH  /api/v1/companies/:id
-  DELETE /api/v1/companies/:id
-  POST   /api/v1/companies/:id/logo
-  GET    /api/v1/companies/:id
+3. REPOSITORY LAYOUT (SHORT)
+────────────────────────────
+backend/src/     config, constants, controllers, middlewares, models, queues,
+                 repositories, routes (/api/v1), services, utils, validations, workers
+frontend/src/    api, components, context, features, hooks, layouts, lib, pages
+docs/            deployment, API contract, OpenAPI snapshot, Atlas, SEO, privacy, etc.
+postman/         Postman collection + README
+scripts/         Root helpers (e.g. wait-for-api.cjs)
+backend/scripts/ e2e-seed.js and other maintenance scripts
 
-NOTIFICATIONS:
-  GET    /api/v1/notifications
-  GET    /api/v1/notifications/unread-count
-  PATCH  /api/v1/notifications/read-all
-  PATCH  /api/v1/notifications/:id/read
-  DELETE /api/v1/notifications/:id
 
-JOB ALERTS:
-  GET    /api/v1/job-alerts
-  POST   /api/v1/job-alerts
-  PATCH  /api/v1/job-alerts/:id
-  DELETE /api/v1/job-alerts/:id
+4. USER ROLES & MAIN CAPABILITIES
+───────────────────────────────
+Candidate:  Public job/company browsing, apply (idempotent with optional
+            Idempotency-Key header), dashboard, profile CRUD, resume PDF, saved jobs,
+            notifications, job alerts.
 
-USERS (profile):
-  PATCH  /api/v1/users/change-password
-  PATCH  /api/v1/users/profile
-  POST   /api/v1/users/profile/image
-  POST   /api/v1/users/profile/resume
-  GET    /api/v1/users/profile/resume/file
-  DELETE /api/v1/users/profile/resume
-  POST   /api/v1/users/saved-jobs/:jobId
-  GET    /api/v1/users/saved-jobs
-  DELETE /api/v1/users/account
+Recruiter:  Companies CRUD + logo, jobs CRUD (drafts, expiry), analytics/trends,
+            applications for own jobs, interview scheduling fields, resume stream
+            for own applicants, notifications.
 
-ADMIN (admin JWT on all routes):
-  GET    /api/v1/admin/stats
-  GET    /api/v1/admin/stats/trend
-  GET    /api/v1/admin/users
-  PATCH  /api/v1/admin/users/:id/toggle-status
-  PATCH  /api/v1/admin/users/:id/role
-  DELETE /api/v1/admin/users/:id
-  GET    /api/v1/admin/jobs
-  PATCH  /api/v1/admin/jobs/:id/toggle-status
-  PATCH  /api/v1/admin/jobs/:id/status
-  DELETE /api/v1/admin/jobs/:id
-  GET    /api/v1/admin/companies
-  DELETE /api/v1/admin/companies/:id
-  GET    /api/v1/admin/applications
-  GET    /api/v1/admin/audit-logs
+Admin:      Platform stats/trends, user list/toggle/delete/role, job moderation,
+            company delete, all applications, audit logs (paginated, TTL on collection).
 
-SECURITY
-────────
-- Access JWT (default 15m, JWT_ACCESS_EXPIRES); stored in memory on SPA.
-- Refresh JWT in httpOnly cookie (default 7d, JWT_REFRESH_EXPIRES); path
-  /api/v1/auth; rotation + reuse detection; $unset refresh hash on logout.
-- CSRF double-submit for most POST/PUT/PATCH/DELETE under /api (exemptions in
-  middlewares/csrf.js include login, register, refresh, logout, forgot-password,
-  reset-password, csrf-token).
-- Bcrypt hash on User save with salt rounds 12 (see models/User.js).
-- Rate limits when RATE_LIMIT_ENABLED or production (see app.js and security.js).
-- Helmet + CSP; CORS from CLIENT_URL; input sanitization; Zod validation;
-  RBAC and resource ownership in middlewares/authorize.js.
-- Audit log TTL on AuditLog.createdAt.
 
-EMAIL & QUEUE
-─────────────
-Queue: BullMQ queue name "email" when REDIS_URL is set (ioredis connection).
-Workers (from backend/package.json scripts):
+5. API SURFACE (SUMMARY)
+────────────────────────
+Base: Versioned JSON REST under /api/v1/...
+System (no v1 prefix on router mount): 
+  GET  /api/health   — liveness
+  GET  /api/ready    — readiness (Mongo connected vs 503)
+  GET  /api/metrics  — Prometheus scrape (token gate optional)
+
+Auth: register, login, logout, refresh, me, forgot/reset password, csrf-token.
+Jobs, companies, applications (including apply, pipeline, resume stream),
+notifications, job-alerts, user profile/resume/saved-jobs/account delete.
+Admin: stats, users, jobs, companies, applications, audit-logs.
+
+Full path list: keep using this file’s historical appendix in Postman or
+docs/openapi.yaml + docs/API_CONTRACT.md for pagination caps.
+
+Apply flow highlights:
+  • POST /api/v1/applications — candidate only; Zod body; audit; idempotency
+    middleware when Idempotency-Key is sent; SPA sends key per attempt
+    (frontend/src/api/applicationsApi.js).
+  • Duplicate apply: unique index (job + candidate); 409 CONFLICT from service
+    or 409 DUPLICATE_KEY from Mongo duplicate key handler.
+
+
+6. SECURITY & PRODUCTION BEHAVIOR (IMPLEMENTED)
+──────────────────────────────────────────────
+• Trust proxy: Express trust proxy from env (TRUST_PROXY_HOPS; production default
+  1 hop when unset) — before rate limit and req.ip-dependent logic (app.js, env.js).
+• CORS: allowedHeaders include Idempotency-Key for cross-origin SPA (security.js);
+  verified by cors.integration.test.js.
+• CSRF: Most mutating /api routes require matching X-CSRF-Token and cookie;
+  auth bootstrap routes exempt (middlewares/csrf.js). In tests, CSRF can be enforced
+  with CSRF_ENFORCE_IN_TEST=true (CI).
+• Rate limiting: Auth routes stricter; blanket /api limiter skips health/ready/metrics
+  when enabled (production or RATE_LIMIT_ENABLED).
+• Errors: Consistent JSON shape (success, message, code, errors, requestId);
+  production hides generic 500 detail; Mongo duplicate key 11000 → 409 DUPLICATE_KEY.
+• Sentry: Optional DSN; 5xx capture with request correlation; beforeSend reduces
+  request payload/cookie leakage; sendDefaultPii false.
+• Idempotency cache: Same Redis/memory store as utils/cache.js — shared across
+  instances only when REDIS_URL is set and initRedis() runs on API startup; otherwise
+  per-process (documented in docs/DEPLOYMENT.md).
+• Pagination caps (Zod): backend/src/validations/paginationLimits.js —
+  public jobs list max 50; application lists max 100 (see docs/API_CONTRACT.md).
+
+
+7. EMAIL, REDIS, WORKERS
+────────────────────────
+When REDIS_URL is set: BullMQ queue "email"; workers:
   npm run worker:email
   npm run worker:job-alert-digest
-Typed jobs in emailQueue.addEmailJob include:
-  JOB_ALERT, APPLICATION_RECEIVED, APPLICATION_STATUS_CHANGED, INTERVIEW_SCHEDULED
-(queue name = type). Defaults: attempts 3, exponential backoff delay 5000 ms.
-Fallback: Direct nodemailer send in-process when Redis queue is unavailable
-(for implemented types in emailQueue.js).
+Production expectation for reliable mail/alerts: run web + both workers with Redis
+(render.yaml lists three services). Without Redis: in-process direct send with
+logging and metrics counters (best-effort; not for strict delivery SLAs).
+Metrics: email_direct_fallback_* counters; email_queue_jobs gauge by state on scrape
+when queue exists on the API process.
 
-FRONTEND PAGES
-──────────────
-Public:
-  / (Home)
-  /jobs, /jobs/:id
-  /companies, /companies/:id
-  /privacy, /terms, /cookies
-  /about, /careers, /contact, /press (placeholder)
-  /resources/career-tips, /resources/resume, /resources/interview (placeholder)
 
-Auth:
-  /login, /register, /forgot-password, /reset-password/:token
+8. FRONTEND ROUTING (HIGH LEVEL)
+────────────────────────────────
+Public: /, /jobs, /jobs/:id, /companies, /companies/:id, legal (/privacy, /terms,
+/cookies), /about, /contact. Routes like /careers, /press, /resources/* redirect
+to /about so nav does not promise empty placeholders.
 
-Protected:
-  /dashboard (role redirect)
-  /candidate/dashboard (candidate)
-  /recruiter/dashboard (recruiter)
-  /admin/dashboard, /admin/users, /admin/jobs, /admin/companies,
-  /admin/applications, /admin/audit-logs (admin)
+Auth: /login, /register, /forgot-password, /reset-password/:token
 
-Error / utility:
-  /unauthorized
-  /500
-  * (NotFoundPage)
+Protected: /dashboard (role redirect), candidate/recruiter dashboards, admin/*.
 
-ENVIRONMENT VARIABLES
-─────────────────────
-Required backend (validated — see backend/src/config/env.js and .env.example):
-  MONGODB_URI
-  JWT_ACCESS_SECRET
-  JWT_REFRESH_SECRET
-  CLOUDINARY_CLOUD_NAME
-  CLOUDINARY_API_KEY
-  CLOUDINARY_API_SECRET
+Errors: /unauthorized, /500, NotFound for *.
 
-Common optional backend (.env.example documents defaults and comments):
-  NODE_ENV (default development)
-  PORT (default 5000 in example)
-  CLIENT_URL (e.g. http://localhost:5173)
-  JWT_ACCESS_EXPIRES (example 15m)
-  JWT_REFRESH_EXPIRES (example 7d)
-  RATE_LIMIT_ENABLED
-  COOKIE_SAME_SITE
-  METRICS_TOKEN
-  AUDIT_LOG_TTL_DAYS
-  REDIS_URL
-  SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
+SEO: Client-rendered app; stance documented in docs/SEO_CRAWLING.md.
 
-Frontend (frontend/.env.example and vite.config.js):
-  VITE_BACKEND_PORT (fallback 5000 in vite.config if unset)
-  VITE_BACKEND_URL (optional full origin for dev proxy)
-  VITE_SITE_URL
-  Optional: VITE_GA_MEASUREMENT_ID, VITE_LINKEDIN_URL, etc.
 
-QUICK START
-───────────
-1. cd backend && cp .env.example .env && edit required keys
-2. cd backend && npm install && (optional) same for frontend from frontend/
-3. From repo root: npm install (installs root devDependencies: concurrently, wait-on)
-4. npm run dev — runs backend:dev and frontend:dev (see root package.json)
+9. TESTING & QUALITY GATES
+──────────────────────────
+Backend: Jest — unit/integration (auth, health, ready, CSRF/RBAC flow, CORS preflight,
+apply + idempotency, etc.).
+Frontend: Vitest (component tests); production build in CI.
+E2E: Playwright (smoke + full flow when E2E_FULL=1); CI seeds Mongo via e2e-seed.js.
+Root: npm run openapi:validate (OpenAPI file in docs/openapi.yaml).
+Dependabot: .github/dependabot.yml for npm and GitHub Actions.
 
-Default ports in backend/.env.example: API PORT=5000. Vite dev server: 5173
-(frontend/vite.config.js server.port). Frontend proxy /api uses VITE_BACKEND_PORT
-or VITE_BACKEND_URL (see vite.config.js).
 
-DOCUMENTATION
-─────────────
-README.md                 Quick start and overview (root)
-docs/PROJECT_REFERENCE.md Technical reference
-docs/DEPLOYMENT.md        Deployment
-docs/ARCHITECTURE.md      Architecture
-docs/PACKAGES_AND_SCRIPTS Packages and scripts detail
-postman/                  Postman collection + README
+10. ENVIRONMENT VARIABLES (POINTER)
+──────────────────────────────────
+Required backend (Zod in config/env.js; see backend/.env.example):
+  MONGODB_URI, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET,
+  CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET
 
-════════════════════════════════════════
+Commonly set for real deploys:
+  NODE_ENV, PORT, CLIENT_URL (comma-separated origins),
+  TRUST_PROXY_HOPS, REDIS_URL, SMTP_*, METRICS_TOKEN,
+  SENTRY_DSN, SENTRY_RELEASE, RATE_LIMIT_ENABLED, COOKIE_SAME_SITE, AUDIT_LOG_TTL_DAYS
+
+Frontend (see frontend/.env.example):
+  VITE_SITE_URL, VITE_API_URL (production API base), VITE_SENTRY_DSN / RELEASE,
+  VITE_ENABLE_WEB_VITALS, dev proxy via VITE_BACKEND_PORT / VITE_BACKEND_URL
+
+
+11. QUICK START (LOCAL)
+───────────────────────
+1. backend: cp .env.example .env and fill required keys; npm install; npm run dev
+2. frontend: npm install; npm run dev (or root: npm install && npm run dev)
+3. Default ports: API 5000, Vite 5173 — proxy documented in frontend/vite.config.js
+
+
+12. DOCUMENTATION INDEX
+───────────────────────
+README.md                    — Overview and quick reference
+docs/DEPLOYMENT.md           — Deploy, Redis/workers, idempotency, logging, Sentry, metrics
+docs/PRE_LAUNCH_CHECKLIST.md — Go-live checklist (CORS, cookies, trust proxy, workers)
+docs/PRIVACY_AND_DATA.md     — PII and GDPR/EU stance
+docs/API_CONTRACT.md         — Postman pointer, pagination table, OpenAPI validate
+docs/openapi.yaml            — Partial OpenAPI 3 snapshot
+docs/MONGODB_ATLAS.md        — Atlas backups, IP access, DB user
+docs/SEO_CRAWLING.md         — CSR SEO and public URLs
+docs/ARCHITECTURE.md         — Long-form architecture (includes logging pointer)
+docs/PROJECT_REFERENCE.md    — Technical reference
+docs/PACKAGES_AND_SCRIPTS.md — Scripts detail
+postman/                     — API collection
+
+(Older design-phase docs may still exist under docs/; this summary reflects the
+ shipping-oriented sources above.)
+
+
+══════════════════════════════════════════════════════════════════════════════
+END OF PROJECT SUMMARY
+══════════════════════════════════════════════════════════════════════════════

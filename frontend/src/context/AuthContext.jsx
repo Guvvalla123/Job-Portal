@@ -18,8 +18,6 @@ import {
 } from '../lib/authConstants.js'
 import { toPersistedSessionUser } from '../lib/sessionUser.js'
 import { subscribeToSessionExpiry } from '../lib/authEvents.js'
-import { AppBootstrapSkeleton } from '../components/AppBootstrapSkeleton.jsx'
-
 const AuthContext = createContext(null)
 
 function parseStoredSessionUser(raw) {
@@ -221,6 +219,8 @@ export function AuthProvider({ children }) {
     () => ({
       user,
       loading,
+      /** Alias for consumers that expect `isLoading` (e.g. App route gate). */
+      isLoading: loading,
       isAuthenticated: Boolean(user),
       login,
       logout,
@@ -229,17 +229,7 @@ export function AuthProvider({ children }) {
     [user, loading, login, logout, updateUser],
   )
 
-  return (
-    <AuthContext.Provider value={value}>
-      {loading ? (
-        <div className="fixed inset-0 z-[200] min-h-dvh bg-gray-50 dark:bg-gray-950" role="status" aria-busy="true" aria-label="Loading">
-          <AppBootstrapSkeleton />
-        </div>
-      ) : (
-        children
-      )}
-    </AuthContext.Provider>
-  )
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
 export { AuthContext }

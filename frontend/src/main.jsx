@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import * as Sentry from '@sentry/react'
 import { QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
 import { HelmetProvider } from 'react-helmet-async'
@@ -12,6 +13,19 @@ import { ThemeProvider } from './context/ThemeContext.jsx'
 import { AnalyticsTracker } from './components/AnalyticsTracker.jsx'
 import { ErrorFallback } from './components/ErrorFallback.jsx'
 import { ScrollToTop } from './components/ScrollToTop.jsx'
+import { initWebVitalsReport } from './lib/reportWebVitals.js'
+
+initWebVitalsReport()
+
+if (import.meta.env.VITE_SENTRY_DSN) {
+  Sentry.init({
+    dsn: import.meta.env.VITE_SENTRY_DSN,
+    environment: import.meta.env.MODE,
+    release: import.meta.env.VITE_SENTRY_RELEASE || undefined,
+    sendDefaultPii: false,
+    tracesSampleRate: import.meta.env.PROD ? 0.05 : 0,
+  })
+}
 
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
