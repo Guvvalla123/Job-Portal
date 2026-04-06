@@ -44,6 +44,24 @@ const envSchema = z.object({
   METRICS_TOKEN: z.preprocess((v) => (v === "" || v == null ? undefined : v), z.string().min(16).optional()),
   /** Audit log TTL in days (MongoDB TTL index on createdAt) */
   AUDIT_LOG_TTL_DAYS: z.coerce.number().min(1).max(3650).default(365),
+  /**
+   * Number of reverse-proxy hops to trust for req.ip / rate limiting (Render, nginx).
+   * Set explicitly in staging to validate (e.g. 1). See docs/DEPLOYMENT.md.
+   */
+  TRUST_PROXY_HOPS: z.preprocess((v) => {
+    if (v === undefined || v === "" || v == null) return undefined;
+    const n = parseInt(String(v), 10);
+    return Number.isFinite(n) ? n : undefined;
+  }, z.number().int().min(0).max(10).optional()),
+  /** Optional: Sentry DSN for server error tracking (never commit real DSN). */
+  SENTRY_DSN: z.preprocess((v) => (v === "" || v == null ? undefined : v), z.string().url().optional()),
+  /** Optional: release string for Sentry (e.g. git SHA from Render GITHUB_COMMIT / SENTRY_RELEASE). */
+  SENTRY_RELEASE: z.preprocess((v) => (v === "" || v == null ? undefined : v), z.string().max(200).optional()),
+  /**
+   * Optional: Redis for BullMQ email queue + shared cache. When unset, email uses in-process best-effort send.
+   * Production with job alerts / transactional mail should set this and run workers.
+   */
+  REDIS_URL: z.preprocess((v) => (v === "" || v == null ? undefined : v), z.string().min(1).optional()),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -53,6 +71,14 @@ if (!parsed.success) {
   throw new Error("Invalid environment configuration.");
 }
 
-const env = parsed.data;
+const data = parsed.data;
+const trustProxyHops =
+  data.TRUST_PROXY_HOPS !== undefined && data.TRUST_PROXY_HOPS !== null
+    ? data.TRUST_PROXY_HOPS
+    : data.NODE_ENV === "production"
+      ? 1
+      : 0;
+
+const env = { ...data, trustProxyHops };
 
 module.exports = { env };

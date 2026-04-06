@@ -1,5 +1,6 @@
 const { z } = require("zod");
 const { APPLICATION_STATUSES, INTERVIEW_STATUSES } = require("../constants/applicationStatus");
+const { APPLICATIONS_LIST_MAX } = require("./paginationLimits");
 
 const applyJobSchema = z.object({
   jobId: z.string().min(1, "Job ID is required"),
@@ -29,12 +30,12 @@ const listJobApplicationsQuerySchema = z.object({
   q: z.string().max(200).optional(),
   skill: z.string().max(80).optional(),
   page: z.coerce.number().int().min(1).optional().default(1),
-  limit: z.coerce.number().int().min(1).max(200).optional().default(20),
+  limit: z.coerce.number().int().min(1).max(APPLICATIONS_LIST_MAX).optional().default(20),
 });
 
 const listMyApplicationsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
-  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+  limit: z.coerce.number().int().min(1).max(APPLICATIONS_LIST_MAX).optional().default(20),
 });
 
 module.exports = {

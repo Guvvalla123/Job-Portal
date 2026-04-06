@@ -1,0 +1,113 @@
+openapi: 3.0.3
+info:
+  title: Job Portal API
+  description: |
+    Partial OpenAPI 3 snapshot; not every route is listed. Full exploration: `postman/`.
+    Cross-origin SPA: CORS allows `Idempotency-Key` on POST `/api/v1/applications`.
+  version: 1.0.0
+
+servers:
+  - url: https://api.example.com
+    description: Production API origin (no path — paths below are absolute)
+  - url: http://localhost:5000
+    description: Local API
+
+tags:
+  - name: System
+  - name: Auth
+  - name: Applications
+
+paths:
+  /api/health:
+    get:
+      tags: [System]
+      summary: Liveness
+      responses:
+        "200":
+          description: Process up
+  /api/ready:
+    get:
+      tags: [System]
+      summary: Readiness (MongoDB)
+      responses:
+        "200":
+          description: DB connected
+        "503":
+          description: DB unavailable
+
+  /api/v1/auth/register:
+    post:
+      tags: [Auth]
+      summary: Register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fullName, email, password, role]
+              properties:
+                fullName: { type: string }
+                email: { type: string, format: email }
+                password: { type: string }
+                role: { type: string, enum: [candidate, recruiter, admin] }
+      responses:
+        "201":
+          description: Created
+        "422":
+          description: Validation error
+
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      summary: Login (sets refresh + CSRF cookies)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string }
+                password: { type: string }
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/applications:
+    post:
+      tags: [Applications]
+      summary: Apply to job (candidate)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: header
+          name: X-CSRF-Token
+          required: true
+          schema: { type: string }
+        - in: header
+          name: Idempotency-Key
+          required: false
+          schema: { type: string, maxLength: 128 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [jobId]
+              properties:
+                jobId: { type: string }
+                coverLetter: { type: string }
+      responses:
+        "201":
+          description: Application created
+        "409":
+          description: Already applied (CONFLICT) or duplicate key (DUPLICATE_KEY)
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

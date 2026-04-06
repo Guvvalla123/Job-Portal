@@ -5,6 +5,7 @@ import { AppLayout } from './layouts/AppLayout.jsx'
 import { RecruiterLayout } from './layouts/RecruiterLayout.jsx'
 import { ProtectedRoute } from './components/ProtectedRoute.jsx'
 import { useAuth } from './context/useAuth.jsx'
+import { AppBootstrapSkeleton } from './components/AppBootstrapSkeleton.jsx'
 import { Button } from './components/ui/index.js'
 
 const HomePage = lazy(() => import('./pages/HomePage.jsx').then((m) => ({ default: m.HomePage })))
@@ -39,7 +40,6 @@ const AdminApplicationsPage = lazy(() => import('./pages/admin/AdminApplications
 const AdminAuditLogPage = lazy(() => import('./pages/admin/AdminAuditLogPage.jsx').then((m) => ({ default: m.AdminAuditLogPage })))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage.jsx').then((m) => ({ default: m.NotFoundPage })))
 const ServerErrorPage = lazy(() => import('./pages/ServerErrorPage.jsx').then((m) => ({ default: m.ServerErrorPage })))
-const PlaceholderPage = lazy(() => import('./pages/PlaceholderPage.jsx').then((m) => ({ default: m.PlaceholderPage })))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage.jsx').then((m) => ({ default: m.PrivacyPage })))
 const TermsPage = lazy(() => import('./pages/TermsPage.jsx').then((m) => ({ default: m.TermsPage })))
 const CookiesPage = lazy(() => import('./pages/CookiesPage.jsx').then((m) => ({ default: m.CookiesPage })))
@@ -85,8 +85,16 @@ function DashboardRedirect() {
 }
 
 function App() {
-  const { user } = useAuth()
+  const { user, isLoading } = useAuth()
   const sessionLayoutKey = String(user?.id ?? user?._id ?? 'guest')
+
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 z-[200] min-h-dvh bg-gray-50 dark:bg-gray-950" role="status" aria-busy="true" aria-label="Loading">
+        <AppBootstrapSkeleton />
+      </div>
+    )
+  }
 
   return (
     <Routes>
@@ -198,14 +206,14 @@ function App() {
             </RouteSegmentBoundary>
           }
         />
-        <Route path="/careers" element={<RouteSegmentBoundary><PlaceholderPage /></RouteSegmentBoundary>} />
-        <Route path="/press" element={<RouteSegmentBoundary><PlaceholderPage /></RouteSegmentBoundary>} />
+        <Route path="/careers" element={<Navigate to="/about" replace />} />
+        <Route path="/press" element={<Navigate to="/about" replace />} />
         <Route path="/privacy" element={<RouteSegmentBoundary><PrivacyPage /></RouteSegmentBoundary>} />
         <Route path="/terms" element={<RouteSegmentBoundary><TermsPage /></RouteSegmentBoundary>} />
         <Route path="/cookies" element={<RouteSegmentBoundary><CookiesPage /></RouteSegmentBoundary>} />
-        <Route path="/resources/career-tips" element={<RouteSegmentBoundary><PlaceholderPage /></RouteSegmentBoundary>} />
-        <Route path="/resources/resume" element={<RouteSegmentBoundary><PlaceholderPage /></RouteSegmentBoundary>} />
-        <Route path="/resources/interview" element={<RouteSegmentBoundary><PlaceholderPage /></RouteSegmentBoundary>} />
+        <Route path="/resources/career-tips" element={<Navigate to="/about" replace />} />
+        <Route path="/resources/resume" element={<Navigate to="/about" replace />} />
+        <Route path="/resources/interview" element={<Navigate to="/about" replace />} />
         <Route path="*" element={<RouteSegmentBoundary><NotFoundPage /></RouteSegmentBoundary>} />
       </Route>
     </Routes>

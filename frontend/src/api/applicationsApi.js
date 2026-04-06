@@ -5,8 +5,21 @@ export async function listMyApplications(params = {}) {
   return data.data
 }
 
-export async function applyToJob({ jobId, coverLetter }) {
-  const { data } = await apiClient.post('/applications', { jobId, coverLetter })
+function newIdempotencyKey() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return `apply-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`
+}
+
+/** Sends Idempotency-Key per attempt so retries do not duplicate applications (server middleware). */
+export async function applyToJob({ jobId, coverLetter, idempotencyKey } = {}) {
+  const key = idempotencyKey || newIdempotencyKey()
+  const { data } = await apiClient.post(
+    '/applications',
+    { jobId, coverLetter },
+    { headers: { 'Idempotency-Key': key } },
+  )
   return data.data
 }
 

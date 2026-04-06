@@ -1,4 +1,5 @@
 const { z } = require("zod");
+const { JOBS_LIST_MAX } = require("./paginationLimits");
 
 const listJobsQuerySchema = z.object({
   q: z.string().max(200).optional().default(""),
@@ -6,7 +7,7 @@ const listJobsQuerySchema = z.object({
   employmentType: z.enum(["full-time", "part-time", "contract", "internship"]).optional(),
   experienceLevel: z.enum(["fresher", "junior", "mid", "senior", "lead"]).optional(),
   page: z.coerce.number().int().min(1).optional().default(1),
-  limit: z.coerce.number().int().min(1).max(50).optional().default(10),
+  limit: z.coerce.number().int().min(1).max(JOBS_LIST_MAX).optional().default(10),
   sort: z
     .preprocess((v) => {
       if (v == null || v === "") return "newest";

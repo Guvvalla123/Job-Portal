@@ -6,9 +6,7 @@ import { ThemeToggleFooter } from './ThemeToggle.jsx'
 const FOOTER_LINKS = {
   company: [
     { label: 'About Us', href: '/about' },
-    { label: 'Careers', href: '/careers' },
     { label: 'Contact', href: '/contact' },
-    { label: 'Press', href: '/press' },
   ],
   jobs: [
     { label: 'Browse Jobs', href: '/jobs' },
@@ -16,11 +14,7 @@ const FOOTER_LINKS = {
     { label: 'Remote Jobs', href: '/jobs?location=remote' },
     { label: 'Internships', href: '/jobs?employmentType=internship' },
   ],
-  resources: [
-    { label: 'Career Tips', href: '/resources/career-tips' },
-    { label: 'Resume Builder', href: '/resources/resume' },
-    { label: 'Interview Prep', href: '/resources/interview' },
-  ],
+  resources: [{ label: 'Career resources', href: '/about' }],
   legal: [
     { label: 'Privacy Policy', href: '/privacy' },
     { label: 'Terms of Service', href: '/terms' },

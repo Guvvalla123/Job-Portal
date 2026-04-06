@@ -7,8 +7,17 @@ const { sendMail } = require("../utils/mail");
 const { logger } = require("../config/logger");
 const { JobAlert } = require("../models/JobAlert");
 const { env } = require("../config/env");
+const { incEmailDirectFallback, incEmailDirectFallbackFailed } = require("../config/metrics");
 
 let emailQueue = null;
+
+function warnDirectEmailFallback(emailType) {
+  logger.warn("email_queue_direct_fallback", {
+    emailType,
+    hint: "Set REDIS_URL and run npm run worker:email (and worker:job-alert-digest if using digests) for durable delivery.",
+  });
+  incEmailDirectFallback();
+}
 
 const defaultJobOptions = {
   attempts: 3,
@@ -18,7 +27,7 @@ const defaultJobOptions = {
 };
 
 const getConnection = () => {
-  const url = process.env.REDIS_URL;
+  const url = env.REDIS_URL;
   if (!url) return null;
   try {
     const IORedis = require("ioredis");
@@ -54,6 +63,7 @@ const addEmailJob = async (type, payload, options = {}) => {
     return;
   }
   if (type === "JOB_ALERT") {
+    warnDirectEmailFallback(type);
     const clientUrl = String(env.CLIENT_URL || "http://localhost:5173")
       .split(",")[0]
       .trim();
@@ -79,7 +89,10 @@ const addEmailJob = async (type, payload, options = {}) => {
             logger.error("JOB_ALERT lastSentAt update failed", { error: e.message, alertId: p.alertId })
           );
         })
-        .catch((err) => logger.error("Direct JOB_ALERT mail failed", { error: err.message, to: p.userEmail }));
+        .catch((err) => {
+          incEmailDirectFallbackFailed();
+          logger.error("Direct JOB_ALERT mail failed", { error: err.message, to: p.userEmail });
+        });
     });
     return;
   }
@@ -93,6 +106,7 @@ const addEmailJob = async (type, payload, options = {}) => {
   };
 
   if (type === "APPLICATION_RECEIVED" && payload.userEmail) {
+    warnDirectEmailFallback(type);
     const p = payload;
     const html =
       p.html ||
@@ -106,12 +120,16 @@ const addEmailJob = async (type, payload, options = {}) => {
         to: p.userEmail,
         subject: p.subject || `New application: ${p.jobTitle || "Your job"}`,
         html,
-      }).catch((err) => logger.error("Direct APPLICATION_RECEIVED mail failed", { error: err.message }));
+      }).catch((err) => {
+        incEmailDirectFallbackFailed();
+        logger.error("Direct APPLICATION_RECEIVED mail failed", { error: err.message });
+      });
     });
     return;
   }
 
   if (type === "APPLICATION_STATUS_CHANGED" && payload.userEmail) {
+    warnDirectEmailFallback(type);
     const p = payload;
     const html =
       p.html ||
@@ -125,12 +143,16 @@ const addEmailJob = async (type, payload, options = {}) => {
         to: p.userEmail,
         subject: p.subject || "Application status updated",
         html,
-      }).catch((err) => logger.error("Direct STATUS mail failed", { error: err.message }));
+      }).catch((err) => {
+        incEmailDirectFallbackFailed();
+        logger.error("Direct STATUS mail failed", { error: err.message });
+      });
     });
     return;
   }
 
   if (type === "INTERVIEW_SCHEDULED" && payload.userEmail) {
+    warnDirectEmailFallback(type);
     const p = payload;
     const html =
       p.html ||
@@ -144,12 +166,15 @@ const addEmailJob = async (type, payload, options = {}) => {
         to: p.userEmail,
         subject: p.subject || "Interview scheduled",
         html,
-      }).catch((err) => logger.error("Direct INTERVIEW mail failed", { error: err.message }));
+      }).catch((err) => {
+        incEmailDirectFallbackFailed();
+        logger.error("Direct INTERVIEW mail failed", { error: err.message });
+      });
     });
     return;
   }
 
-  logger.warn("No Redis; typed email job skipped", { type });
+  logger.warn("No Redis; typed email job skipped (not implemented for direct fallback)", { type });
 };
 
 /**
@@ -161,8 +186,12 @@ const queueEmail = async (payload) => {
     await queue.add("send", payload, defaultJobOptions);
     return;
   }
+  warnDirectEmailFallback("send");
   setImmediate(() => {
-    sendMail(payload).catch((err) => logger.error("Direct mail send failed", { error: err.message, to: payload.to }));
+    sendMail(payload).catch((err) => {
+      incEmailDirectFallbackFailed();
+      logger.error("Direct mail send failed", { error: err.message, to: payload.to });
+    });
   });
 };
 
@@ -175,4 +204,18 @@ const closeQueue = async () => {
   }
 };
 
-module.exports = { queueEmail, addEmailJob, initQueue, closeQueue };
+/**
+ * Snapshot of BullMQ email queue counts for Prometheus (see config/metrics.js).
+ * @returns {Promise<Record<string, number>|null>} null if queue/Redis not active on this process.
+ */
+async function getEmailQueueJobCounts() {
+  const queue = initQueue();
+  if (!queue) return null;
+  try {
+    return await queue.getJobCounts("waiting", "paused", "active", "delayed", "completed", "failed");
+  } catch {
+    return null;
+  }
+}
+
+module.exports = { queueEmail, addEmailJob, initQueue, closeQueue, getEmailQueueJobCounts };

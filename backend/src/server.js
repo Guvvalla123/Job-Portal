@@ -1,4 +1,6 @@
 const mongoose = require("mongoose");
+const { initSentry } = require("./config/sentry");
+initSentry();
 const { app } = require("./app");
 const { env } = require("./config/env");
 const { connectDB } = require("./config/db");

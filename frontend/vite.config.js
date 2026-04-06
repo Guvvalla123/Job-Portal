@@ -15,6 +15,10 @@ export default defineConfig(({ mode }) => {
     '',
   )
 
+  // Vitest sets VITEST=true; skipping the Tailwind Vite plugin avoids rare
+  // post-run hangs and speeds transforms (unit tests do not rely on Tailwind).
+  const isVitest = process.env.VITEST === 'true'
+
   return {
     build: {
       rollupOptions: {
@@ -33,7 +37,7 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(__dirname, 'src'),
       },
     },
-    plugins: [react(), tailwindcss()],
+    plugins: [react(), ...(isVitest ? [] : [tailwindcss()])],
     test: {
       globals: true,
       environment: 'jsdom',

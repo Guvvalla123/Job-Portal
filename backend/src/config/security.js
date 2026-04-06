@@ -26,7 +26,15 @@ const corsOptions = {
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Request-Id", "X-CSRF-Token", "X-Metrics-Token"],
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Request-Id",
+    "X-CSRF-Token",
+    "X-Metrics-Token",
+    // Cross-origin SPA POST /api/v1/applications — verified in cors.integration.test.js
+    "Idempotency-Key",
+  ],
   maxAge: 86400,
 };
 

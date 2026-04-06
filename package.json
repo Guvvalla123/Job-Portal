@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "description": "Naukri-like job portal using MERN + Tailwind",
   "scripts": {
+    "openapi:validate": "npx --yes @apidevtools/swagger-cli@4.0.4 validate docs/openapi.yaml",
     "dev": "concurrently -n api,web -c cyan,magenta \"npm run backend:dev\" \"node scripts/wait-for-api.cjs && npm run frontend:dev\"",
     "dev:open": "concurrently -n api,web -c cyan,magenta \"npm run backend:dev\" \"node scripts/wait-for-api.cjs && npm run frontend:dev -- --open\"",
     "frontend:dev": "npm --prefix frontend run dev",

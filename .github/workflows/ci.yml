@@ -34,6 +34,8 @@ jobs:
         run: cd backend && npm test
         env:
           NODE_ENV: test
+          TRUST_PROXY_HOPS: "0"
+          CSRF_ENFORCE_IN_TEST: "true"
           MONGODB_URI: mongodb://localhost:27017/job_portal_test
           JWT_ACCESS_SECRET: test_access_secret_32chars_minimum_required!!
           JWT_REFRESH_SECRET: test_refresh_secret_32chars_minimum_required!!
@@ -41,6 +43,8 @@ jobs:
           CLOUDINARY_CLOUD_NAME: test
           CLOUDINARY_API_KEY: test
           CLOUDINARY_API_SECRET: test
+      - name: Validate OpenAPI spec
+        run: npm run openapi:validate
 
   frontend:
     runs-on: ubuntu-latest
@@ -59,3 +63,61 @@ jobs:
         run: cd frontend && npm test
       - name: Build frontend
         run: cd frontend && npm run build
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install backend deps
+        run: cd backend && npm ci
+      - name: Install frontend deps
+        run: cd frontend && npm ci
+      - name: Seed E2E Mongo data
+        run: node backend/scripts/e2e-seed.js
+        env:
+          MONGODB_URI: mongodb://127.0.0.1:27017/job_portal_e2e
+          JWT_ACCESS_SECRET: test_access_secret_32chars_minimum_required!!
+          JWT_REFRESH_SECRET: test_refresh_secret_32chars_minimum_required!!
+          CLOUDINARY_CLOUD_NAME: test
+          CLOUDINARY_API_KEY: test
+          CLOUDINARY_API_SECRET: test
+          CLIENT_URL: http://127.0.0.1:4173
+      - name: Start API
+        run: cd backend && node src/server.js &
+        env:
+          NODE_ENV: development
+          PORT: "5000"
+          TRUST_PROXY_HOPS: "0"
+          MONGODB_URI: mongodb://127.0.0.1:27017/job_portal_e2e
+          JWT_ACCESS_SECRET: test_access_secret_32chars_minimum_required!!
+          JWT_REFRESH_SECRET: test_refresh_secret_32chars_minimum_required!!
+          CLIENT_URL: http://127.0.0.1:4173
+          CLOUDINARY_CLOUD_NAME: test
+          CLOUDINARY_API_KEY: test
+          CLOUDINARY_API_SECRET: test
+      - name: Build frontend for E2E
+        run: cd frontend && VITE_API_URL=http://127.0.0.1:5000/api/v1 VITE_SITE_URL=http://127.0.0.1:4173 npm run build
+      - name: Start Vite preview
+        run: cd frontend && npx vite preview --host 127.0.0.1 --port 4173 --strictPort &
+      - name: Install Playwright Chromium
+        run: cd frontend && npx playwright install --with-deps chromium
+      - name: Wait for API and preview
+        run: npx wait-on@7.2.0 http://127.0.0.1:5000/api/health http://127.0.0.1:4173 -t 120000
+      - name: Run Playwright
+        run: cd frontend && E2E_FULL=1 npm run test:e2e
+        env:
+          E2E_FULL: "1"

@@ -7,7 +7,8 @@ const { env } = require("../config/env");
  * Exempt safe methods and auth bootstrap routes. Skipped in NODE_ENV=test for Supertest.
  */
 const csrfProtection = (req, res, next) => {
-  if (env.NODE_ENV === "test") return next();
+  /** Mirror production CSRF in CI when CSRF_ENFORCE_IN_TEST=true (see .github/workflows/ci.yml). */
+  if (env.NODE_ENV === "test" && process.env.CSRF_ENFORCE_IN_TEST !== "true") return next();
 
   if (["GET", "HEAD", "OPTIONS"].includes(req.method)) return next();
 

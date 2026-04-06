@@ -22,6 +22,10 @@
 | BR-8 | ATS-lite: pipeline stages, notes, bulk actions | P1 |
 | BR-9 | Monetization: featured jobs, subscriptions | P2 |
 
+### Logging & PII (operations)
+
+Operational policy for logs, Sentry, and secrets is summarized in **`docs/DEPLOYMENT.md`** (“Logging, PII, and error reporting”). Keep error messages and third-party payloads free of passwords and unnecessary PII.
+
 ### 1.2 Non-Functional Requirements
 
 | Category | Requirement | Target |

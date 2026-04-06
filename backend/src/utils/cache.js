@@ -1,8 +1,9 @@
 /**
- * Cache layer - in-memory fallback when Redis not configured.
- * Set REDIS_URL in .env for production Redis caching.
+ * Cache layer — shared Redis when REDIS_URL is set (see initRedis() from server.js),
+ * else in-memory per process. Idempotency keys (`idempotency:` prefix) use the same store.
  */
 const { logger } = require("../config/logger");
+const { env } = require("../config/env");
 
 const TTL_MS = 5 * 60 * 1000; // 5 min default
 const memoryStore = new Map();
@@ -24,7 +25,7 @@ const setMemory = (key, value, ttlMs = TTL_MS) => {
 let redisClient = null;
 
 const initRedis = () => {
-  const url = process.env.REDIS_URL;
+  const url = env.REDIS_URL;
   if (!url) return null;
   try {
     const Redis = require("ioredis");
