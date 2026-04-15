@@ -67,7 +67,7 @@ export function PrivacyPage() {
               We keep your information for as long as your account is active or as needed to provide the service,
               comply with legal obligations, resolve disputes, and enforce our agreements. You may request deletion of
               your account subject to any legal holds or legitimate business needs described in our{' '}
-              <Link to="/terms" className="font-medium text-indigo-600 underline hover:text-indigo-500 dark:text-indigo-400">
+              <Link to="/terms" className="font-medium text-teal-700 underline hover:text-[#0C5F5A] dark:text-teal-400">
                 Terms of Service
               </Link>
               .
@@ -79,7 +79,7 @@ export function PrivacyPage() {
             <p>
               You can update or remove much of your profile data from your account settings. For other requests
               (including access or deletion where applicable), contact us using the details on our{' '}
-              <Link to="/contact" className="font-medium text-indigo-600 underline hover:text-indigo-500 dark:text-indigo-400">
+              <Link to="/contact" className="font-medium text-teal-700 underline hover:text-[#0C5F5A] dark:text-teal-400">
                 Contact
               </Link>{' '}
               page.
@@ -90,7 +90,7 @@ export function PrivacyPage() {
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Cookies</h2>
             <p>
               We use cookies and similar technologies for security, preferences, and analytics. See our{' '}
-              <Link to="/cookies" className="font-medium text-indigo-600 underline hover:text-indigo-500 dark:text-indigo-400">
+              <Link to="/cookies" className="font-medium text-teal-700 underline hover:text-[#0C5F5A] dark:text-teal-400">
                 Cookie Policy
               </Link>{' '}
               for details.
@@ -104,7 +104,7 @@ export function PrivacyPage() {
 
           <Link
             to="/"
-            className="inline-flex rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-700"
+            className="inline-flex rounded-lg bg-teal-700 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#0C5F5A]"
           >
             Back to home
           </Link>

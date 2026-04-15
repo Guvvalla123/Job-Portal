@@ -3,14 +3,14 @@ import { NavLink, Outlet, Link } from 'react-router-dom'
 import { RouteFallback } from '../components/layout/RouteFallback.jsx'
 
 const navItemClass =
-  'group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900'
+  'group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-teal-500/80 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900'
 
 function NavIcon({ children, active }) {
   return (
     <span
       className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors ${
         active
-          ? 'bg-indigo-600 text-white dark:bg-indigo-500'
+          ? 'bg-teal-700 text-white dark:bg-teal-600'
           : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
       }`}
     >
@@ -68,7 +68,7 @@ function SidebarNav({ onNavigate }) {
             <span
               className={`${navItemClass} ${
                 isActive
-                  ? 'bg-indigo-50 text-indigo-900 dark:bg-indigo-950/60 dark:text-indigo-100'
+                  ? 'bg-teal-50 text-teal-900 dark:bg-teal-950/60 dark:text-teal-100'
                   : 'text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800/80'
               }`}
             >
@@ -117,7 +117,7 @@ export function RecruiterLayout() {
         }`}
       >
         <div className="hidden border-b border-gray-100 px-4 py-4 dark:border-gray-800 md:block">
-          <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Workspace</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-teal-700 dark:text-teal-400">Workspace</p>
           <p className="mt-0.5 text-sm font-semibold text-gray-900 dark:text-white">Hiring</p>
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Post roles, review candidates, schedule interviews.</p>
         </div>

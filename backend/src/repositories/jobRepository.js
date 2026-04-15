@@ -7,6 +7,28 @@ const create = (data) => Job.create(data);
 const findById = (id) =>
   Job.findById(id).populate("company", "name logoUrl location description website");
 
+const findByIdSelect = (id, select) => Job.findById(id).select(select);
+
+const findByIdPopulatePostedBy = (id, postedBySelect) =>
+  Job.findById(id).populate("postedBy", postedBySelect);
+
+const findByIdPopulateCompanyName = (id) => Job.findById(id).populate("company", "name");
+
+const findTitleLean = (id) => Job.findById(id).select("title").lean();
+
+const findCreatedInWindowForDigest = (since, now) =>
+  Job.find({
+    createdAt: { $gte: since },
+    isActive: { $ne: false },
+    isDraft: { $ne: true },
+    $or: [{ expiresAt: null }, { expiresAt: { $exists: false } }, { expiresAt: { $gt: now } }],
+  })
+    .populate("company", "name")
+    .lean();
+
+const findPostedBySelectLean = (userId, select) =>
+  Job.find({ postedBy: userId }).select(select).lean();
+
 const publicJobVisibilityFilter = () => {
   const now = new Date();
   return {
@@ -63,6 +85,12 @@ const buildListFilter = (query) => {
 module.exports = {
   create,
   findById,
+  findByIdSelect,
+  findByIdPopulatePostedBy,
+  findByIdPopulateCompanyName,
+  findTitleLean,
+  findCreatedInWindowForDigest,
+  findPostedBySelectLean,
   publicJobVisibilityFilter,
   findActiveById,
   findWithFilter,

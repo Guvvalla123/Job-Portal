@@ -65,6 +65,10 @@ export function JobDetailsPage() {
   }
 
   const job = detailsQuery.data
+  /** `resumeUrl` is omitted from API JSON; rely on `hasResume` / filename (stream uses `/users/profile/resume/file`). */
+  const candidateHasResume = Boolean(
+    user?.hasResume || user?.resumeFileName?.trim() || user?.resumeUrl,
+  )
   const alreadyApplied = (myApplicationsQuery.data || []).some(
     (app) => app.job?._id === id || app.job === id,
   )
@@ -135,7 +139,7 @@ export function JobDetailsPage() {
 
           <div className="mt-5 flex flex-wrap gap-2">
             {job.employmentType && (
-              <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
+              <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-700">
                 {job.employmentType}
               </span>
             )}
@@ -158,7 +162,7 @@ export function JobDetailsPage() {
                 {job.skills.map((skill) => (
                   <span
                     key={skill}
-                    className="rounded-md bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-600"
+                    className="rounded-md bg-teal-50 px-3 py-1 text-xs font-medium text-teal-700"
                   >
                     {skill}
                   </span>
@@ -228,7 +232,7 @@ export function JobDetailsPage() {
                 <p className="text-sm text-gray-500">Sign in to apply for this job</p>
                 <Link
                   to="/login"
-                  className="block rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700"
+                  className="block rounded-lg bg-teal-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#0C5F5A]"
                 >
                   Sign In to Apply
                 </Link>
@@ -255,7 +259,7 @@ export function JobDetailsPage() {
                   href={job.company.website}
                   target="_blank"
                   rel="noreferrer"
-                  className="mt-2 inline-block text-sm font-medium text-indigo-600 hover:text-indigo-500"
+                  className="mt-2 inline-block text-sm font-medium text-teal-700 hover:text-[#0C5F5A]"
                 >
                   Visit website &rarr;
                 </a>
@@ -288,7 +292,7 @@ export function JobDetailsPage() {
                 <button
                   type="button"
                   onClick={() => setResumePreviewOpen(true)}
-                  className="shrink-0 text-sm font-semibold text-indigo-600 hover:text-indigo-500"
+                  className="shrink-0 text-sm font-semibold text-teal-700 hover:text-[#0C5F5A]"
                 >
                   View
                 </button>
@@ -303,7 +307,7 @@ export function JobDetailsPage() {
                   <p className="text-xs text-amber-700 mt-0.5">Upload a resume in your profile to apply.</p>
                   <Link
                     to="/candidate/dashboard?tab=profile"
-                    className="mt-2 inline-block text-sm font-semibold text-indigo-600 hover:text-indigo-500"
+                    className="mt-2 inline-block text-sm font-semibold text-teal-700 hover:text-[#0C5F5A]"
                     onClick={() => setApplyModalOpen(false)}
                   >
                     Go to Profile &rarr;
@@ -324,7 +328,7 @@ export function JobDetailsPage() {
               placeholder="Why are you a good fit for this role? Highlight your relevant experience and skills..."
               rows={5}
               disabled={applyMutation.isPending}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm transition-colors placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
+              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm transition-colors placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500/40 focus:border-teal-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
               aria-describedby="coverLetter-hint"
             />
             <p id="coverLetter-hint" className="mt-1 text-xs text-gray-500">A cover letter can help you stand out from other applicants.</p>
@@ -343,16 +347,16 @@ export function JobDetailsPage() {
               className="flex-1"
               loading={applyMutation.isPending}
               loadingText="Submitting..."
-              disabled={!user?.resumeUrl || applyMutation.isPending}
+              disabled={!candidateHasResume || applyMutation.isPending}
               onClick={() => applyMutation.mutate()}
             >
               Submit Application
             </Button>
           </div>
 
-          {user?.resumeUrl && (
+          {candidateHasResume && (
             <p className="text-center text-xs text-gray-500">
-              <Link to="/candidate/dashboard?tab=applications" className="font-medium text-indigo-600 hover:text-indigo-500" onClick={() => setApplyModalOpen(false)}>
+              <Link to="/candidate/dashboard?tab=applications" className="font-medium text-teal-700 hover:text-[#0C5F5A]" onClick={() => setApplyModalOpen(false)}>
                 View my applications
               </Link>
             </p>
@@ -366,7 +370,7 @@ export function JobDetailsPage() {
         title={user?.resumeFileName ? `Resume — ${user.resumeFileName}` : 'Your resume'}
         size="xl"
       >
-        {resumePreviewOpen && user?.resumeUrl ? (
+        {resumePreviewOpen && candidateHasResume ? (
           <LazyResumeViewer path="/users/profile/resume/file" title={user?.resumeFileName || 'Resume'} />
         ) : null}
       </Modal>

@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { Button } from './Button.jsx'
 
 const primaryLinkClass =
-  'inline-flex items-center justify-center rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-[background-color,box-shadow] duration-200 hover:bg-indigo-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-950'
+  'inline-flex items-center justify-center rounded-lg bg-teal-700 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-[background-color,box-shadow] duration-200 hover:bg-[#0C5F5A] hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-950'
 
 /**
  * Empty state with icon, message, and optional CTA

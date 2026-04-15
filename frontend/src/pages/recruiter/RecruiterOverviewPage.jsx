@@ -52,9 +52,9 @@ export function RecruiterOverviewPage() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl bg-linear-to-br from-indigo-600 to-indigo-800 px-6 py-8 shadow-lg sm:px-8">
+      <div className="rounded-2xl bg-linear-to-br from-teal-600 to-teal-800 px-6 py-8 shadow-lg sm:px-8">
         <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">Overview</h1>
-        <p className="mt-2 max-w-2xl text-sm text-indigo-100 sm:text-base">
+        <p className="mt-2 max-w-2xl text-sm text-teal-100 sm:text-base">
           Hiring health at a glance — volume, pipeline mix, and what&apos;s next on your calendar.
         </p>
       </div>
@@ -62,7 +62,7 @@ export function RecruiterOverviewPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md dark:border-gray-800 dark:bg-gray-900">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 dark:bg-indigo-950/80 dark:text-indigo-300">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-100 text-teal-700 dark:bg-teal-950/80 dark:text-teal-300">
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 13.255A23.193 23.193 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
@@ -75,7 +75,7 @@ export function RecruiterOverviewPage() {
         </div>
         <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md dark:border-gray-800 dark:bg-gray-900">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 dark:bg-indigo-950/80 dark:text-indigo-300">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-100 text-teal-700 dark:bg-teal-950/80 dark:text-teal-300">
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
@@ -88,14 +88,14 @@ export function RecruiterOverviewPage() {
         </div>
         <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md dark:border-gray-800 dark:bg-gray-900">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300">
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
               </svg>
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Active pipeline</p>
-              <p className="text-2xl font-bold text-violet-700 dark:text-violet-300">{activePipeline || '—'}</p>
+              <p className="text-2xl font-bold text-sky-700 dark:text-sky-300">{activePipeline || '—'}</p>
               <p className="text-[10px] text-gray-400 dark:text-gray-500">Screening + interview + offer</p>
             </div>
           </div>
@@ -170,7 +170,7 @@ export function RecruiterOverviewPage() {
             </div>
             <Link
               to="/recruiter/interviews"
-              className="text-sm font-semibold text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
+              className="text-sm font-semibold text-teal-700 hover:text-[#0C5F5A] dark:text-teal-400"
             >
               View all →
             </Link>
@@ -186,11 +186,11 @@ export function RecruiterOverviewPage() {
             {upcoming.slice(0, 5).map((row) => (
               <li
                 key={row._id}
-                className="rounded-xl border border-indigo-100 bg-indigo-50/50 px-3 py-2.5 dark:border-indigo-900/50 dark:bg-indigo-950/30"
+                className="rounded-xl border border-teal-100 bg-teal-50/50 px-3 py-2.5 dark:border-teal-900/50 dark:bg-teal-950/30"
               >
                 <p className="font-medium text-gray-900 dark:text-white">{row.job?.title || 'Job'}</p>
                 <p className="text-xs text-gray-600 dark:text-gray-400">{row.candidate?.fullName || 'Candidate'}</p>
-                <p className="text-xs font-medium text-indigo-700 dark:text-indigo-300">
+                <p className="text-xs font-medium text-teal-700 dark:text-teal-300">
                   {row.interview?.scheduledAt
                     ? new Date(row.interview.scheduledAt).toLocaleString(undefined, {
                         dateStyle: 'medium',
@@ -204,16 +204,16 @@ export function RecruiterOverviewPage() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-3 rounded-xl border border-dashed border-indigo-200 bg-indigo-50/50 px-4 py-4 dark:border-indigo-900/60 dark:bg-indigo-950/20">
+      <div className="flex flex-wrap gap-3 rounded-xl border border-dashed border-teal-200 bg-teal-50/50 px-4 py-4 dark:border-teal-900/60 dark:bg-teal-950/20">
         <Link
           to="/recruiter/jobs"
-          className="inline-flex items-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+          className="inline-flex items-center rounded-lg bg-teal-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#0C5F5A]"
         >
           Manage jobs & applicants
         </Link>
         <Link
           to="/recruiter/companies"
-          className="inline-flex items-center rounded-lg border border-indigo-200 bg-white px-4 py-2.5 text-sm font-semibold text-indigo-800 hover:bg-indigo-50 dark:border-indigo-800 dark:bg-gray-900 dark:text-indigo-200 dark:hover:bg-indigo-950/40"
+          className="inline-flex items-center rounded-lg border border-teal-200 bg-white px-4 py-2.5 text-sm font-semibold text-teal-800 hover:bg-teal-50 dark:border-teal-800 dark:bg-gray-900 dark:text-teal-200 dark:hover:bg-teal-950/40"
         >
           Company profiles
         </Link>

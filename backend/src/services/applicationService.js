@@ -2,10 +2,8 @@ const { ApiError } = require("../utils/apiError");
 const { createNotification } = require("./notificationService");
 const applicationRepository = require("../repositories/applicationRepository");
 const jobRepository = require("../repositories/jobRepository");
+const userRepository = require("../repositories/userRepository");
 const { addEmailJob } = require("../queues/emailQueue");
-const { Job } = require("../models/Job");
-const { Application } = require("../models/Application");
-const { User } = require("../models/User");
 const { logger } = require("../config/logger");
 
 function jobPostedByUserId(job) {
@@ -19,7 +17,7 @@ async function assertRecruiterOwnsApplicationJob(application, userId, userRole) 
   const jobId = application.job?._id || application.job;
   if (!jobId) throw new ApiError(404, "Job not found for this application");
 
-  const job = await Job.findById(jobId).select("postedBy title");
+  const job = await jobRepository.findByIdSelect(jobId, "postedBy title");
   if (!job) throw new ApiError(404, "Job not found");
 
   const jobOwnerId = jobPostedByUserId(job);
@@ -42,12 +40,12 @@ const applyToJob = async (jobId, candidateId, coverLetter) => {
     coverLetter: coverLetter || "",
   });
 
-  const populatedJob = await Job.findById(jobId).populate("postedBy", "fullName email");
+  const populatedJob = await jobRepository.findByIdPopulatePostedBy(jobId, "fullName email");
   if (populatedJob?.postedBy?._id) {
-    const candidate = await User.findById(candidateId).select("fullName").lean();
+    const candidate = await userRepository.findByIdLean(candidateId, "fullName");
     const candidateName = candidate?.fullName?.trim() || "A candidate";
     const jobTitle = populatedJob.title || "a job";
-    createNotification({
+    await createNotification({
       userId: populatedJob.postedBy._id,
       type: "APPLICATION_RECEIVED",
       title: "New application received",
@@ -60,7 +58,7 @@ const applyToJob = async (jobId, candidateId, coverLetter) => {
         operation: "createNotification",
         error: err.message,
         stack: err.stack,
-      })
+      }),
     );
 
     const recruiter = populatedJob.postedBy;
@@ -78,7 +76,7 @@ const applyToJob = async (jobId, candidateId, coverLetter) => {
           operation: "addEmailJob",
           error: err.message,
           stack: err.stack,
-        })
+        }),
       );
     }
   }
@@ -100,7 +98,6 @@ const updateApplicationStatus = async (applicationId, status, userId, userRole) 
   application.status = status;
   await application.save();
 
-  // Email queue: candidate notified on pipeline change (worker / direct send when no Redis).
   createNotification({
     userId: application.candidate,
     type: "APPLICATION_STATUS_CHANGED",
@@ -114,10 +111,10 @@ const updateApplicationStatus = async (applicationId, status, userId, userRole) 
       operation: "createNotification",
       error: err.message,
       stack: err.stack,
-    })
+    }),
   );
 
-  const cand = await User.findById(application.candidate).select("email fullName").lean();
+  const cand = await userRepository.findByIdLean(application.candidate, "email fullName");
   if (cand?.email) {
     addEmailJob("APPLICATION_STATUS_CHANGED", {
       userEmail: cand.email,
@@ -131,7 +128,7 @@ const updateApplicationStatus = async (applicationId, status, userId, userRole) 
         operation: "addEmailJob",
         error: err.message,
         stack: err.stack,
-      })
+      }),
     );
   }
 
@@ -158,16 +155,7 @@ const listApplicationsForJob = async (jobId, userId, userRole, query = {}) => {
 };
 
 const getApplicationDetail = async (applicationId, userId, userRole) => {
-  const application = await Application.findById(applicationId)
-    .populate({
-      path: "job",
-      select: "title location postedBy",
-      populate: { path: "company", select: "name logoUrl" },
-    })
-    .populate(
-      "candidate",
-      "fullName email phone headline location skills experience projects education profileImageUrl resumeFileName"
-    );
+  const application = await applicationRepository.findByIdPopulatedForRecruiterDetail(applicationId);
 
   if (!application) throw new ApiError(404, "Application not found");
   await assertRecruiterOwnsApplicationJob(application, userId, userRole);
@@ -216,10 +204,9 @@ const updateInterview = async (applicationId, payload, userId, userRole) => {
   }
   await application.save();
 
-  // Email queue when interview is set/updated with a scheduled time.
   if (interviewScheduledInRequest && next.scheduledAt) {
     const jobIdForTitle = application.job?._id || application.job;
-    const jobDoc = await Job.findById(jobIdForTitle).select("title").lean();
+    const jobDoc = await jobRepository.findTitleLean(jobIdForTitle);
     const jobTitle = jobDoc?.title || "your application";
     const formattedDate = next.scheduledAt.toLocaleString(undefined, {
       dateStyle: "medium",
@@ -241,10 +228,10 @@ const updateInterview = async (applicationId, payload, userId, userRole) => {
         operation: "createNotification",
         error: err.message,
         stack: err.stack,
-      })
+      }),
     );
 
-    const cand = await User.findById(application.candidate).select("email fullName").lean();
+    const cand = await userRepository.findByIdLean(application.candidate, "email fullName");
     if (cand?.email) {
       addEmailJob("INTERVIEW_SCHEDULED", {
         userEmail: cand.email,
@@ -258,7 +245,7 @@ const updateInterview = async (applicationId, payload, userId, userRole) => {
           operation: "addEmailJob",
           error: err.message,
           stack: err.stack,
-        })
+        }),
       );
     }
   }
@@ -267,19 +254,12 @@ const updateInterview = async (applicationId, payload, userId, userRole) => {
 };
 
 const listUpcomingInterviews = async (userId, userRole) => {
-  const jobs = await Job.find({ postedBy: userId }).select("_id").lean();
+  const jobs = await jobRepository.findJobIdsByPostedBy(userId);
   const jobIds = jobs.map((j) => j._id);
   if (jobIds.length === 0) return { interviews: [] };
 
   if (userRole === "admin") {
-    const all = await Application.find({
-      "interview.scheduledAt": { $gte: new Date() },
-      "interview.status": "scheduled",
-    })
-      .populate("candidate", "fullName email")
-      .populate("job", "title")
-      .sort({ "interview.scheduledAt": 1 })
-      .limit(50);
+    const all = await applicationRepository.findUpcomingInterviewsAllAdmin();
     return { interviews: all };
   }
 

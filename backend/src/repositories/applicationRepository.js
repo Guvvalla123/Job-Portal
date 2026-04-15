@@ -153,6 +153,44 @@ const findUpcomingInterviewsForJobs = (jobIds, fromDate = new Date()) =>
     .sort({ "interview.scheduledAt": 1 })
     .limit(50);
 
+const RECRUITER_DETAIL_CANDIDATE_FIELDS =
+  "fullName email phone headline location skills experience projects education profileImageUrl resumeFileName";
+
+const findByIdPopulatedForRecruiterDetail = (id) =>
+  Application.findById(id)
+    .populate({
+      path: "job",
+      select: "title location postedBy",
+      populate: { path: "company", select: "name logoUrl" },
+    })
+    .populate("candidate", RECRUITER_DETAIL_CANDIDATE_FIELDS);
+
+const countByJobsCreatedBetween = (jobIds, start, end) =>
+  Application.countDocuments({
+    job: { $in: jobIds },
+    createdAt: { $gte: start, $lt: end },
+  });
+
+const countByJobsCreatedBetweenWithStatus = (jobIds, start, end, status) =>
+  Application.countDocuments({
+    job: { $in: jobIds },
+    status,
+    createdAt: { $gte: start, $lt: end },
+  });
+
+const findUpcomingInterviewsAllAdmin = (fromDate = new Date()) =>
+  Application.find({
+    "interview.scheduledAt": { $gte: fromDate },
+    "interview.status": "scheduled",
+  })
+    .populate("candidate", "fullName email")
+    .populate("job", "title")
+    .sort({ "interview.scheduledAt": 1 })
+    .limit(50);
+
+const findByCandidatePopulateJobForExport = (candidateId) =>
+  Application.find({ candidate: candidateId }).populate("job", "title location company").lean();
+
 module.exports = {
   create,
   findById,
@@ -164,4 +202,9 @@ module.exports = {
   aggregateByStatus,
   updateById,
   findUpcomingInterviewsForJobs,
+  findByIdPopulatedForRecruiterDetail,
+  countByJobsCreatedBetween,
+  countByJobsCreatedBetweenWithStatus,
+  findUpcomingInterviewsAllAdmin,
+  findByCandidatePopulateJobForExport,
 };

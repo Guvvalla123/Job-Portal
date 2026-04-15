@@ -1,12 +1,22 @@
 const jwt = require("jsonwebtoken");
 const { env } = require("../config/env");
 
-const signOptsAccess = { expiresIn: env.JWT_ACCESS_EXPIRES, jwtid: require("crypto").randomUUID(), algorithm: "HS256" };
-const signOptsRefresh = { expiresIn: env.JWT_REFRESH_EXPIRES, algorithm: "HS256" };
+const crypto = require("crypto");
 
-const signAccessToken = (payload) => jwt.sign(payload, env.JWT_ACCESS_SECRET, signOptsAccess);
+const signAccessToken = (payload) =>
+  jwt.sign(payload, env.JWT_ACCESS_SECRET, {
+    expiresIn: env.JWT_ACCESS_EXPIRES,
+    jwtid: crypto.randomUUID(),
+    algorithm: "HS256",
+  });
 
-const signRefreshToken = (payload) => jwt.sign(payload, env.JWT_REFRESH_SECRET, signOptsRefresh);
+/** New `jti` every call so stored refresh hash rotates and old cookies fail reuse detection. */
+const signRefreshToken = (payload) =>
+  jwt.sign(payload, env.JWT_REFRESH_SECRET, {
+    expiresIn: env.JWT_REFRESH_EXPIRES,
+    jwtid: crypto.randomUUID(),
+    algorithm: "HS256",
+  });
 
 const JWT_VERIFY_OPTS = { algorithms: ["HS256"] };
 

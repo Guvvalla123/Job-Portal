@@ -23,8 +23,6 @@ export async function deleteCompany(id) {
 export async function uploadCompanyLogo(id, file) {
   const formData = new FormData()
   formData.append('logo', file)
-  const { data } = await apiClient.post(`/companies/${id}/logo`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  })
+  const { data } = await apiClient.post(`/companies/${id}/logo`, formData)
   return data.data
 }

@@ -2,7 +2,7 @@
  * Audit logging - tracks critical actions for compliance and debugging.
  * Writes async to avoid blocking response.
  */
-const { AuditLog } = require("../models/AuditLog");
+const auditLogRepository = require("../repositories/auditLogRepository");
 const { logger } = require("../config/logger");
 
 const log = async ({ userId, action, resourceType, resourceId, changes, req }) => {
@@ -20,7 +20,7 @@ const log = async ({ userId, action, resourceType, resourceId, changes, req }) =
   };
 
   setImmediate(() => {
-    AuditLog.create(doc).catch((err) => {
+    auditLogRepository.create(doc).catch((err) => {
       logger.error("AuditLog write failed", { error: err.message, action, resourceType });
     });
   });

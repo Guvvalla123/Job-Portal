@@ -1,15 +1,27 @@
-import { useEffect, useState } from 'react'
+/* frontend/src/layouts/AppLayout.jsx */
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/useAuth.jsx'
 import { Footer } from '../components/Footer.jsx'
 import { FloatingRecruiterFab } from '../components/FloatingRecruiterFab.jsx'
 import { PageShell, AnimatedPage } from '../components/layout/PageShell.jsx'
+import { DashboardBottomNav } from '../components/navigation/DashboardBottomNav.jsx'
 import { useHeaderScrolled } from '../hooks/useHeaderScrolled.js'
 import { isAuthRoute } from '../lib/authRoutes.js'
-import { ThemeToggle } from '../components/ThemeToggle.jsx'
 import { SITE_LOGO_MARK, SITE_NAME } from '../config/site.js'
 import { DesktopNav } from './components/DesktopNav.jsx'
 import { MobileSheet } from './components/MobileSheet.jsx'
+
+function useShowMobileDashboardNav(user, pathname, authPage, loading) {
+  return useMemo(() => {
+    if (!user || loading || authPage) return false
+    const role = user.role
+    if (role === 'candidate' && pathname.startsWith('/candidate/dashboard')) return true
+    if (role === 'recruiter' && pathname.startsWith('/recruiter')) return true
+    if (role === 'admin' && pathname.startsWith('/admin')) return true
+    return false
+  }, [user, pathname, authPage, loading])
+}
 
 export function AppLayout() {
   const { user, loading } = useAuth()
@@ -18,16 +30,21 @@ export function AppLayout() {
   const headerScrolled = useHeaderScrolled(8)
   const authPage = isAuthRoute(pathname)
   const showAuthenticatedNav = Boolean(user) && !authPage && !loading
+  const showMobileDashboardNav = useShowMobileDashboardNav(user, pathname, authPage, loading)
 
   useEffect(() => {
     setMobileOpen(false)
   }, [pathname])
 
+  const mainPadBottom = showMobileDashboardNav
+    ? 'max-md:pb-[calc(4.85rem+env(safe-area-inset-bottom,0px))]'
+    : ''
+
   return (
     <div className="flex min-h-dvh flex-col">
       <header
-        className={`sticky top-0 z-50 border-b border-white/10 bg-indigo-900/95 shadow-md backdrop-blur-xl transition-[box-shadow,background-color] duration-200 dark:bg-indigo-950/95 ${
-          headerScrolled ? 'shadow-lg shadow-indigo-950/20' : ''
+        className={`sticky top-0 z-50 border-b border-white/10 bg-[#0F766E]/95 shadow-md backdrop-blur-xl transition-[box-shadow,background-color] duration-200 dark:bg-[#0C5F5A]/95 ${
+          headerScrolled ? 'shadow-lg shadow-teal-950/25' : ''
         }`}
       >
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6">
@@ -44,7 +61,6 @@ export function AppLayout() {
           <DesktopNav showAuthenticatedNav={showAuthenticatedNav} user={user} />
 
           <div className="flex items-center gap-1 md:hidden">
-            <ThemeToggle />
             <button
               type="button"
               onClick={() => setMobileOpen(true)}
@@ -71,8 +87,8 @@ export function AppLayout() {
       <main
         className={
           authPage
-            ? 'flex min-w-0 flex-1 flex-col bg-slate-950 dark:bg-gray-950'
-            : 'flex min-w-0 flex-1 flex-col bg-gray-50 dark:bg-gray-950'
+            ? `flex min-w-0 flex-1 flex-col bg-slate-950 dark:bg-gray-950 ${mainPadBottom}`
+            : `flex min-w-0 flex-1 flex-col bg-gray-50 dark:bg-gray-950 ${mainPadBottom}`
         }
       >
         <PageShell>
@@ -82,6 +98,7 @@ export function AppLayout() {
 
       <Footer />
       <FloatingRecruiterFab />
+      <DashboardBottomNav />
     </div>
   )
 }

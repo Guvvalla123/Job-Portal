@@ -28,7 +28,7 @@ const JOB_CATEGORIES = [
     blurb: 'Backend, frontend, DevOps & more',
     href: '/jobs?q=engineering',
     iconWrap:
-      'bg-violet-500/10 text-violet-700 ring-1 ring-violet-500/15 dark:bg-violet-500/15 dark:text-violet-300 dark:ring-violet-500/25',
+      'bg-sky-500/10 text-sky-700 ring-1 ring-sky-500/15 dark:bg-sky-500/15 dark:text-sky-300 dark:ring-sky-500/25',
     icon: (
       <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
@@ -196,7 +196,7 @@ const TESTIMONIALS = [
 ]
 
 function testimonialAvatar(seed) {
-  return `https://api.dicebear.com/7.x/notionists/svg?seed=${encodeURIComponent(seed)}&backgroundColor=c7d2fe`
+  return `https://api.dicebear.com/7.x/notionists/svg?seed=${encodeURIComponent(seed)}&backgroundColor=ccfbf1`
 }
 
 function StatCardSkeleton() {
@@ -279,49 +279,52 @@ export function HomePage() {
               decoding="async"
             />
           </div>
-          <div className="absolute inset-0 -z-10 bg-linear-to-br from-indigo-950/92 via-slate-950/90 to-indigo-950/94" aria-hidden />
-          <div className="absolute inset-0 -z-10 bg-linear-to-t from-black/50 via-transparent to-indigo-900/25" aria-hidden />
+          <div
+            className="absolute inset-0 -z-10 bg-linear-to-br from-slate-950/90 via-[#0f766e]/42 to-slate-950/93"
+            aria-hidden
+          />
+          <div className="absolute inset-0 -z-10 bg-linear-to-t from-black/58 via-transparent to-[#14b8a6]/18" aria-hidden />
           <div
             className="absolute inset-0 -z-10 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNyI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-70"
             aria-hidden
           />
-          <div className="pointer-events-none absolute -left-24 top-1/4 size-112 rounded-full bg-indigo-500/20 blur-[100px] motion-safe:animate-hero-float" aria-hidden />
+          <div className="pointer-events-none absolute -left-24 top-1/4 size-112 rounded-full bg-[#14b8a6]/25 blur-[100px] motion-safe:animate-hero-float" aria-hidden />
           <div
-            className="pointer-events-none absolute -right-20 bottom-1/4 h-80 w-80 rounded-full bg-indigo-600/15 blur-[90px] motion-safe:animate-hero-float"
+            className="pointer-events-none absolute -right-20 bottom-1/4 h-80 w-80 rounded-full bg-[#0f766e]/20 blur-[90px] motion-safe:animate-hero-float"
             style={{ animationDelay: '-7s' }}
             aria-hidden
           />
 
           <div className="relative mx-auto max-w-4xl text-center">
             <span
-              className="inline-flex animate-fade-in-up items-center rounded-full bg-white/15 px-4 py-1.5 text-sm font-medium text-white shadow-lg ring-1 ring-white/20 backdrop-blur-md"
+              className="inline-flex animate-fade-in-up items-center rounded-full bg-white/12 px-4 py-1.5 text-sm font-medium tracking-wide text-white/95 shadow-lg ring-1 ring-white/25 backdrop-blur-md"
               style={{ animationDelay: '0.05s' }}
             >
               Trusted by teams hiring at scale
             </span>
             <h1
-              className="type-hero mt-6 animate-fade-in-up drop-shadow-sm"
+              className="type-hero mt-6 animate-fade-in-up drop-shadow-md"
               style={{ animationDelay: '0.12s' }}
             >
               Find work that fits your ambition
             </h1>
             <p
-              className="mx-auto mt-6 max-w-2xl animate-fade-in-up text-base font-normal leading-relaxed text-indigo-100/95 sm:text-lg"
+              className="mx-auto mt-6 max-w-2xl animate-fade-in-up text-base font-normal leading-relaxed text-slate-100/90 sm:text-lg"
               style={{ animationDelay: '0.2s' }}
             >
               Premium job discovery — rich company profiles, transparent roles, and applications that respect your time.
             </p>
-            <div className="mt-10 flex flex-wrap justify-center gap-4 animate-fade-in-up" style={{ animationDelay: '0.28s' }}>
+            <div className="mt-10 flex flex-wrap justify-center gap-3 sm:gap-4 animate-fade-in-up" style={{ animationDelay: '0.28s' }}>
               <Link
                 to="/jobs"
-                className="inline-flex items-center rounded-lg bg-white px-8 py-3.5 text-base font-semibold text-indigo-700 shadow-md transition-[background-color,box-shadow,opacity] duration-200 hover:bg-indigo-50 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-indigo-950"
+                className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#0F766E] px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-black/20 transition-[background-color,box-shadow,transform] duration-200 hover:bg-[#0C5F5A] hover:shadow-xl active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
               >
                 Explore jobs
               </Link>
               {!isAuthenticated && (
                 <Link
                   to="/register"
-                  className="inline-flex items-center rounded-lg border border-white/40 bg-white/10 px-8 py-3.5 text-base font-semibold text-white backdrop-blur-md transition-colors duration-200 hover:border-white/60 hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-indigo-950"
+                  className="inline-flex min-h-12 items-center justify-center rounded-xl border-2 border-white/45 bg-white/10 px-8 py-3.5 text-base font-semibold text-white backdrop-blur-md transition-[border-color,background-color] duration-200 hover:border-white/70 hover:bg-white/16 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
                 >
                   Create free account
                 </Link>
@@ -329,7 +332,7 @@ export function HomePage() {
               {user?.role === 'recruiter' && (
                 <Link
                   to="/recruiter/dashboard"
-                  className="inline-flex items-center rounded-lg border border-white/40 bg-white/10 px-8 py-3.5 text-base font-semibold text-white backdrop-blur-md transition-colors duration-200 hover:bg-white/15"
+                  className="inline-flex min-h-12 items-center justify-center rounded-xl border-2 border-white/45 bg-white/10 px-8 py-3.5 text-base font-semibold text-white backdrop-blur-md transition-colors duration-200 hover:bg-white/15"
                 >
                   Post a role
                 </Link>
@@ -364,7 +367,7 @@ export function HomePage() {
                         className="rounded-xl border border-gray-200/80 bg-white p-6 text-center shadow-sm ring-1 ring-gray-100 transition-shadow duration-200 hover:shadow-md dark:border-gray-700/80 dark:bg-gray-800/90 dark:ring-gray-700/80"
                         style={{ animationDelay: `${i * 0.06}s` }}
                       >
-                        <div className="relative mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm">
+                        <div className="relative mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-teal-700 text-white shadow-sm">
                           {item.icon}
                         </div>
                         <p className="relative text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">{headline}</p>
@@ -391,7 +394,7 @@ export function HomePage() {
               </div>
               <Link
                 to="/jobs"
-                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-indigo-700 shadow-sm transition-colors duration-200 hover:border-indigo-200 hover:bg-indigo-50 dark:border-gray-600 dark:bg-gray-800 dark:text-indigo-300 dark:hover:border-indigo-800 dark:hover:bg-indigo-950/40"
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-teal-700 shadow-sm transition-colors duration-200 hover:border-teal-200 hover:bg-teal-50 dark:border-gray-600 dark:bg-gray-800 dark:text-teal-300 dark:hover:border-teal-800 dark:hover:bg-teal-950/40"
               >
                 View all jobs
                 <span aria-hidden>→</span>
@@ -417,14 +420,14 @@ export function HomePage() {
                           loading="lazy"
                         />
                       ) : (
-                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-lg font-semibold text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300">
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-teal-100 text-lg font-semibold text-teal-700 dark:bg-teal-950/60 dark:text-teal-300">
                           {job.company?.name?.charAt(0)?.toUpperCase() || 'C'}
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
                         <Link
                           to={`/jobs/${job.id ?? job._id}`}
-                          className="line-clamp-2 text-base font-semibold text-gray-900 transition-colors group-hover/card:text-indigo-600 dark:text-white dark:group-hover/card:text-indigo-400"
+                          className="line-clamp-2 text-base font-semibold text-gray-900 transition-colors group-hover/card:text-teal-700 dark:text-white dark:group-hover/card:text-teal-400"
                         >
                           {job.title}
                         </Link>
@@ -500,7 +503,7 @@ export function HomePage() {
                 <Link
                   key={cat.title}
                   to={cat.href}
-                  className="group rounded-xl border border-gray-200/80 bg-white p-6 shadow-sm ring-1 ring-gray-100 transition-[box-shadow,transform,border-color] duration-200 hover:-translate-y-0.5 hover:border-indigo-200/80 hover:shadow-md dark:border-gray-700/80 dark:bg-gray-800/50 dark:ring-gray-700/60 dark:hover:border-indigo-800/80 motion-reduce:hover:translate-y-0"
+                  className="group rounded-xl border border-gray-200/80 bg-white p-6 shadow-sm ring-1 ring-gray-100 transition-[box-shadow,transform,border-color] duration-200 hover:-translate-y-0.5 hover:border-teal-200/80 hover:shadow-md dark:border-gray-700/80 dark:bg-gray-800/50 dark:ring-gray-700/60 dark:hover:border-teal-800/80 motion-reduce:hover:translate-y-0"
                 >
                   <div className={`inline-flex rounded-lg p-3 transition-opacity duration-200 group-hover:opacity-90 ${cat.iconWrap}`}>
                     {cat.icon}
@@ -521,13 +524,13 @@ export function HomePage() {
           <div className="pointer-events-none absolute inset-0 opacity-25" aria-hidden>
             <img src={CAREER_ILLUSTRATION} alt="" className="h-full w-full object-cover object-center" />
           </div>
-          <div className="absolute inset-0 bg-indigo-950/88" aria-hidden />
+          <div className="absolute inset-0 bg-teal-950/88" aria-hidden />
           <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
               <div className="max-w-xl">
-                <p className="text-xs font-semibold uppercase tracking-wider text-indigo-200">Employer spotlight</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-teal-200">Employer spotlight</p>
                 <h2 className="text-display mt-2 text-3xl font-semibold tracking-tight">Companies hiring now</h2>
-                <p className="mt-2 text-base font-normal text-indigo-100/90">
+                <p className="mt-2 text-base font-normal text-teal-100/90">
                   Discover teams with open reqs — logos, locations, and culture in one place.
                 </p>
               </div>
@@ -552,13 +555,13 @@ export function HomePage() {
                         {company.logoUrl ? (
                           <img src={company.logoUrl} alt="" className="h-12 w-12 rounded-xl object-cover ring-2 ring-white/20" loading="lazy" />
                         ) : (
-                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-lg font-semibold text-white">
+                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-teal-700 text-lg font-semibold text-white">
                             {company.name?.charAt(0)?.toUpperCase() || 'C'}
                           </div>
                         )}
                         <div className="min-w-0 flex-1">
                           <h3 className="truncate font-semibold text-white">{company.name}</h3>
-                          {company.location && <p className="truncate text-sm text-indigo-200">{company.location}</p>}
+                          {company.location && <p className="truncate text-sm text-teal-200">{company.location}</p>}
                         </div>
                       </Link>
                     ) : (
@@ -566,12 +569,12 @@ export function HomePage() {
                         key={`placeholder-${idx}`}
                         className="flex items-center gap-4 rounded-2xl border border-dashed border-white/15 bg-white/5 p-4 backdrop-blur-sm"
                       >
-                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 text-sm font-bold text-indigo-200">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 text-sm font-bold text-teal-200">
                           ?
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-indigo-100">Your company here</p>
-                          <p className="text-xs text-indigo-300/80">Post a job to appear</p>
+                          <p className="text-sm font-medium text-teal-100">Your company here</p>
+                          <p className="text-xs text-teal-300/80">Post a job to appear</p>
                         </div>
                       </div>
                     ),
@@ -590,15 +593,15 @@ export function HomePage() {
               </h2>
             </div>
             <div className="relative mt-16">
-              <div className="absolute left-0 top-8 hidden h-px w-full bg-indigo-200 md:block dark:bg-indigo-800" aria-hidden />
+              <div className="absolute left-0 top-8 hidden h-px w-full bg-teal-200 md:block dark:bg-teal-800" aria-hidden />
               <div className="grid gap-10 md:grid-cols-3 md:gap-6">
                 {HOW_IT_WORKS.map(({ step, icon, title, description }, i) => (
                   <div key={title} className="relative">
                     <div className="relative z-10 mx-auto flex max-w-sm flex-col rounded-xl border border-gray-200/80 bg-white p-8 shadow-sm ring-1 ring-gray-100 transition-shadow duration-200 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:ring-gray-700 md:mx-0">
-                      <span className="absolute -top-3 left-8 rounded-full bg-indigo-600 px-3 py-0.5 text-xs font-semibold text-white">
+                      <span className="absolute -top-3 left-8 rounded-full bg-teal-700 px-3 py-0.5 text-xs font-semibold text-white">
                         {step}
                       </span>
-                      <div className="mt-4 flex h-14 w-14 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-300">
+                      <div className="mt-4 flex h-14 w-14 items-center justify-center rounded-xl bg-teal-50 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300">
                         {icon}
                       </div>
                       <h3 className="mt-6 text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
@@ -606,7 +609,7 @@ export function HomePage() {
                     </div>
                     {i < 2 && (
                       <div className="my-6 flex justify-center md:hidden" aria-hidden>
-                        <div className="h-8 w-px bg-indigo-200 dark:bg-indigo-800" />
+                        <div className="h-8 w-px bg-teal-200 dark:bg-teal-800" />
                       </div>
                     )}
                   </div>
@@ -643,7 +646,7 @@ export function HomePage() {
                     <img
                       src={testimonialAvatar(seed)}
                       alt=""
-                      className="h-14 w-14 rounded-2xl object-cover ring-2 ring-indigo-100 dark:ring-indigo-900/50"
+                      className="h-14 w-14 rounded-2xl object-cover ring-2 ring-teal-100 dark:ring-teal-900/50"
                       width={56}
                       height={56}
                       loading="lazy"
@@ -661,7 +664,7 @@ export function HomePage() {
 
         {/* CTA */}
         {!isAuthenticated && (
-          <section className="section-y relative overflow-hidden bg-indigo-700 dark:bg-indigo-900">
+          <section className="section-y relative overflow-hidden bg-teal-700 dark:bg-teal-900">
             <div
               className="absolute inset-0 opacity-[0.12] mix-blend-overlay bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')]"
               aria-hidden
@@ -670,13 +673,13 @@ export function HomePage() {
               <h2 className="text-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
                 Ready for your next chapter?
               </h2>
-              <p className="mx-auto mt-4 max-w-xl text-base font-normal text-indigo-100">
+              <p className="mx-auto mt-4 max-w-xl text-base font-normal text-teal-100">
                 Join professionals who use CareerSync to discover roles worth their skills — free for candidates.
               </p>
               <div className="mt-10 flex flex-wrap justify-center gap-3">
                 <Link
                   to="/register"
-                  className="inline-flex items-center rounded-lg bg-white px-8 py-3.5 text-base font-semibold text-indigo-700 shadow-md transition-[background-color,box-shadow] duration-200 hover:bg-indigo-50 hover:shadow-lg"
+                  className="inline-flex items-center rounded-lg bg-white px-8 py-3.5 text-base font-semibold text-teal-700 shadow-md transition-[background-color,box-shadow] duration-200 hover:bg-teal-50 hover:shadow-lg"
                 >
                   Create free account
                 </Link>

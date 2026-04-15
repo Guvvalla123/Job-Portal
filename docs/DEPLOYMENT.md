@@ -9,6 +9,23 @@
 | **staging** | Pre-production | Staging DB, real TLS, `RATE_LIMIT_ENABLED=true`, `TRUST_PROXY_HOPS` matches host |
 | **production** | Live | Atlas + secrets manager, `NODE_ENV=production`, Redis + workers for email |
 
+## Administrator MFA (TOTP)
+
+- **Optional org policy:** set **`ADMIN_MFA_REQUIRED=true`** in production so every user with role `admin` must enroll an authenticator before **`/api/v1/admin/*`** returns data (see `requireAdminPortalAccess` + `amfa` on JWTs in `backend/src/services/authService.js`).
+- **Required env when policy is on:** **`MFA_ENCRYPTION_KEY`** (min **32** characters) encrypts stored TOTP secrets (`backend/src/utils/mfaSecretCrypto.js`).
+- **Enrollment:** `POST /api/v1/auth/mfa/setup` (authenticated admin) → `POST /api/v1/auth/mfa/enable` with `{ secret, code }`, or use the SPA **`/admin/security`** page.
+- **Sign-in:** after password, admins with MFA enabled receive **`mfaRequired` + `mfaToken`** from `POST /auth/login`, then `POST /auth/mfa/verify-login` with `{ mfaToken, code }` (handled in the login UI).
+
+## Stronger env validation (optional flags)
+
+| Variable | Effect |
+|----------|--------|
+| **`REQUIRE_SMTP=true`** | Boot fails unless `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` are set. |
+| **`REQUIRE_REDIS_IN_PRODUCTION=true`** | In `NODE_ENV=production`, boot fails if `REDIS_URL` is unset. |
+| **`ADMIN_MFA_REQUIRED=true`** | In production, requires `MFA_ENCRYPTION_KEY` and enforces admin enrollment (see above). |
+
+All are parsed in **`backend/src/config/env.js`**.
+
 ## Reverse proxy (Express `trust proxy`)
 
 Render, nginx, and similar sit **one hop** in front of Node. Without `trust proxy`, `req.ip` and **express-rate-limit** key off the proxy IP, not the client.
@@ -77,9 +94,13 @@ Operators should assume **strict cross-instance dedup for the middleware layer**
 - **Sentry:** backend uses `sendDefaultPii: false` and redacts `request.data` / cookies in `beforeSend` (`config/sentry.js`). Add org-level scrubbing rules in Sentry for field names (`email`, `password`, etc.).
 - **Audit logs** store IP and user agent by design (`auditLogService.js`)—treat as operational data with retention (`AUDIT_LOG_TTL_DAYS`).
 
+## User data export (portability)
+
+Authenticated users may call **`GET /api/v1/users/me/data-export`** (JSON attachment). The candidate dashboard includes a **Download my data** action on the profile tab. This complements Atlas backups; it does not replace them — keep an operational backup runbook in your org (MongoDB Atlas snapshots, etc.).
+
 ## Pre-launch checklist
 
-See **`docs/PRE_LAUNCH_CHECKLIST.md`** (CORS, `TRUST_PROXY_HOPS`, `METRICS_TOKEN`, CSRF/cookies, Redis/workers, smoke checks).
+Before go-live: validate CORS, `TRUST_PROXY_HOPS`, `METRICS_TOKEN`, CSRF/cookies, Redis/workers, admin MFA policy, and run smoke tests against staging. See **`PROJECT_STATUS.txt`** (root) for current gaps.
 
 ## Render (`render.yaml`)
 
@@ -139,11 +160,9 @@ cd frontend && E2E_FULL=1 npm run test:e2e
 
 ## Related docs
 
-- `docs/PRE_LAUNCH_CHECKLIST.md` — CORS, cookies, Redis/workers, metrics, smoke.
-- `docs/MONGODB_ATLAS.md` — Atlas backups, IP access, least-privilege DB user.
-- `docs/PRIVACY_AND_DATA.md` — PII, GDPR/EU scope, export/delete stance.
-- `docs/SEO_CRAWLING.md` — SPA SEO limits and nav/placeholder policy.
-- `docs/API_CONTRACT.md` — Postman + `docs/openapi.yaml`.
+- `docs/ARCHITECTURE.md` — system design and modules.
+- `docs/api/API_CONTRACT.md` — API overview + `docs/api/openapi.yaml`.
+- `docs/PROJECT_STATUS.md` — honest build/testing/feature status (updated with the codebase).
 
 ## CVE / dependency policy
 

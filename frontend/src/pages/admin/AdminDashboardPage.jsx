@@ -16,6 +16,7 @@ import { CACHE_TIERS } from '../../lib/queryOptions.js'
 import { Card } from '../../components/ui/Card.jsx'
 import { Skeleton } from '../../components/ui/Skeleton.jsx'
 import { PageHeader } from '../../components/ui/PageHeader.jsx'
+import { adminNav } from '../../lib/adminNav.js'
 
 function formatStat(n) {
   if (n == null || Number.isNaN(Number(n))) return '—'
@@ -29,15 +30,6 @@ function formatChartMonth(isoYm) {
   if (Number.isNaN(d.getTime())) return isoYm
   return d.toLocaleString(undefined, { month: 'short', year: '2-digit' })
 }
-
-const adminNav = [
-  { to: '/admin/dashboard', label: 'Overview', description: 'Platform statistics' },
-  { to: '/admin/users', label: 'Users', description: 'Roles, status, and accounts' },
-  { to: '/admin/jobs', label: 'Jobs', description: 'Listings and activation' },
-  { to: '/admin/companies', label: 'Companies', description: 'Recruiter organizations' },
-  { to: '/admin/applications', label: 'Applications', description: 'Candidate applications' },
-  { to: '/admin/audit-logs', label: 'Audit log', description: 'Security and activity' },
-]
 
 function IconUsers({ className = 'h-6 w-6' }) {
   return (
@@ -120,7 +112,7 @@ function StatCard({ icon, label, value }) {
   return (
     <Card padding="default" className="flex flex-col gap-3">
       <div className="flex items-start justify-between gap-3">
-        <div className="rounded-lg bg-indigo-50 p-2 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-300">
+        <div className="rounded-lg bg-teal-50 p-2 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300">
           <IconGlyph className="h-6 w-6" />
         </div>
       </div>
@@ -178,9 +170,9 @@ export function AdminDashboardPage() {
         description="Manage users, jobs, companies, applications, and audit activity from one place."
       />
 
-      <div className="rounded-xl bg-indigo-600 px-5 py-6 shadow-md sm:px-8 dark:bg-indigo-800">
-        <p className="text-xs font-semibold uppercase tracking-wide text-indigo-200">At a glance</p>
-        <p className="mt-1 text-sm text-indigo-100">
+      <div className="rounded-xl bg-teal-700 px-5 py-6 shadow-md sm:px-8 dark:bg-teal-800">
+        <p className="text-xs font-semibold uppercase tracking-wide text-teal-200">At a glance</p>
+        <p className="mt-1 text-sm text-teal-100">
           Totals reflect live data from the API. Use the sections below to drill into each area.
         </p>
       </div>

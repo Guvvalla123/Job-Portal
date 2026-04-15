@@ -80,7 +80,7 @@ const PipelineApplicantCard = memo(function PipelineApplicantCard({
             <img
               src={c.profileImageUrl}
               alt=""
-              className="h-9 w-9 shrink-0 rounded-full object-cover ring-2 ring-indigo-100"
+              className="h-9 w-9 shrink-0 rounded-full object-cover ring-2 ring-teal-100"
               loading="lazy"
             />
           )}
@@ -110,7 +110,7 @@ const PipelineApplicantCard = memo(function PipelineApplicantCard({
                 setOpeningResumeId(null)
               }
             }}
-            className="rounded-md border border-indigo-200 px-2 py-1 text-[11px] font-medium text-indigo-700 hover:bg-indigo-50 disabled:opacity-60"
+            className="rounded-md border border-teal-200 px-2 py-1 text-[11px] font-medium text-teal-700 hover:bg-teal-50 disabled:opacity-60"
           >
             {openingResumeId === String(app._id) ? 'Opening…' : 'Resume'}
           </button>
@@ -129,7 +129,7 @@ const PipelineApplicantCard = memo(function PipelineApplicantCard({
             }
           }}
           onClick={(e) => e.stopPropagation()}
-          className="max-w-36 rounded-md border border-gray-300 px-1.5 py-1 text-[11px] shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+          className="max-w-36 rounded-md border border-gray-300 px-1.5 py-1 text-[11px] shadow-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {PIPELINE_STATUSES.map((st) => (
             <option key={st} value={st}>
@@ -208,7 +208,7 @@ export function ApplicantsPipelinePanel({ jobId, onStatusChange, isStatusPending
       <div className="flex flex-col gap-3 rounded-xl border border-gray-200/80 bg-gray-50/90 p-4 dark:border-gray-700 dark:bg-gray-900/50">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">
+            <p className="text-xs font-semibold uppercase tracking-wide text-teal-700 dark:text-teal-400">
               Applicant pipeline
             </p>
             <p className="mt-0.5 text-sm text-gray-600 dark:text-gray-400">
@@ -222,18 +222,18 @@ export function ApplicantsPipelinePanel({ jobId, onStatusChange, isStatusPending
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Search name or email…"
-              className="w-full min-w-0 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-600 dark:bg-gray-950 sm:min-w-44 sm:max-w-xs"
+              className="w-full min-w-0 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 dark:border-gray-600 dark:bg-gray-950 sm:min-w-44 sm:max-w-xs"
             />
             <input
               value={skillInput}
               onChange={(e) => setSkillInput(e.target.value)}
               placeholder="Skill…"
-              className="w-full min-w-0 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-600 dark:bg-gray-950 sm:w-36"
+              className="w-full min-w-0 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 dark:border-gray-600 dark:bg-gray-950 sm:w-36"
             />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-600 dark:bg-gray-950 sm:w-44"
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 dark:border-gray-600 dark:bg-gray-950 sm:w-44"
             >
               <option value="">All stages</option>
               {PIPELINE_STATUSES.map((st) => (
@@ -264,7 +264,7 @@ export function ApplicantsPipelinePanel({ jobId, onStatusChange, isStatusPending
                 <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">
                   {STATUS_LABELS[st]}
                 </span>
-                <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-indigo-700 dark:bg-indigo-950/80 dark:text-indigo-300">
+                <span className="rounded-full bg-teal-50 px-2 py-0.5 text-[10px] font-bold text-teal-700 dark:bg-teal-950/80 dark:text-teal-300">
                   {byStatus[st]?.length ?? 0}
                 </span>
               </div>
@@ -305,7 +305,7 @@ export function ApplicantsPipelinePanel({ jobId, onStatusChange, isStatusPending
             />
           ))}
           {showFilteredEmpty && (
-            <p className="rounded-lg border border-dashed border-indigo-200 bg-white/80 px-4 py-8 text-center text-sm text-gray-500">
+            <p className="rounded-lg border border-dashed border-teal-200 bg-white/80 px-4 py-8 text-center text-sm text-gray-500">
               No applicants match your filters.
             </p>
           )}
@@ -313,7 +313,7 @@ export function ApplicantsPipelinePanel({ jobId, onStatusChange, isStatusPending
       )}
 
       {!showApplicationsSkeleton && showEmptyAll && (
-        <p className="mt-4 rounded-lg border border-dashed border-indigo-200 bg-white/80 px-4 py-8 text-center text-sm text-gray-500">
+        <p className="mt-4 rounded-lg border border-dashed border-teal-200 bg-white/80 px-4 py-8 text-center text-sm text-gray-500">
           No applicants yet. Share the job link to start receiving applications.
         </p>
       )}

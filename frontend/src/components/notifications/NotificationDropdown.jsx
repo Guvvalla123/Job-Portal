@@ -109,8 +109,8 @@ function typeAccentClasses(type) {
       }
     case 'JOB_ALERT_MATCH':
       return {
-        border: 'border-l-violet-500 dark:border-l-violet-400',
-        icon: 'text-violet-600 dark:text-violet-400',
+        border: 'border-l-sky-500 dark:border-l-sky-400',
+        icon: 'text-sky-600 dark:text-sky-400',
       }
     case 'GENERAL':
     default:
@@ -227,7 +227,7 @@ export function NotificationDropdown({ onClose }) {
           type="button"
           disabled={unreadCount === 0 || markAllMutation.isPending}
           onClick={() => markAllMutation.mutate()}
-          className="shrink-0 text-xs font-medium text-indigo-600 hover:text-indigo-500 disabled:cursor-not-allowed disabled:opacity-40 dark:text-indigo-400 dark:hover:text-indigo-300"
+          className="shrink-0 text-xs font-medium text-teal-700 hover:text-[#0C5F5A] disabled:cursor-not-allowed disabled:opacity-40 dark:text-teal-400 dark:hover:text-teal-300"
         >
           Mark all read
         </button>
@@ -265,7 +265,7 @@ export function NotificationDropdown({ onClose }) {
               <div
                 key={n._id}
                 className={`group relative border-b border-gray-100 border-l-4 pl-3 pr-2 transition-colors last:border-b-0 dark:border-gray-700/80 ${accent.border} ${
-                  !n.read ? 'bg-indigo-50/40 dark:bg-indigo-950/25' : 'bg-transparent hover:bg-gray-50/80 dark:hover:bg-gray-800/50'
+                  !n.read ? 'bg-teal-50/40 dark:bg-teal-950/25' : 'bg-transparent hover:bg-gray-50/80 dark:hover:bg-gray-800/50'
                 }`}
               >
                 <div className="flex gap-2 py-3 pr-7">
@@ -305,7 +305,7 @@ export function NotificationDropdown({ onClose }) {
                 </div>
                 <button
                   type="button"
-                  className="absolute right-2 top-2 rounded-md p-1 text-gray-400 opacity-100 transition-opacity hover:bg-gray-200 hover:text-gray-700 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+                  className="absolute right-2 top-2 rounded-md p-1 text-gray-400 opacity-100 transition-opacity hover:bg-gray-200 hover:text-gray-700 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 dark:hover:bg-gray-700 dark:hover:text-gray-200"
                   aria-label="Delete notification"
                   onClick={(e) => handleDelete(e, n._id)}
                   disabled={deleteMutation.isPending}
@@ -324,7 +324,7 @@ export function NotificationDropdown({ onClose }) {
         <div className="border-t border-gray-100 px-3 py-2 dark:border-gray-700/80">
           <button
             type="button"
-            className="w-full rounded-lg py-2 text-center text-xs font-medium text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-950/40"
+            className="w-full rounded-lg py-2 text-center text-xs font-medium text-teal-700 hover:bg-teal-50 dark:text-teal-400 dark:hover:bg-teal-950/40"
             disabled={isFetchingNextPage}
             onClick={() => fetchNextPage()}
           >

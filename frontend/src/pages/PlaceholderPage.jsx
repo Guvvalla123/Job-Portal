@@ -26,7 +26,7 @@ export function PlaceholderPage() {
         <p className="type-body mt-4">{page.content}</p>
         <Link
           to="/"
-          className="mt-8 inline-block rounded-lg bg-indigo-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-indigo-700"
+          className="mt-8 inline-block rounded-lg bg-teal-700 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#0C5F5A]"
         >
           Back to home
         </Link>

@@ -17,7 +17,7 @@ test.describe('public shell', () => {
 
 test.describe('authenticated apply flow', () => {
   test('login → job detail → apply → sign out', async ({ page }) => {
-    test.skip(process.env.E2E_FULL !== '1', 'Set E2E_FULL=1 in CI with API, seed, and vite preview (see docs/DEPLOYMENT.md)')
+    test.skip(process.env.E2E_FULL !== '1', 'Set E2E_FULL=1 in CI with API, seed, and vite preview (see docs/operations/DEPLOYMENT.md)')
 
     await page.goto('/login')
     await page.locator('#login-email').fill(CANDIDATE_EMAIL)

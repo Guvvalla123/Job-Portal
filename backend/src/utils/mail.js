@@ -1,21 +1,22 @@
 const nodemailer = require("nodemailer");
 const { logger } = require("../config/logger");
+const { env } = require("../config/env");
 
 let transporter = null;
 let breaker = null;
 
 function getTransporter() {
   if (transporter) return transporter;
-  const host = process.env.SMTP_HOST;
-  const port = process.env.SMTP_PORT;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
+  const host = env.SMTP_HOST;
+  const port = env.SMTP_PORT;
+  const user = env.SMTP_USER;
+  const pass = env.SMTP_PASS;
 
   if (host && user && pass) {
     transporter = nodemailer.createTransport({
       host,
-      port: port ? parseInt(port, 10) : 587,
-      secure: port === "465",
+      port: port ? parseInt(String(port), 10) : 587,
+      secure: String(port) === "465",
       auth: { user, pass },
     });
   }
@@ -28,7 +29,7 @@ async function sendMailRaw({ to, subject, html, text }) {
     return { preview: text || html?.slice(0, 100) };
   }
   return transport.sendMail({
-    from: process.env.SMTP_FROM || process.env.SMTP_USER || "noreply@careersync.com",
+    from: env.SMTP_FROM || env.SMTP_USER || "noreply@careersync.com",
     to,
     subject,
     html: html || text,

@@ -49,7 +49,7 @@ export function AboutPage() {
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Get in touch</h2>
             <p>
               Questions about CareerSync or your account?{' '}
-              <Link to="/contact" className="font-medium text-indigo-600 underline hover:text-indigo-500 dark:text-indigo-400">
+              <Link to="/contact" className="font-medium text-teal-700 underline hover:text-[#0C5F5A] dark:text-teal-400">
                 Visit our contact page
               </Link>{' '}
               — we aim to reply to most messages within one business day.
@@ -60,7 +60,7 @@ export function AboutPage() {
         <p className="type-body-sm mt-10">
           <Link
             to="/"
-            className="font-medium text-indigo-600 underline hover:text-indigo-500 dark:text-indigo-400"
+            className="font-medium text-teal-700 underline hover:text-[#0C5F5A] dark:text-teal-400"
           >
             ← Back to home
           </Link>

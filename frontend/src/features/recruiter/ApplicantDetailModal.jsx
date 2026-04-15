@@ -156,10 +156,10 @@ function ApplicantDetailModalInner({ id, jKey, onClose, onStatusChange, isStatus
 
           {Array.isArray(candidate.skills) && candidate.skills.length > 0 && (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Skills</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">Skills</p>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {candidate.skills.map((s) => (
-                  <span key={s} className="rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-800">
+                  <span key={s} className="rounded-md bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-800">
                     {s}
                   </span>
                 ))}
@@ -169,7 +169,7 @@ function ApplicantDetailModalInner({ id, jKey, onClose, onStatusChange, isStatus
 
           {Array.isArray(candidate.experience) && candidate.experience.length > 0 && (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Experience</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">Experience</p>
               <ul className="mt-2 space-y-2 text-sm text-gray-700">
                 {candidate.experience.map((ex) => (
                   <li key={ex._id || `${ex.title}-${ex.company}`} className="rounded-lg bg-gray-50 px-3 py-2 ring-1 ring-gray-100">
@@ -188,14 +188,14 @@ function ApplicantDetailModalInner({ id, jKey, onClose, onStatusChange, isStatus
           )}
 
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Resume</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">Resume</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {candidate.resumeUrl ? (
                 <>
                   <button
                     type="button"
                     onClick={() => openApplicationResumeInNewTab(id)}
-                    className="rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-sm font-medium text-indigo-700 hover:bg-indigo-50"
+                    className="rounded-lg border border-teal-200 bg-white px-3 py-1.5 text-sm font-medium text-teal-700 hover:bg-teal-50"
                   >
                     Open in new tab
                   </button>
@@ -216,7 +216,7 @@ function ApplicantDetailModalInner({ id, jKey, onClose, onStatusChange, isStatus
           </div>
 
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Quick pipeline</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">Quick pipeline</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {[
                 ['screening', 'Screening'],
@@ -239,7 +239,7 @@ function ApplicantDetailModalInner({ id, jKey, onClose, onStatusChange, isStatus
                       /* parent shows toast */
                     }
                   }}
-                  className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#0C5F5A] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {label}
                 </button>
@@ -248,7 +248,7 @@ function ApplicantDetailModalInner({ id, jKey, onClose, onStatusChange, isStatus
           </div>
 
           <div>
-            <label htmlFor={`rc-notes-${id}`} className="text-xs font-semibold uppercase tracking-wide text-indigo-600">
+            <label htmlFor={`rc-notes-${id}`} className="text-xs font-semibold uppercase tracking-wide text-teal-700">
               Recruiter notes
             </label>
             <textarea
@@ -256,21 +256,21 @@ function ApplicantDetailModalInner({ id, jKey, onClose, onStatusChange, isStatus
               value={notesDraft}
               onChange={(e) => setNotesOverride(e.target.value)}
               rows={4}
-              className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
               placeholder="Private notes — only your team sees this."
             />
             <button
               type="button"
               disabled={notesMutation.isPending}
               onClick={() => notesMutation.mutate(notesDraft)}
-              className="mt-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
+              className="mt-2 rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-[#0C5F5A] disabled:opacity-60"
             >
               {notesMutation.isPending ? 'Saving…' : 'Save notes'}
             </button>
           </div>
 
-          <div className="rounded-xl bg-indigo-50/40 p-4 ring-1 ring-indigo-100">
-            <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Interview</p>
+          <div className="rounded-xl bg-teal-50/40 p-4 ring-1 ring-teal-100">
+            <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">Interview</p>
             {app.interview?.scheduledAt && (
               <p className="mt-2 text-sm text-gray-700">
                 Scheduled:{' '}
@@ -278,7 +278,7 @@ function ApplicantDetailModalInner({ id, jKey, onClose, onStatusChange, isStatus
                   {formatInterviewWhen(app.interview.scheduledAt, app.interview.timezone)}
                 </span>
                 {app.interview.status && (
-                  <span className="ml-2 rounded-md bg-white px-2 py-0.5 text-xs font-medium text-indigo-800 ring-1 ring-indigo-200">
+                  <span className="ml-2 rounded-md bg-white px-2 py-0.5 text-xs font-medium text-teal-800 ring-1 ring-teal-200">
                     {INTERVIEW_STATUS_LABELS[app.interview.status] || app.interview.status}
                   </span>
                 )}
@@ -361,7 +361,7 @@ function ApplicantDetailModalInner({ id, jKey, onClose, onStatusChange, isStatus
                     type="checkbox"
                     checked={interviewLocal.syncPipelineStatus}
                     onChange={(e) => setInterviewField({ syncPipelineStatus: e.target.checked })}
-                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                    className="rounded border-gray-300 text-teal-700 focus:ring-teal-500"
                   />
                   Move pipeline to Interview when scheduled
                 </label>
@@ -372,7 +372,7 @@ function ApplicantDetailModalInner({ id, jKey, onClose, onStatusChange, isStatus
                 type="button"
                 disabled={interviewMutation.isPending}
                 onClick={handleSaveInterview}
-                className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
+                className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-[#0C5F5A] disabled:opacity-60"
               >
                 {interviewMutation.isPending ? 'Saving…' : 'Save interview'}
               </button>
@@ -392,7 +392,7 @@ function ApplicantDetailModalInner({ id, jKey, onClose, onStatusChange, isStatus
 
           {app.coverLetter && (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Cover letter</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">Cover letter</p>
               <p className="mt-2 rounded-lg bg-gray-50 p-3 text-sm text-gray-700 ring-1 ring-gray-100">{app.coverLetter}</p>
             </div>
           )}

@@ -38,7 +38,7 @@ export function CookiesPage() {
                 <strong className="text-gray-900 dark:text-gray-100">Analytics and improvement:</strong> understanding
                 how the product is used so we can fix issues and improve performance. Where we use third-party analytics,
                 we aim to configure them in a privacy-respecting way consistent with our{' '}
-                <Link to="/privacy" className="font-medium text-indigo-600 underline hover:text-indigo-500 dark:text-indigo-400">
+                <Link to="/privacy" className="font-medium text-teal-700 underline hover:text-[#0C5F5A] dark:text-teal-400">
                   Privacy Policy
                 </Link>
                 .
@@ -61,7 +61,7 @@ export function CookiesPage() {
 
           <Link
             to="/"
-            className="inline-flex rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-700"
+            className="inline-flex rounded-lg bg-teal-700 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#0C5F5A]"
           >
             Back to home
           </Link>

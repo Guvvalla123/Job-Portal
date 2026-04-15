@@ -19,7 +19,7 @@ export function TermsPage() {
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Agreement</h2>
             <p>
               By accessing or using CareerSync, you agree to these Terms and our{' '}
-              <Link to="/privacy" className="font-medium text-indigo-600 underline hover:text-indigo-500 dark:text-indigo-400">
+              <Link to="/privacy" className="font-medium text-teal-700 underline hover:text-[#0C5F5A] dark:text-teal-400">
                 Privacy Policy
               </Link>
               . If you do not agree, do not use the service.
@@ -87,7 +87,7 @@ export function TermsPage() {
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Contact</h2>
             <p>
               Questions about these Terms? Reach out via our{' '}
-              <Link to="/contact" className="font-medium text-indigo-600 underline hover:text-indigo-500 dark:text-indigo-400">
+              <Link to="/contact" className="font-medium text-teal-700 underline hover:text-[#0C5F5A] dark:text-teal-400">
                 Contact
               </Link>{' '}
               page.
@@ -96,7 +96,7 @@ export function TermsPage() {
 
           <Link
             to="/"
-            className="inline-flex rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-700"
+            className="inline-flex rounded-lg bg-teal-700 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#0C5F5A]"
           >
             Back to home
           </Link>

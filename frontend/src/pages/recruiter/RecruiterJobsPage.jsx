@@ -231,7 +231,7 @@ export function RecruiterJobsPage() {
             <button
               type="button"
               onClick={cancelEditing}
-              className="text-sm font-semibold text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
+              className="text-sm font-semibold text-teal-700 hover:text-[#0C5F5A] dark:text-teal-400"
             >
               Cancel editing
             </button>
@@ -378,7 +378,7 @@ export function RecruiterJobsPage() {
           </div>
           <div className="flex flex-col gap-2 lg:col-span-2">
             <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-              <input type="checkbox" {...jobForm.register('isDraft')} className="h-4 w-4 rounded accent-indigo-600" />
+              <input type="checkbox" {...jobForm.register('isDraft')} className="h-4 w-4 rounded accent-teal-700" />
               Save as draft (hidden from public listings)
             </label>
           </div>
@@ -433,7 +433,7 @@ export function RecruiterJobsPage() {
                     key={jid}
                     className={`rounded-2xl border transition-shadow ${
                       isSelected
-                        ? 'border-indigo-500 bg-indigo-50/40 shadow-md shadow-indigo-500/10 ring-2 ring-indigo-500/25 dark:bg-indigo-950/30 dark:ring-indigo-400/30'
+                        ? 'border-teal-500 bg-teal-50/40 shadow-md shadow-teal-500/10 ring-2 ring-teal-500/25 dark:bg-teal-950/30 dark:ring-teal-400/30'
                         : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:hover:border-gray-600'
                     } ${isInactive ? 'opacity-80' : ''}`}
                   >
@@ -441,7 +441,7 @@ export function RecruiterJobsPage() {
                       <button
                         type="button"
                         onClick={() => setPipelineJobId(jid)}
-                        className="min-w-0 flex-1 rounded-xl text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                        className="min-w-0 flex-1 rounded-xl text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
                       >
                         <p className="font-semibold text-gray-900 dark:text-white">{job.title}</p>
                         <p className="mt-0.5 text-sm text-gray-600 dark:text-gray-400">
@@ -506,7 +506,7 @@ export function RecruiterJobsPage() {
               {selectedJob && selectedJob.isActive !== false && (
                 <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
                   <div className="border-b border-gray-100 pb-4 dark:border-gray-800">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-teal-700 dark:text-teal-400">
                       Pipeline
                     </p>
                     <h3 className="mt-1 text-xl font-bold text-gray-900 dark:text-white">{selectedJob.title}</h3>

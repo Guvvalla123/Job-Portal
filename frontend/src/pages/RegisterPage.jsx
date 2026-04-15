@@ -137,7 +137,7 @@ export function RegisterPage() {
       bullets={BULLETS}
     >
       <div className="text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-indigo-600 text-lg font-semibold text-white shadow-md lg:hidden">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-teal-700 text-lg font-semibold text-white shadow-md lg:hidden">
           {SITE_LOGO_MARK}
         </div>
         <h2 className="mt-4 text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl lg:mt-0">
@@ -178,12 +178,12 @@ export function RegisterPage() {
             I want to
           </label>
           <div className="grid grid-cols-2 gap-3">
-            <label className="flex cursor-pointer items-center gap-2 rounded-xl border-2 border-gray-200 bg-white/50 px-4 py-3 text-sm font-medium transition-all duration-200 hover:border-indigo-200 hover:shadow-md has-checked:border-indigo-600 has-checked:bg-indigo-50 has-checked:shadow-md has-checked:ring-2 has-checked:ring-indigo-500/20 dark:border-gray-600 dark:bg-gray-800/50 dark:hover:border-indigo-500/50 dark:has-checked:bg-indigo-950/50 dark:has-checked:border-indigo-500">
-              <input {...register('role')} type="radio" value="candidate" className="accent-indigo-600" />
+            <label className="flex cursor-pointer items-center gap-2 rounded-xl border-2 border-gray-200 bg-white/50 px-4 py-3 text-sm font-medium transition-all duration-200 hover:border-teal-200 hover:shadow-md has-checked:border-teal-600 has-checked:bg-teal-50 has-checked:shadow-md has-checked:ring-2 has-checked:ring-teal-500/20 dark:border-gray-600 dark:bg-gray-800/50 dark:hover:border-teal-500/50 dark:has-checked:bg-teal-950/50 dark:has-checked:border-teal-500">
+              <input {...register('role')} type="radio" value="candidate" className="accent-teal-700" />
               <span className="text-gray-700 dark:text-gray-200">Find a job</span>
             </label>
-            <label className="flex cursor-pointer items-center gap-2 rounded-xl border-2 border-gray-200 bg-white/50 px-4 py-3 text-sm font-medium transition-all duration-200 hover:border-indigo-200 hover:shadow-md has-checked:border-indigo-600 has-checked:bg-indigo-50 has-checked:shadow-md has-checked:ring-2 has-checked:ring-indigo-500/20 dark:border-gray-600 dark:bg-gray-800/50 dark:hover:border-indigo-500/50 dark:has-checked:bg-indigo-950/50 dark:has-checked:border-indigo-500">
-              <input {...register('role')} type="radio" value="recruiter" className="accent-indigo-600" />
+            <label className="flex cursor-pointer items-center gap-2 rounded-xl border-2 border-gray-200 bg-white/50 px-4 py-3 text-sm font-medium transition-all duration-200 hover:border-teal-200 hover:shadow-md has-checked:border-teal-600 has-checked:bg-teal-50 has-checked:shadow-md has-checked:ring-2 has-checked:ring-teal-500/20 dark:border-gray-600 dark:bg-gray-800/50 dark:hover:border-teal-500/50 dark:has-checked:bg-teal-950/50 dark:has-checked:border-teal-500">
+              <input {...register('role')} type="radio" value="recruiter" className="accent-teal-700" />
               <span className="text-gray-700 dark:text-gray-200">Hire talent</span>
             </label>
           </div>
@@ -206,7 +206,7 @@ export function RegisterPage() {
       </form>
       <p className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
         Already have an account?{' '}
-        <Link to="/login" className="font-semibold text-indigo-600 transition-colors hover:text-indigo-500 dark:text-indigo-400">
+        <Link to="/login" className="font-semibold text-teal-700 transition-colors hover:text-[#0C5F5A] dark:text-teal-400">
           Sign in
         </Link>
       </p>

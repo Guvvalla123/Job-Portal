@@ -9,8 +9,16 @@ import {
 } from '../lib/authConstants.js'
 import { toPersistedSessionUser } from '../lib/sessionUser.js'
 import { emitSessionExpired } from '../lib/authEvents.js'
+import { createAuthRefreshCoordinator, REFRESH_TIMEOUT_MS, LOG_PREFIX } from './authRefreshCoordinator.js'
 
 const CSRF_HEADER = 'X-CSRF-Token'
+
+const isDev = import.meta.env.DEV
+
+function authDebugLog(message, ...rest) {
+  if (!isDev) return
+  console.debug(`${LOG_PREFIX} ${message}`, ...rest)
+}
 
 /** Access token never touches localStorage (XSS). Survives until refresh or tab close. */
 let accessTokenMemory = null
@@ -79,9 +87,6 @@ export function endBootstrap() {
   bootstrapPromise = null
 }
 
-/** Single-flight POST /auth/refresh during initial restore (avoids StrictMode / parallel refresh races). */
-let authBootstrapInFlight = null
-
 /** Ensures Bearer token is set on config.headers (Axios 1.x AxiosHeaders-safe). */
 function setAuthorizationHeader(config, token) {
   if (!token || !config) return
@@ -109,28 +114,21 @@ function setCsrfHeader(config) {
 const apiClient = axios.create({
   baseURL: API_BASE,
   timeout: 15000,
-  headers: { 'Content-Type': 'application/json' },
   withCredentials: true,
 })
 
-let isRefreshing = false
-/** @type {Array<(token: string | null, err?: unknown) => void>} */
-let refreshSubscribers = []
-
-const notifyRefreshSubscribers = (token, err) => {
-  const subs = refreshSubscribers
-  refreshSubscribers = []
-  subs.forEach((cb) => {
-    try {
-      cb(token, err)
-    } catch {
-      /* ignore subscriber errors */
-    }
-  })
-}
-
-const subscribeToRefresh = (cb) => {
-  refreshSubscribers.push(cb)
+/**
+ * Do not set a global Content-Type. Axios adds `application/json` automatically for plain-object
+ * bodies; forcing JSON here breaks `FormData` uploads (multer sees no file → "Resume file is required").
+ */
+{
+  const common = apiClient.defaults.headers.common
+  if (common && typeof common.delete === 'function') {
+    common.delete('Content-Type')
+  } else if (common) {
+    delete common['Content-Type']
+    delete common['content-type']
+  }
 }
 
 /** Sync default Authorization header with in-memory token. */
@@ -166,6 +164,97 @@ function clearSession() {
   }
 }
 
+const refreshCoordinator = createAuthRefreshCoordinator({
+  postRefreshRequest: () =>
+    axios.post(`${API_BASE}/auth/refresh`, {}, { withCredentials: true, timeout: REFRESH_TIMEOUT_MS }),
+  applySession: ({ accessToken, user }) => {
+    setAccessToken(accessToken)
+    if (user) {
+      const minimal = toPersistedSessionUser(user)
+      if (minimal) localStorage.setItem(AUTH_KEYS.USER, JSON.stringify(minimal))
+    }
+  },
+  clearClientAuth: () => {
+    clearSession()
+    try {
+      clearPersistedAuthKeys()
+    } catch {
+      /* ignore */
+    }
+  },
+  markSessionEnded: setSessionEndedFlag,
+  isSessionIntentionallyEnded,
+  isDev,
+})
+
+function getRefreshPromise() {
+  return refreshCoordinator.getRefreshPromise()
+}
+
+/**
+ * Test-only: reset in-flight refresh + cooldown (Vitest).
+ * Do not use in production code.
+ */
+export function __resetRefreshStateForTests() {
+  refreshCoordinator.resetForTests()
+}
+
+/** @internal Tests may spy on coordinator behavior via dynamic import of module. */
+export function __getRefreshCoordinatorForTests() {
+  return refreshCoordinator
+}
+
+apiClient.interceptors.request.use(
+  async (config) => {
+    if (bootstrapPromise && config.skipAuthBootstrapWait !== true) {
+      await bootstrapPromise.catch(() => {})
+    }
+    // Wait for an in-flight refresh only — never call getRefreshPromise() here (would start refresh on every request).
+    const flight = refreshCoordinator.peekInFlightRefresh()
+    if (flight && config.skipAuthBootstrapWait !== true) {
+      try {
+        await flight
+      } catch {
+        /* refresh failed; proceed — likely 401 on this request */
+      }
+    }
+    setCsrfHeader(config)
+    setAuthorizationHeader(config, accessTokenMemory)
+
+    /** Belt-and-suspenders: ensure multipart requests never inherit a JSON Content-Type. */
+    if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+      const h = config.headers
+      if (h && typeof h.delete === 'function') {
+        h.delete('Content-Type')
+      } else if (h && typeof h === 'object') {
+        delete h['Content-Type']
+        delete h['content-type']
+      }
+    }
+
+    if (config.responseType === 'blob') {
+      if (config.headers && typeof config.headers.set === 'function') {
+        if (!config.headers.get('Accept')) {
+          config.headers.set('Accept', 'application/pdf,*/*', false)
+        }
+      } else {
+        config.headers = config.headers || {}
+        config.headers.Accept = config.headers.Accept || 'application/pdf,*/*'
+      }
+      if (config.method?.toLowerCase() === 'get') {
+        if (config.headers && typeof config.headers.delete === 'function') {
+          config.headers.delete('Content-Type')
+        } else {
+          delete config.headers['Content-Type']
+        }
+      }
+    }
+
+    return config
+  },
+  (err) => Promise.reject(err),
+)
+
 const isAuthUrl = (url) => {
   if (!url) return false
   const path = url.replace(apiClient.defaults.baseURL || '', '')
@@ -175,7 +264,8 @@ const isAuthUrl = (url) => {
     path.startsWith('/auth/refresh') ||
     path.startsWith('/auth/logout') ||
     path.startsWith('/auth/forgot') ||
-    path.startsWith('/auth/reset')
+    path.startsWith('/auth/reset') ||
+    path.startsWith('/auth/mfa/')
   )
 }
 
@@ -204,71 +294,15 @@ async function restoreSessionFromCookie() {
       }
       return null
     }
-    if (authBootstrapInFlight) {
-      return await authBootstrapInFlight
+    try {
+      return await getRefreshPromise()
+    } catch {
+      return null
     }
-    authBootstrapInFlight = (async () => {
-      try {
-        const { data } = await axios.post(`${API_BASE}/auth/refresh`, {}, { withCredentials: true, timeout: 10000 })
-        const { accessToken, user } = data.data
-        if (accessToken) setAccessToken(accessToken)
-        if (user) {
-          const minimal = toPersistedSessionUser(user)
-          if (minimal) localStorage.setItem(AUTH_KEYS.USER, JSON.stringify(minimal))
-        }
-        return { accessToken, user }
-      } catch {
-        clearSession()
-        try {
-          clearPersistedAuthKeys()
-        } catch {
-          /* ignore */
-        }
-        return null
-      } finally {
-        authBootstrapInFlight = null
-      }
-    })()
-
-    return await authBootstrapInFlight
   } finally {
     endBootstrap()
   }
 }
-
-apiClient.interceptors.request.use(
-  async (config) => {
-    if (bootstrapPromise && config.skipAuthBootstrapWait !== true) {
-      await bootstrapPromise.catch(() => {})
-    }
-    if (authBootstrapInFlight && config.skipAuthBootstrapWait !== true) {
-      await authBootstrapInFlight.catch(() => {})
-    }
-    setCsrfHeader(config)
-    setAuthorizationHeader(config, accessTokenMemory)
-
-    if (config.responseType === 'blob') {
-      if (config.headers && typeof config.headers.set === 'function') {
-        if (!config.headers.get('Accept')) {
-          config.headers.set('Accept', 'application/pdf,*/*', false)
-        }
-      } else {
-        config.headers = config.headers || {}
-        config.headers.Accept = config.headers.Accept || 'application/pdf,*/*'
-      }
-      if (config.method?.toLowerCase() === 'get') {
-        if (config.headers && typeof config.headers.delete === 'function') {
-          config.headers.delete('Content-Type')
-        } else {
-          delete config.headers['Content-Type']
-        }
-      }
-    }
-
-    return config
-  },
-  (err) => Promise.reject(err),
-)
 
 apiClient.interceptors.response.use(
   (response) => response,
@@ -277,15 +311,7 @@ apiClient.interceptors.response.use(
     const status = error.response?.status
 
     if (status === 401 && originalRequest) {
-      const url = originalRequest.url || ''
-      if (
-        url.includes('/auth/refresh') ||
-        url.includes('/auth/login') ||
-        url.includes('/auth/register')
-      ) {
-        return Promise.reject(error)
-      }
-
+      /** After one refresh attempt, never enter refresh logic again (prevents loops). */
       if (originalRequest._retry) {
         clearSession()
         try {
@@ -293,10 +319,22 @@ apiClient.interceptors.response.use(
         } catch {
           /* ignore */
         }
+        setSessionEndedFlag()
         if (!shouldSkipGlobalToast(originalRequest)) {
           toast.error(apiErrorMessage(error, 'Your session has expired. Please sign in again.'))
         }
         emitSessionExpired()
+        authDebugLog('401 after refresh retry — session cleared')
+        return Promise.reject(error)
+      }
+
+      const url = originalRequest.url || ''
+      if (
+        url.includes('/auth/refresh') ||
+        url.includes('/auth/login') ||
+        url.includes('/auth/register') ||
+        url.includes('/auth/mfa/verify-login')
+      ) {
         return Promise.reject(error)
       }
 
@@ -313,69 +351,47 @@ apiClient.interceptors.response.use(
       if (bootstrapPromise) {
         await bootstrapPromise.catch(() => {})
       }
-      if (authBootstrapInFlight) {
-        await authBootstrapInFlight.catch(() => {})
-        if (accessTokenMemory && !originalRequest._bootstrapRetry) {
-          originalRequest._bootstrapRetry = true
+
+      // Leader already started refresh — wait for same promise, then retry once (no second POST /auth/refresh).
+      const waitOn = refreshCoordinator.peekInFlightRefresh()
+      if (waitOn) {
+        try {
+          await waitOn
+        } catch {
+          /* coordinator already cleared session + cooldown */
+        }
+        if (accessTokenMemory) {
+          originalRequest._retry = true
           setAuthorizationHeader(originalRequest, accessTokenMemory)
           setCsrfHeader(originalRequest)
+          authDebugLog('Retrying request', originalRequest.url)
           return apiClient(originalRequest)
         }
+        if (!shouldSkipGlobalToast(originalRequest)) {
+          toast.error(apiErrorMessage(error, 'Your session has expired. Please sign in again.'))
+        }
+        emitSessionExpired()
+        return Promise.reject(error)
       }
 
       originalRequest._retry = true
 
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          subscribeToRefresh((token, err) => {
-            if (err) {
-              reject(err instanceof Error ? err : new Error(String(err)))
-              return
-            }
-            if (!token) {
-              reject(error)
-              return
-            }
-            setAuthorizationHeader(originalRequest, token)
-            setCsrfHeader(originalRequest)
-            resolve(apiClient(originalRequest))
-          })
-        })
-      }
-
-      isRefreshing = true
-
       try {
-        const { data } = await axios.post(`${API_BASE}/auth/refresh`, {}, { withCredentials: true, timeout: 10000 })
-
-        const { accessToken, user } = data.data
-        setAccessToken(accessToken)
-        if (user) {
-          const minimal = toPersistedSessionUser(user)
-          if (minimal) localStorage.setItem(AUTH_KEYS.USER, JSON.stringify(minimal))
+        const { accessToken } = await getRefreshPromise()
+        if (!accessToken) {
+          throw new Error('No access token after refresh')
         }
-
-        isRefreshing = false
-        notifyRefreshSubscribers(accessToken, null)
         setAuthorizationHeader(originalRequest, accessToken)
         setCsrfHeader(originalRequest)
+        authDebugLog('Retrying request', originalRequest.url)
         return apiClient(originalRequest)
       } catch (refreshErr) {
-        notifyRefreshSubscribers(null, refreshErr)
-        clearSession()
-        try {
-          clearPersistedAuthKeys()
-        } catch {
-          /* ignore */
-        }
-        setSessionEndedFlag()
         if (!shouldSkipGlobalToast(originalRequest)) {
           toast.error(apiErrorMessage(refreshErr, 'Your session has expired. Please sign in again.'))
         }
         emitSessionExpired()
+        authDebugLog('Refresh path failed — session ended')
         return Promise.reject(refreshErr)
-      } finally {
-        isRefreshing = false
       }
     }
 

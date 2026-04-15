@@ -11,3 +11,5 @@ process.env.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "test_refresh
 process.env.CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || "test_cloud";
 process.env.CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY || "test_key";
 process.env.CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET || "test_secret";
+process.env.MFA_ENCRYPTION_KEY =
+  process.env.MFA_ENCRYPTION_KEY || "test_mfa_encryption_key_32chars_min!!";

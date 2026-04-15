@@ -38,6 +38,27 @@ const register = asyncHandler(async (req, res) => {
 const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
   const result = await authService.login(email, password);
+
+  if (result.mfaPending) {
+    const csrfToken = issueCsrfToken(res);
+    auditLogService.log({
+      userId: result.user.id,
+      action: "login_mfa_pending",
+      resourceType: "auth",
+      req,
+    });
+    return success(
+      res,
+      {
+        user: result.user,
+        mfaRequired: true,
+        mfaToken: result.mfaToken,
+        csrfToken,
+      },
+      "Two-factor authentication required."
+    );
+  }
+
   setRefreshTokenCookie(res, result.refreshTokenForCookie);
   const csrfToken = issueCsrfToken(res);
   auditLogService.log({
@@ -161,4 +182,76 @@ const csrfToken = asyncHandler(async (req, res) => {
   return success(res, { csrfToken: token });
 });
 
-module.exports = { register, login, me, forgotPassword, resetPassword, refresh, logout, csrfToken };
+const verifyMfaLogin = asyncHandler(async (req, res) => {
+  const { mfaToken, code } = req.body;
+  const result = await authService.completeMfaLogin(mfaToken, code);
+  setRefreshTokenCookie(res, result.refreshTokenForCookie);
+  const csrf = issueCsrfToken(res);
+  auditLogService.log({
+    userId: result.user.id,
+    action: "login_mfa_complete",
+    resourceType: "auth",
+    req,
+  });
+  return success(
+    res,
+    {
+      user: result.user,
+      accessToken: result.accessToken,
+      csrfToken: csrf,
+    },
+    "Login successful"
+  );
+});
+
+const mfaService = require("../services/mfaService");
+
+const mfaSetup = asyncHandler(async (req, res) => {
+  mfaService.assertAdminRole(req.user);
+  mfaService.requireMfaKey();
+  const { user: profile } = await authService.getMe(req.user.userId);
+  const secret = mfaService.generateEnrollmentSecret();
+  const otpauthUrl = mfaService.buildOtpauthUrl(profile.email, secret);
+  return success(res, { secret, otpauthUrl }, "Scan the QR or enter the secret in your authenticator app, then call /auth/mfa/enable.");
+});
+
+const mfaEnable = asyncHandler(async (req, res) => {
+  mfaService.assertAdminRole(req.user);
+  const { secret, code } = req.body;
+  await mfaService.enableMfaForUser(req.user.userId, secret, code);
+  auditLogService.log({
+    userId: req.user.userId,
+    action: "mfa_enabled",
+    resourceType: "auth",
+    req,
+  });
+  return success(res, null, "Authenticator enabled. You will be prompted for a code on next sign-in.");
+});
+
+const mfaDisable = asyncHandler(async (req, res) => {
+  mfaService.assertAdminRole(req.user);
+  const { password } = req.body;
+  await mfaService.disableMfaForUser(req.user.userId, password);
+  auditLogService.log({
+    userId: req.user.userId,
+    action: "mfa_disabled",
+    resourceType: "auth",
+    req,
+  });
+  return success(res, null, "Authenticator disabled.");
+});
+
+module.exports = {
+  register,
+  login,
+  me,
+  forgotPassword,
+  resetPassword,
+  refresh,
+  logout,
+  csrfToken,
+  verifyMfaLogin,
+  mfaSetup,
+  mfaEnable,
+  mfaDisable,
+};

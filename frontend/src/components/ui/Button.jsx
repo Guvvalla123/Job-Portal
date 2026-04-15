@@ -1,32 +1,33 @@
+/* frontend/src/components/ui/Button.jsx */
 import PropTypes from 'prop-types'
 
 /**
  * Button — primary / secondary / ghost hierarchy; gradient variant aliases to primary.
+ * Mobile-first: comfortable min-height on touch; refines on sm+.
  */
 const variants = {
   primary:
-    'bg-indigo-600 text-white shadow-sm shadow-indigo-950/10 hover:bg-indigo-700 hover:shadow-md active:opacity-90 focus-visible:ring-indigo-500 dark:shadow-indigo-950/30',
-  /** @deprecated Use primary — kept for backward compatibility */
+    'bg-teal-700 text-white shadow-soft hover:bg-[#0C5F5A] active:scale-[0.99] focus-visible:ring-teal-600 dark:bg-teal-700 dark:hover:bg-[#0C5F5A] dark:shadow-teal-950/40',
   gradient:
-    'bg-indigo-600 text-white shadow-sm shadow-indigo-950/10 hover:bg-indigo-700 hover:shadow-md active:opacity-90 focus-visible:ring-indigo-500 dark:shadow-indigo-950/30',
+    'bg-teal-700 text-white shadow-soft hover:bg-[#0C5F5A] active:scale-[0.99] focus-visible:ring-teal-600 dark:bg-teal-700 dark:hover:bg-[#0C5F5A] dark:shadow-teal-950/40',
   secondary:
-    'border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 hover:border-gray-400 active:opacity-90 focus-visible:ring-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700',
+    'border border-gray-300/90 bg-white text-gray-800 shadow-xs hover:border-gray-400 hover:bg-gray-50 active:scale-[0.99] focus-visible:ring-gray-400 dark:border-gray-600 dark:bg-gray-800/90 dark:text-gray-100 dark:hover:bg-gray-700/90',
   ghost:
-    'text-gray-700 hover:bg-gray-100 active:bg-gray-200/80 focus-visible:ring-gray-400 dark:text-gray-200 dark:hover:bg-gray-800',
+    'text-gray-700 hover:bg-gray-100 active:bg-gray-200/80 focus-visible:ring-gray-400 dark:text-gray-200 dark:hover:bg-gray-800 dark:active:bg-gray-700/80',
   danger:
-    'bg-red-600 text-white shadow-sm hover:bg-red-700 hover:shadow-md active:opacity-90 focus-visible:ring-red-500',
+    'bg-red-600 text-white shadow-soft hover:bg-red-500 active:scale-[0.99] focus-visible:ring-red-500 dark:bg-red-600 dark:hover:bg-red-500',
   'primary-outline':
-    'border-2 border-indigo-600 text-indigo-600 bg-transparent hover:bg-indigo-50 active:bg-indigo-100/80 focus-visible:ring-indigo-500 dark:text-indigo-400 dark:hover:bg-indigo-950/50',
+    'border-2 border-teal-700 bg-transparent text-teal-700 hover:bg-teal-50 active:scale-[0.99] focus-visible:ring-teal-600 dark:border-teal-400 dark:text-teal-300 dark:hover:bg-teal-950/50',
   success:
-    'bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 active:opacity-90 focus-visible:ring-emerald-500',
+    'bg-emerald-600 text-white shadow-soft hover:bg-emerald-500 active:scale-[0.99] focus-visible:ring-emerald-500 motion-reduce:active:scale-100',
 }
 
 const sizes = {
-  sm: 'px-3 py-1.5 text-xs font-semibold rounded-lg gap-1.5',
-  md: 'px-4 py-2.5 text-sm font-semibold rounded-lg gap-2',
-  lg: 'px-6 py-3 text-sm font-semibold rounded-lg gap-2',
-  icon: 'p-2 rounded-lg',
-  'icon-sm': 'p-1.5 rounded-md',
+  sm: 'min-h-11 px-3 py-2 text-xs font-semibold rounded-xl gap-1.5 sm:min-h-9 sm:py-1.5 sm:rounded-lg',
+  md: 'min-h-12 px-4 py-2.5 text-sm font-semibold rounded-xl gap-2 sm:min-h-10 sm:rounded-xl',
+  lg: 'min-h-12 px-6 py-3 text-sm font-semibold rounded-xl gap-2 sm:min-h-11 md:px-7 md:text-[0.9375rem]',
+  icon: 'min-h-11 min-w-11 p-0 rounded-xl sm:min-h-10 sm:min-w-10',
+  'icon-sm': 'min-h-10 min-w-10 p-0 rounded-lg sm:min-h-9 sm:w-9',
 }
 
 export function Button({
@@ -43,7 +44,7 @@ export function Button({
   ...props
 }) {
   const base =
-    'inline-flex items-center justify-center transition-[color,background-color,border-color,opacity,box-shadow] duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-950 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none'
+    'motion-reduce:transform-none inline-flex items-center justify-center transition-[color,background-color,border-color,opacity,box-shadow,transform] duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-950 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none disabled:active:scale-100'
 
   const sizeClass = sizes[size] || sizes.md
   const variantClass = variants[variant] || variants.primary

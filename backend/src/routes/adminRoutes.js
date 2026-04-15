@@ -16,11 +16,12 @@ const {
   deleteJob,
 } = require("../controllers/adminController");
 const { requireAuth, requireRole } = require("../middlewares/auth");
+const { requireAdminPortalAccess } = require("../middlewares/requireAdminPortalAccess");
 const { ROLES } = require("../constants/roles");
 
 const router = express.Router();
 
-router.use(requireAuth, requireRole(ROLES.ADMIN));
+router.use(requireAuth, requireRole(ROLES.ADMIN), requireAdminPortalAccess);
 
 router.get("/stats", getStats);
 router.get("/stats/trend", getStatsTrend);

@@ -47,7 +47,7 @@ export function ForgotPasswordPage() {
       bullets={BULLETS}
     >
       <div className="text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-indigo-600 text-lg font-semibold text-white shadow-md lg:hidden">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-teal-700 text-lg font-semibold text-white shadow-md lg:hidden">
           {SITE_LOGO_MARK}
         </div>
         <h2 className="mt-4 text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl lg:mt-0">
@@ -78,7 +78,7 @@ export function ForgotPasswordPage() {
         </Button>
       </form>
       <p className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
-        <Link to="/login" className="font-semibold text-indigo-600 transition-colors hover:text-indigo-500 dark:text-indigo-400">
+        <Link to="/login" className="font-semibold text-teal-700 transition-colors hover:text-[#0C5F5A] dark:text-teal-400">
           Back to sign in
         </Link>
       </p>

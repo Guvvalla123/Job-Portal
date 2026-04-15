@@ -69,7 +69,7 @@ export function AdminJobsPage() {
       <div className="min-w-0">
         <Link
           to="/admin/dashboard"
-          className="text-sm font-medium text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300"
+          className="text-sm font-medium text-teal-700 hover:text-teal-800 dark:text-teal-400 dark:hover:text-teal-300"
         >
           ← Admin overview
         </Link>
@@ -144,7 +144,7 @@ export function AdminJobsPage() {
                       <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
                         <Link
                           to={`/jobs/${job._id}`}
-                          className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300"
+                          className="text-teal-700 hover:text-teal-800 dark:text-teal-400 dark:hover:text-teal-300"
                         >
                           {job.title}
                         </Link>

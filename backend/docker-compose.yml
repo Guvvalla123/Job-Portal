@@ -1,0 +1,21 @@
+# Local development — Redis for BullMQ + shared cache / idempotency.
+# Usage (from this directory):
+#   docker compose up -d redis
+# Then set REDIS_URL=redis://127.0.0.1:6379 in .env and restart the API.
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: careersync-redis-dev
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - careersync_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  careersync_redis_data:

@@ -19,7 +19,7 @@ export function LoadingState({
       aria-label={label}
     >
       <div
-        className={`${spinner} animate-spin rounded-full border-indigo-200 border-t-indigo-600 dark:border-indigo-900 dark:border-t-indigo-400`}
+        className={`${spinner} animate-spin rounded-full border-teal-200 border-t-teal-700 dark:border-teal-900 dark:border-t-teal-400`}
         aria-hidden
       />
       <span className="text-sm font-medium text-gray-500 dark:text-gray-400">{label}</span>

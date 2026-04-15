@@ -22,7 +22,7 @@ export function RecruiterInterviewsPage() {
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Interviews</h1>
         <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
           Scheduled interviews across your open roles. Manage candidates from{' '}
-          <Link to="/recruiter/jobs" className="font-medium text-indigo-600 hover:underline dark:text-indigo-400">
+          <Link to="/recruiter/jobs" className="font-medium text-teal-700 hover:underline dark:text-teal-400">
             Jobs & applicants
           </Link>
           .
@@ -49,7 +49,7 @@ export function RecruiterInterviewsPage() {
           </p>
           <Link
             to="/recruiter/jobs"
-            className="mt-4 inline-flex rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500"
+            className="mt-4 inline-flex rounded-lg bg-teal-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0C5F5A]"
           >
             Go to jobs
           </Link>
@@ -70,14 +70,14 @@ export function RecruiterInterviewsPage() {
                   {jobId ? (
                     <Link
                       to={`/jobs/${jobId}`}
-                      className="ml-2 text-sm font-normal text-indigo-600 hover:underline dark:text-indigo-400"
+                      className="ml-2 text-sm font-normal text-teal-700 hover:underline dark:text-teal-400"
                     >
                       View listing
                     </Link>
                   ) : null}
                 </p>
                 <p className="mt-0.5 text-sm text-gray-600 dark:text-gray-400">{row.candidate?.fullName || 'Candidate'}</p>
-                <p className="mt-2 inline-flex items-center gap-2 text-sm font-medium text-indigo-700 dark:text-indigo-300">
+                <p className="mt-2 inline-flex items-center gap-2 text-sm font-medium text-teal-700 dark:text-teal-300">
                   <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>

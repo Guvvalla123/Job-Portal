@@ -51,7 +51,7 @@ export function AdminApplicationsPage() {
       <div className="min-w-0">
         <Link
           to="/admin/dashboard"
-          className="text-sm font-medium text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300"
+          className="text-sm font-medium text-teal-700 hover:text-teal-800 dark:text-teal-400 dark:hover:text-teal-300"
         >
           ← Admin overview
         </Link>
@@ -133,7 +133,7 @@ export function AdminApplicationsPage() {
                         {jobId ? (
                           <Link
                             to={`/jobs/${jobId}`}
-                            className="font-medium text-indigo-600 hover:text-indigo-800 dark:text-indigo-400"
+                            className="font-medium text-teal-700 hover:text-teal-800 dark:text-teal-400"
                           >
                             {app.job?.title || 'Job'}
                           </Link>

@@ -1,5 +1,6 @@
 /**
- * Styled select for filters and forms.
+ * frontend/src/components/ui/Select.jsx
+ * Styled select for filters and forms — full light/dark contrast aligned with Input.
  */
 export function Select({
   id,
@@ -12,15 +13,17 @@ export function Select({
   ...props
 }) {
   const base =
-    'w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 disabled:bg-gray-50 disabled:cursor-not-allowed'
-  const errorStyles = error ? 'border-red-300 focus:ring-red-500/40' : ''
+    'w-full min-h-12 rounded-xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 shadow-xs transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500/40 focus:border-teal-600 disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-10 sm:py-2.5 sm:text-sm dark:border-slate-600 dark:bg-slate-900/85 dark:text-slate-100 dark:shadow-none dark:focus:border-teal-400 dark:focus:ring-teal-400/35 dark:disabled:bg-slate-900/50 [&>option]:bg-white [&>option]:text-slate-900 dark:[&>option]:bg-slate-800 dark:[&>option]:text-slate-100'
+  const errorStyles = error
+    ? 'border-red-400 focus:ring-red-500/40 dark:border-red-500/50'
+    : ''
 
   return (
     <div className={containerClassName}>
       {label && (
         <label
           htmlFor={id}
-          className="mb-1.5 block text-sm font-medium text-gray-700"
+          className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-200"
         >
           {label}
         </label>
@@ -31,20 +34,15 @@ export function Select({
         aria-invalid={error ? 'true' : undefined}
         {...props}
       >
-        {placeholder && (
-          <option value="">{placeholder}</option>
-        )}
+        {placeholder && <option value="">{placeholder}</option>}
         {options.map((opt) => (
-          <option
-            key={opt.value}
-            value={opt.value}
-          >
+          <option key={opt.value} value={opt.value}>
             {opt.label}
           </option>
         ))}
       </select>
       {error && (
-        <p className="mt-1.5 text-sm text-red-600" role="alert">
+        <p className="mt-1.5 text-sm text-red-600 dark:text-red-400" role="alert">
           {error}
         </p>
       )}

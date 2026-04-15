@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
@@ -18,6 +18,8 @@ import {
   getSavedJobs,
   deleteAccount,
   changePassword,
+  fetchMyDataExport,
+  triggerDownloadDataExport,
 } from '../../api/userApi.js'
 import { listMyApplications } from '../../api/applicationsApi.js'
 import { listPublicJobs } from '../../api/jobsApi.js'
@@ -41,13 +43,13 @@ const profileSchema = z.object({
 const STATUS_CONFIG = {
   applied: {
     label: 'Applied',
-    color: 'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-600/20 dark:bg-indigo-950/50 dark:text-indigo-300',
-    dot: 'bg-indigo-500',
+    color: 'bg-teal-50 text-teal-700 ring-1 ring-teal-600/20 dark:bg-teal-950/50 dark:text-teal-300',
+    dot: 'bg-teal-500',
   },
   screening: { label: 'Screening', color: 'bg-amber-50 text-amber-700 ring-1 ring-amber-600/20', dot: 'bg-amber-500' },
   /** Legacy API responses before DB migration */
   shortlisted: { label: 'Screening', color: 'bg-amber-50 text-amber-700 ring-1 ring-amber-600/20', dot: 'bg-amber-500' },
-  interview: { label: 'Interview', color: 'bg-violet-50 text-violet-700 ring-1 ring-violet-600/20', dot: 'bg-violet-500' },
+  interview: { label: 'Interview', color: 'bg-sky-50 text-sky-700 ring-1 ring-sky-600/20', dot: 'bg-sky-500' },
   offer: { label: 'Offer', color: 'bg-teal-50 text-teal-700 ring-1 ring-teal-600/20', dot: 'bg-teal-500' },
   rejected: { label: 'Rejected', color: 'bg-red-50 text-red-700 ring-1 ring-red-600/20', dot: 'bg-red-500' },
   hired: { label: 'Hired', color: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20', dot: 'bg-emerald-500' },
@@ -55,17 +57,64 @@ const STATUS_CONFIG = {
 
 const TYPE_COLORS = {
   'full-time': 'bg-emerald-50 text-emerald-700',
-  'part-time': 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300',
+  'part-time': 'bg-teal-50 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300',
   contract: 'bg-amber-50 text-amber-700',
   internship: 'bg-purple-50 text-purple-700',
 }
 
 const EMPLOYMENT_TYPES = ['full-time', 'part-time', 'contract', 'internship']
 
+function formatMonthYear(ym) {
+  if (!ym || typeof ym !== 'string') return ''
+  const parts = ym.split('-').map((p) => parseInt(p, 10))
+  const y = parts[0]
+  const m = parts[1]
+  if (!y || !m || m < 1 || m > 12) return ym
+  return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+}
+
+function formatExperienceDateRange(exp) {
+  const start = formatMonthYear(exp.startDate)
+  if (exp.current) {
+    return start ? `${start} – Present` : 'Present'
+  }
+  const end = formatMonthYear(exp.endDate)
+  if (start && end) return `${start} – ${end}`
+  return start || end || ''
+}
+
+const DASHBOARD_TAB_ICONS = {
+  overview: (
+    <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+    </svg>
+  ),
+  saved: (
+    <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-8-4-8 4V5z" />
+    </svg>
+  ),
+  alerts: (
+    <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+    </svg>
+  ),
+  applications: (
+    <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+    </svg>
+  ),
+  profile: (
+    <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+    </svg>
+  ),
+}
+
 export function CandidateDashboardPage() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const tabFromUrl = searchParams.get('tab')
   const { user, updateUser, logout } = useAuth()
   const [activeTab, setActiveTab] = useState(
@@ -74,6 +123,8 @@ export function CandidateDashboardPage() {
       : 'overview'
   )
   const imageInputRef = useRef(null)
+  /** Bumps when profile photo uploads so Cloudinary/browser cache shows the new image immediately. */
+  const [profilePhotoKey, setProfilePhotoKey] = useState(0)
   const [experience, setExperience] = useState([])
   const [projects, setProjects] = useState([])
   const [education, setEducation] = useState([])
@@ -177,7 +228,9 @@ export function CandidateDashboardPage() {
     },
     onSuccess: async (nextUser) => {
       updateUser(nextUser)
+      setProfilePhotoKey((k) => k + 1)
       await queryClient.invalidateQueries({ queryKey: queryKeys.auth.me() })
+      await queryClient.refetchQueries({ queryKey: queryKeys.auth.me() })
       toast.success('Profile photo updated.')
     },
     onError: (error) => {
@@ -203,6 +256,15 @@ export function CandidateDashboardPage() {
     onError: (error) => toast.error(getApiErrorMessage(error, 'Could not delete alert.')),
   })
 
+  const dataExportMutation = useMutation({
+    mutationFn: fetchMyDataExport,
+    onSuccess: (payload) => {
+      triggerDownloadDataExport(payload)
+      toast.success('Your data export download started.')
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error, 'Could not download your data export.')),
+  })
+
   const deleteAccountMutation = useMutation({
     mutationFn: () => deleteAccount(),
     onSuccess: () => {
@@ -226,7 +288,19 @@ export function CandidateDashboardPage() {
     onError: (error) => toast.error(getApiErrorMessage(error, 'Could not update password.')),
   })
 
-  const me = meQuery.data || user
+  /** Merge `/me` with auth context; overlay only defined fields so partial context never clears query data. */
+  const me = useMemo(() => {
+    const q = meQuery.data
+    const u = user
+    if (!q && !u) return undefined
+    if (!q) return u
+    if (!u) return q
+    const next = { ...q }
+    for (const [k, v] of Object.entries(u)) {
+      if (v !== undefined) next[k] = v
+    }
+    return next
+  }, [meQuery.data, user])
   const applications = applicationsQuery.data || []
   const appliedIds = new Set(applications.map((a) => a.job?._id || a.job))
 
@@ -240,6 +314,25 @@ export function CandidateDashboardPage() {
     { id: 'profile', label: 'Edit Profile' },
   ]
 
+  const handleTabChange = useCallback(
+    (id) => {
+      setActiveTab(id)
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          if (id === 'overview') {
+            next.delete('tab')
+          } else {
+            next.set('tab', id)
+          }
+          return next
+        },
+        { replace: true },
+      )
+    },
+    [setSearchParams],
+  )
+
   if (meQuery.isLoading && !user) {
     return <CandidateDashboardSkeleton />
   }
@@ -248,15 +341,20 @@ export function CandidateDashboardPage() {
     <div className="space-y-5">
       {/* Profile banner — full width */}
       <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-100">
-        <div className="h-28 bg-indigo-600 sm:h-36" />
+        <div className="h-28 bg-teal-700 sm:h-36" />
         <div className="relative px-4 pb-5 sm:px-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:gap-5">
             <div className="-mt-12 sm:-mt-14">
               <button type="button" onClick={() => imageInputRef.current?.click()} className="group relative" title="Change photo">
                 {me?.profileImageUrl ? (
-                  <img src={me.profileImageUrl} alt={me.fullName} className="h-24 w-24 rounded-full border-4 border-white object-cover shadow-md sm:h-28 sm:w-28" />
+                  <img
+                    key={`${me.profileImageUrl}-${profilePhotoKey}`}
+                    src={me.profileImageUrl}
+                    alt={me.fullName}
+                    className="h-24 w-24 rounded-full border-4 border-white object-cover shadow-md sm:h-28 sm:w-28"
+                  />
                 ) : (
-                  <div className="flex h-24 w-24 items-center justify-center rounded-full border-4 border-white bg-indigo-600 text-2xl font-semibold text-white shadow-md sm:h-28 sm:w-28 sm:text-3xl">
+                  <div className="flex h-24 w-24 items-center justify-center rounded-full border-4 border-white bg-teal-700 text-2xl font-semibold text-white shadow-md sm:h-28 sm:w-28 sm:text-3xl">
                     {me?.fullName?.charAt(0)?.toUpperCase() || 'U'}
                   </div>
                 )}
@@ -286,7 +384,7 @@ export function CandidateDashboardPage() {
           {me?.skills?.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-1.5">
               {me.skills.map((skill) => (
-                <span key={skill} className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700">{skill}</span>
+                <span key={skill} className="rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-medium text-teal-700">{skill}</span>
               ))}
             </div>
           )}
@@ -298,10 +396,40 @@ export function CandidateDashboardPage() {
         </div>
       </div>
 
-      {/* Tabs — full width, scroll on mobile */}
-      <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-100">
-        <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} variant="pills" />
-      </div>
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
+        <aside className="hidden shrink-0 lg:block lg:w-56 xl:w-60" aria-label="Dashboard sections">
+          <nav className="sticky top-24 space-y-1 rounded-xl bg-white p-2 shadow-sm ring-1 ring-gray-100">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => handleTabChange(tab.id)}
+                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${
+                  activeTab === tab.id
+                    ? 'bg-teal-50 text-teal-800 ring-1 ring-teal-100'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+              >
+                <span className={activeTab === tab.id ? 'text-teal-700' : 'text-gray-400'}>{DASHBOARD_TAB_ICONS[tab.id]}</span>
+                <span className="min-w-0 flex-1 truncate">{tab.label}</span>
+                {tab.count != null && (
+                  <span
+                    className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${
+                      activeTab === tab.id ? 'bg-teal-200/80 text-teal-900' : 'bg-gray-100 text-gray-600'
+                    }`}
+                  >
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            ))}
+          </nav>
+        </aside>
+
+        <div className="min-w-0 flex-1 space-y-5">
+          <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-100 lg:hidden">
+            <Tabs tabs={tabs} activeTab={activeTab} onChange={handleTabChange} variant="pills" />
+          </div>
 
       {/* === OVERVIEW TAB === */}
       {activeTab === 'overview' && (
@@ -310,32 +438,32 @@ export function CandidateDashboardPage() {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <button
               type="button"
-              onClick={() => setActiveTab('applications')}
-              className="flex flex-col items-center gap-1 rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100 transition-all hover:shadow-md hover:ring-indigo-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+              onClick={() => handleTabChange('applications')}
+              className="flex flex-col items-center gap-1 rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100 transition-all hover:shadow-md hover:ring-teal-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
             >
-              <span className="text-2xl font-bold text-indigo-600">{applications.length}</span>
+              <span className="text-2xl font-bold text-teal-700">{applications.length}</span>
               <span className="text-xs font-medium text-gray-500">Applications</span>
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab('saved')}
-              className="flex flex-col items-center gap-1 rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100 transition-all hover:shadow-md hover:ring-indigo-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+              onClick={() => handleTabChange('saved')}
+              className="flex flex-col items-center gap-1 rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100 transition-all hover:shadow-md hover:ring-teal-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
             >
-              <span className="text-2xl font-bold text-indigo-600">{savedJobs.length}</span>
+              <span className="text-2xl font-bold text-teal-700">{savedJobs.length}</span>
               <span className="text-xs font-medium text-gray-500">Saved Jobs</span>
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab('alerts')}
-              className="flex flex-col items-center gap-1 rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100 transition-all hover:shadow-md hover:ring-indigo-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+              onClick={() => handleTabChange('alerts')}
+              className="flex flex-col items-center gap-1 rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100 transition-all hover:shadow-md hover:ring-teal-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
             >
-              <span className="text-2xl font-bold text-indigo-600">{jobAlerts.length}</span>
+              <span className="text-2xl font-bold text-teal-700">{jobAlerts.length}</span>
               <span className="text-xs font-medium text-gray-500">Job Alerts</span>
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab('profile')}
-              className="flex flex-col items-center gap-1 rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100 transition-all hover:shadow-md hover:ring-indigo-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+              onClick={() => handleTabChange('profile')}
+              className="flex flex-col items-center gap-1 rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100 transition-all hover:shadow-md hover:ring-teal-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
             >
               <span className="text-2xl font-bold text-emerald-600">
                 {me ? Math.round(
@@ -347,7 +475,7 @@ export function CandidateDashboardPage() {
                     Array.isArray(me.skills) && me.skills.length > 0,
                     Array.isArray(me.experience) && me.experience.length > 0,
                     Array.isArray(me.education) && me.education.length > 0,
-                    Boolean(me.resumeUrl),
+                    Boolean(me.hasResume || me.resumeFileName?.trim()),
                     Boolean(me.profileImageUrl),
                   ].filter(Boolean).length / 9) * 100
                 ) : 0}%
@@ -356,13 +484,91 @@ export function CandidateDashboardPage() {
             </button>
           </div>
 
+          {(me?.experience?.length > 0 || me?.projects?.length > 0) && (
+            <div className="grid gap-4 lg:grid-cols-2">
+              {me.experience?.length > 0 && (
+                <div className="rounded-xl bg-white shadow-sm ring-1 ring-gray-100">
+                  <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+                    <h2 className="font-semibold text-gray-900">Experience</h2>
+                    <button type="button" onClick={() => handleTabChange('profile')} className="text-sm font-medium text-teal-700 hover:text-[#0C5F5A]">
+                      Add or edit
+                    </button>
+                  </div>
+                  <div className="px-5 py-4">
+                    <div className="relative border-l-2 border-gray-200 pl-6">
+                      {me.experience.map((exp, i) => (
+                        <div key={exp._id || `exp-${i}`} className="relative pb-8 last:pb-0">
+                          <div className="absolute -left-[25px] top-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-white bg-teal-700 ring-1 ring-gray-200" aria-hidden />
+                          <div className="flex gap-3">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-sm font-bold uppercase text-gray-600">
+                              {(exp.company || '?').charAt(0)}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-semibold text-gray-900">{exp.title || 'Role'}</p>
+                              <p className="text-sm text-gray-600">{exp.company || 'Company'}{exp.location ? ` · ${exp.location}` : ''}</p>
+                              <p className="mt-0.5 text-xs text-gray-500">{formatExperienceDateRange(exp)}</p>
+                              {exp.description && (
+                                <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-gray-600">{exp.description}</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+              {me.projects?.length > 0 && (
+                <div className="rounded-xl bg-white shadow-sm ring-1 ring-gray-100">
+                  <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+                    <h2 className="font-semibold text-gray-900">Projects</h2>
+                    <button type="button" onClick={() => handleTabChange('profile')} className="text-sm font-medium text-teal-700 hover:text-[#0C5F5A]">
+                      Add or edit
+                    </button>
+                  </div>
+                  <ul className="divide-y divide-gray-50 px-5 py-2">
+                    {me.projects.map((proj, i) => (
+                      <li key={proj._id || `proj-${i}`} className="flex gap-3 py-4 first:pt-2">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-teal-700">
+                          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                          </svg>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                            <span className="font-semibold text-gray-900">{proj.title || 'Project'}</span>
+                            {proj.url && (
+                              <a href={proj.url} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-teal-700 hover:text-[#0C5F5A]">
+                                Link
+                              </a>
+                            )}
+                          </div>
+                          {Array.isArray(proj.technologies) && proj.technologies.length > 0 && (
+                            <div className="mt-1.5 flex flex-wrap gap-1">
+                              {proj.technologies.slice(0, 8).map((t) => (
+                                <span key={t} className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                                  {t}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {proj.description && <p className="mt-2 line-clamp-3 text-sm text-gray-600">{proj.description}</p>}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {/* Recommended jobs — spans 2 cols on xl */}
           <div className="md:col-span-2 xl:col-span-2">
             <div className="rounded-xl bg-white shadow-sm ring-1 ring-gray-100">
               <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
                 <h2 className="font-semibold text-gray-900">Recommended for you</h2>
-                <Link to="/jobs" className="text-sm font-medium text-indigo-600 hover:text-indigo-500">See all jobs &rarr;</Link>
+                <Link to="/jobs" className="text-sm font-medium text-teal-700 hover:text-[#0C5F5A]">See all jobs &rarr;</Link>
               </div>
               <div className="divide-y divide-gray-50">
                 {recommendedJobsQuery.isLoading && (
@@ -376,11 +582,11 @@ export function CandidateDashboardPage() {
                   const isApplied = appliedIds.has(job._id)
                   return (
                     <div key={job._id} className="flex flex-col gap-3 px-5 py-4 transition-colors hover:bg-gray-50/50 sm:flex-row sm:items-start sm:gap-4">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-sm font-semibold text-indigo-600">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-teal-100 text-sm font-semibold text-teal-700">
                         {job.company?.name?.charAt(0)?.toUpperCase() || 'C'}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <Link to={`/jobs/${job._id}`} className="font-medium text-gray-900 hover:text-indigo-600">{job.title}</Link>
+                        <Link to={`/jobs/${job._id}`} className="font-medium text-gray-900 hover:text-teal-700">{job.title}</Link>
                         <p className="mt-0.5 text-sm text-gray-500">{job.company?.name} &middot; {job.location}</p>
                         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                           {job.employmentType && (
@@ -398,7 +604,7 @@ export function CandidateDashboardPage() {
                         {isApplied ? (
                           <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">Applied</span>
                         ) : (
-                          <Link to={`/jobs/${job._id}`} className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-indigo-700">Apply</Link>
+                          <Link to={`/jobs/${job._id}`} className="rounded-lg bg-teal-700 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#0C5F5A]">Apply</Link>
                         )}
                       </div>
                     </div>
@@ -443,12 +649,12 @@ export function CandidateDashboardPage() {
                   {applications.length === 0 && (
                     <div className="px-5 py-6">
                       <p className="text-center text-sm text-gray-500">No applications yet</p>
-                      <Link to="/jobs" className="mt-2 block text-center text-sm font-semibold text-indigo-600 hover:text-indigo-500">Browse jobs &rarr;</Link>
+                      <Link to="/jobs" className="mt-2 block text-center text-sm font-semibold text-teal-700 hover:text-[#0C5F5A]">Browse jobs &rarr;</Link>
                     </div>
                   )}
                   {applications.length > 5 && (
                     <div className="px-5 py-3">
-                      <button type="button" onClick={() => setActiveTab('applications')} className="text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                      <button type="button" onClick={() => handleTabChange('applications')} className="text-sm font-medium text-teal-700 hover:text-[#0C5F5A]">
                         View all {applications.length} applications &rarr;
                       </button>
                     </div>
@@ -462,7 +668,7 @@ export function CandidateDashboardPage() {
                 <div className="mt-3">
                   <ResumeSection user={me} onUserUpdate={updateUser} compact />
                 </div>
-                <Link to="/candidate/dashboard?tab=profile" className="mt-2 block text-xs font-medium text-indigo-600 hover:text-indigo-500">
+                <Link to="/candidate/dashboard?tab=profile" className="mt-2 block text-xs font-medium text-teal-700 hover:text-[#0C5F5A]">
                   Manage resume &rarr;
                 </Link>
               </div>
@@ -486,7 +692,7 @@ export function CandidateDashboardPage() {
               {savedJobs.map((job) => (
                 <div key={job._id} className="flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-gray-50/50">
                   <div className="min-w-0 flex-1">
-                    <Link to={`/jobs/${job._id}`} className="font-medium text-gray-900 hover:text-indigo-600">{job.title}</Link>
+                    <Link to={`/jobs/${job._id}`} className="font-medium text-gray-900 hover:text-teal-700">{job.title}</Link>
                     <p className="mt-0.5 text-sm text-gray-500">{job.company?.name} &middot; {job.location}</p>
                     <div className="mt-1.5 flex flex-wrap gap-1.5">
                       {job.employmentType && (
@@ -499,7 +705,7 @@ export function CandidateDashboardPage() {
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <SaveJobButton jobId={job._id} />
-                    <Link to={`/jobs/${job._id}`} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-700">Apply</Link>
+                    <Link to={`/jobs/${job._id}`} className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#0C5F5A]">Apply</Link>
                   </div>
                 </div>
               ))}
@@ -555,7 +761,7 @@ export function CandidateDashboardPage() {
                   </select>
                 </div>
               </div>
-              <button type="submit" disabled={createAlertMutation.isPending} className="mt-3 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">
+              <button type="submit" disabled={createAlertMutation.isPending} className="mt-3 rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-[#0C5F5A] disabled:opacity-60">
                 {createAlertMutation.isPending ? 'Creating...' : '+ Create alert'}
               </button>
             </form>
@@ -615,7 +821,7 @@ export function CandidateDashboardPage() {
                     return (
                       <tr key={app._id} className="transition-colors hover:bg-gray-50/50">
                         <td className="px-5 py-3.5">
-                          <Link to={`/jobs/${app.job?._id}`} className="font-medium text-gray-900 hover:text-indigo-600">{app.job?.title}</Link>
+                          <Link to={`/jobs/${app.job?._id}`} className="font-medium text-gray-900 hover:text-teal-700">{app.job?.title}</Link>
                         </td>
                         <td className="px-5 py-3.5 text-gray-600">{app.job?.company?.name}</td>
                         <td className="px-5 py-3.5 text-gray-500">
@@ -638,11 +844,11 @@ export function CandidateDashboardPage() {
               const cfg = STATUS_CONFIG[app.status] || STATUS_CONFIG.applied
               return (
                 <div key={app._id} className="flex items-center gap-3 px-4 py-3.5">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-xs font-semibold text-indigo-600">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-teal-100 text-xs font-semibold text-teal-700">
                     {app.job?.company?.name?.charAt(0)?.toUpperCase() || 'C'}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <Link to={`/jobs/${app.job?._id}`} className="text-sm font-medium text-gray-900 hover:text-indigo-600">{app.job?.title}</Link>
+                    <Link to={`/jobs/${app.job?._id}`} className="text-sm font-medium text-gray-900 hover:text-teal-700">{app.job?.title}</Link>
                     <p className="text-xs text-gray-500">{app.job?.company?.name}</p>
                     {app.createdAt && <p className="text-xs text-gray-400">Applied {new Date(app.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>}
                   </div>
@@ -689,9 +895,14 @@ export function CandidateDashboardPage() {
                 <h2 className="text-sm font-semibold text-gray-900">Profile Photo</h2>
                 <div className="mt-3 flex flex-col items-center gap-3">
                   {me?.profileImageUrl ? (
-                    <img src={me.profileImageUrl} alt={me.fullName} className="h-20 w-20 rounded-full object-cover ring-2 ring-indigo-100" />
+                    <img
+                      key={`${me.profileImageUrl}-p-${profilePhotoKey}`}
+                      src={me.profileImageUrl}
+                      alt={me.fullName}
+                      className="h-20 w-20 rounded-full object-cover ring-2 ring-teal-100"
+                    />
                   ) : (
-                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-indigo-600 text-2xl font-semibold text-white">{me?.fullName?.charAt(0)?.toUpperCase() || 'U'}</div>
+                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-teal-700 text-2xl font-semibold text-white">{me?.fullName?.charAt(0)?.toUpperCase() || 'U'}</div>
                   )}
                   <label className="cursor-pointer rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50">
                     {uploadImageMutation.isPending ? 'Uploading...' : 'Change photo'}
@@ -749,17 +960,32 @@ export function CandidateDashboardPage() {
                   <h2 className="text-sm font-semibold text-gray-900">Work Experience</h2>
                   <p className="mt-0.5 text-xs text-gray-500">Add your professional experience</p>
                 </div>
-                <button type="button" onClick={() => setExperience((prev) => [...prev, { title: '', company: '', location: '', startDate: '', endDate: '', current: false, description: '' }])} className="rounded-lg bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-600 transition-colors hover:bg-indigo-100">+ Add</button>
+                <button type="button" onClick={() => setExperience((prev) => [...prev, { title: '', company: '', location: '', startDate: '', endDate: '', current: false, description: '' }])} className="rounded-lg bg-teal-50 px-3 py-1.5 text-xs font-semibold text-teal-700 transition-colors hover:bg-teal-100">+ Add</button>
               </div>
               {experience.length === 0 && (
-                <p className="mt-3 rounded-lg bg-gray-50 p-3 text-center text-xs text-gray-400">No experience added yet.</p>
+                <p className="mt-3 rounded-lg bg-gray-50 p-3 text-center text-xs text-gray-400">No experience added yet. Add each role like on LinkedIn — most recent first.</p>
               )}
-              <div className="mt-3 space-y-3">
+              {experience.length > 0 && (
+              <div className="relative mt-4 ml-1 border-l-2 border-gray-200 pl-6">
                 {experience.map((exp, i) => (
-                  <div key={exp._id || i} className="rounded-lg border border-gray-200 p-4">
-                    <div className="mb-3 flex items-center justify-between">
-                      <span className="text-xs font-semibold text-gray-700">Experience #{i + 1}</span>
-                      <button type="button" onClick={() => setExperience((prev) => prev.filter((_, j) => j !== i))} className="text-xs text-red-500 hover:text-red-700">Remove</button>
+                  <div key={exp._id || i} className="relative pb-10 last:pb-2">
+                    <div className="absolute -left-[25px] top-2 h-3.5 w-3.5 rounded-full border-2 border-white bg-teal-700 ring-1 ring-gray-200" aria-hidden />
+                    <div className="flex gap-3">
+                      <div className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-gray-200 text-sm font-bold text-gray-600 sm:flex">
+                        {(exp.company || '+').charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0 flex-1 rounded-xl border border-gray-100 bg-gray-50/80 p-4 shadow-sm">
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-gray-500">Position {i + 1}</p>
+                        {(exp.title || exp.company) && (
+                          <p className="truncate text-sm font-semibold text-gray-900">{exp.title || 'Title'}{exp.company ? ` · ${exp.company}` : ''}</p>
+                        )}
+                        {(exp.startDate || exp.endDate || exp.current) && (
+                          <p className="text-xs text-gray-500">{formatExperienceDateRange(exp)}</p>
+                        )}
+                      </div>
+                      <button type="button" onClick={() => setExperience((prev) => prev.filter((_, j) => j !== i))} className="shrink-0 text-xs font-medium text-red-600 hover:text-red-800">Remove</button>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div>
@@ -784,7 +1010,7 @@ export function CandidateDashboardPage() {
                       </div>
                       <div className="sm:col-span-2">
                         <label className="flex items-center gap-2 text-xs text-gray-600">
-                          <input type="checkbox" checked={exp.current} onChange={(e) => setExperience((prev) => prev.map((x, j) => j === i ? { ...x, current: e.target.checked, endDate: e.target.checked ? '' : x.endDate } : x))} className="h-3.5 w-3.5 rounded border-gray-300 accent-indigo-600" />
+                          <input type="checkbox" checked={exp.current} onChange={(e) => setExperience((prev) => prev.map((x, j) => j === i ? { ...x, current: e.target.checked, endDate: e.target.checked ? '' : x.endDate } : x))} className="h-3.5 w-3.5 rounded border-gray-300 accent-teal-700" />
                           I currently work here
                         </label>
                       </div>
@@ -793,9 +1019,12 @@ export function CandidateDashboardPage() {
                         <textarea value={exp.description} onChange={(e) => setExperience((prev) => prev.map((x, j) => j === i ? { ...x, description: e.target.value } : x))} rows={2} placeholder="Responsibilities and achievements..." className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm" />
                       </div>
                     </div>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
+              )}
             </div>
 
             {/* Projects */}
@@ -805,17 +1034,24 @@ export function CandidateDashboardPage() {
                   <h2 className="text-sm font-semibold text-gray-900">Projects</h2>
                   <p className="mt-0.5 text-xs text-gray-500">Showcase your best work</p>
                 </div>
-                <button type="button" onClick={() => setProjects((prev) => [...prev, { title: '', description: '', url: '', technologies: [] }])} className="rounded-lg bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-600 transition-colors hover:bg-indigo-100">+ Add</button>
+                <button type="button" onClick={() => setProjects((prev) => [...prev, { title: '', description: '', url: '', technologies: [] }])} className="rounded-lg bg-teal-50 px-3 py-1.5 text-xs font-semibold text-teal-700 transition-colors hover:bg-teal-100">+ Add</button>
               </div>
               {projects.length === 0 && (
-                <p className="mt-3 rounded-lg bg-gray-50 p-3 text-center text-xs text-gray-400">No projects added yet.</p>
+                <p className="mt-3 rounded-lg bg-gray-50 p-3 text-center text-xs text-gray-400">No projects added yet. List apps, open source, or client work.</p>
               )}
-              <div className="mt-3 space-y-3">
+              <div className="mt-3 space-y-4">
                 {projects.map((proj, i) => (
-                  <div key={proj._id || i} className="rounded-lg border border-gray-200 p-4">
-                    <div className="mb-3 flex items-center justify-between">
-                      <span className="text-xs font-semibold text-gray-700">Project #{i + 1}</span>
-                      <button type="button" onClick={() => setProjects((prev) => prev.filter((_, j) => j !== i))} className="text-xs text-red-500 hover:text-red-700">Remove</button>
+                  <div key={proj._id || i} className="flex gap-3 rounded-xl border border-gray-100 bg-gray-50/80 p-4 shadow-sm ring-1 ring-gray-100/80">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-teal-100 text-teal-700">
+                      <span className="text-xs font-bold">{i + 1}</span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-gray-500">Project</p>
+                        {proj.title && <p className="truncate text-sm font-semibold text-gray-900">{proj.title}</p>}
+                      </div>
+                      <button type="button" onClick={() => setProjects((prev) => prev.filter((_, j) => j !== i))} className="shrink-0 text-xs font-medium text-red-600 hover:text-red-800">Remove</button>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div>
@@ -836,6 +1072,7 @@ export function CandidateDashboardPage() {
                         <textarea value={proj.description} onChange={(e) => setProjects((prev) => prev.map((x, j) => j === i ? { ...x, description: e.target.value } : x))} rows={2} placeholder="What does this project do?" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm" />
                       </div>
                     </div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -849,7 +1086,7 @@ export function CandidateDashboardPage() {
                 <h2 className="text-sm font-semibold text-gray-900">Education</h2>
                 <p className="mt-0.5 text-xs text-gray-500">Add your academic background</p>
               </div>
-              <button type="button" onClick={() => setEducation((prev) => [...prev, { degree: '', institution: '', fieldOfStudy: '', startYear: '', endYear: '', grade: '' }])} className="rounded-lg bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-600 transition-colors hover:bg-indigo-100">+ Add</button>
+              <button type="button" onClick={() => setEducation((prev) => [...prev, { degree: '', institution: '', fieldOfStudy: '', startYear: '', endYear: '', grade: '' }])} className="rounded-lg bg-teal-50 px-3 py-1.5 text-xs font-semibold text-teal-700 transition-colors hover:bg-teal-100">+ Add</button>
             </div>
             {education.length === 0 && (
               <p className="mt-3 rounded-lg bg-gray-50 p-3 text-center text-xs text-gray-400">No education added yet.</p>
@@ -960,6 +1197,22 @@ export function CandidateDashboardPage() {
             </div>
           </div>
 
+          {/* Data export */}
+          <div className="rounded-xl border border-gray-200 bg-gray-50/80 p-5 dark:border-gray-700 dark:bg-gray-900/40">
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Your data</h2>
+            <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+              Download a JSON copy of your profile, applications, alerts, and notifications (data portability).
+            </p>
+            <button
+              type="button"
+              onClick={() => dataExportMutation.mutate()}
+              disabled={dataExportMutation.isPending}
+              className="mt-3 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-50 disabled:opacity-60 dark:border-gray-600 dark:bg-gray-950 dark:text-gray-100 dark:hover:bg-gray-900"
+            >
+              {dataExportMutation.isPending ? 'Preparing…' : 'Download my data (JSON)'}
+            </button>
+          </div>
+
           {/* Danger zone */}
           <div className="rounded-xl border border-red-200 bg-red-50/50 p-5">
             <h2 className="text-sm font-semibold text-red-800">Danger zone</h2>
@@ -976,12 +1229,14 @@ export function CandidateDashboardPage() {
 
           {/* Save button */}
           <div className="sticky bottom-4 flex justify-end rounded-xl bg-white/90 p-4 shadow-lg ring-1 ring-gray-100 backdrop-blur-sm">
-            <button type="submit" disabled={updateProfileMutation.isPending} className="rounded-lg bg-indigo-600 px-8 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:opacity-60">
+            <button type="submit" disabled={updateProfileMutation.isPending} className="rounded-lg bg-teal-700 px-8 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#0C5F5A] disabled:opacity-60">
               {updateProfileMutation.isPending ? 'Saving all changes...' : 'Save All Changes'}
             </button>
           </div>
         </form>
       )}
+        </div>
+      </div>
     </div>
   )
 }

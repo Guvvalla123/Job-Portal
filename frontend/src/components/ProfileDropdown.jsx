@@ -1,3 +1,4 @@
+/* frontend/src/components/ProfileDropdown.jsx */
 import { toast } from 'sonner'
 import { useAuth } from '../context/useAuth.jsx'
 import { Dropdown, DropdownItem, DropdownDivider, Tooltip } from './ui/index.js'
@@ -23,10 +24,10 @@ export function ProfileDropdown({ onNavigate, compact = false } = {}) {
     <Tooltip content="Account" placement="bottom">
       <button
         type="button"
-        className={`flex items-center gap-2 rounded-lg p-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
+        className={`flex min-h-11 min-w-0 items-center gap-2 rounded-xl p-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 sm:min-h-10 ${
           compact
-            ? 'text-gray-700 hover:bg-gray-100 focus-visible:ring-indigo-500'
-            : 'text-indigo-100 hover:bg-white/10 focus-visible:ring-white/50'
+            ? 'text-gray-700 hover:bg-gray-100 focus-visible:ring-teal-600 dark:text-gray-200 dark:hover:bg-gray-800'
+            : 'text-teal-100 hover:bg-white/10 focus-visible:ring-white/50 focus-visible:ring-offset-transparent'
         }`}
         aria-expanded="false"
         aria-haspopup="true"
@@ -43,7 +44,7 @@ export function ProfileDropdown({ onNavigate, compact = false } = {}) {
           <div
             className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ring-2 ${
               compact
-                ? 'bg-indigo-100 text-indigo-700 ring-indigo-200'
+                ? 'bg-teal-100 text-teal-800 ring-teal-200 dark:bg-teal-900/60 dark:text-teal-200 dark:ring-teal-700'
                 : 'bg-white/20 text-white ring-white/30'
             }`}
           >
@@ -53,14 +54,14 @@ export function ProfileDropdown({ onNavigate, compact = false } = {}) {
         <span
           className={
             compact
-              ? 'text-sm font-medium text-gray-900'
-              : 'hidden text-sm font-medium sm:inline text-indigo-100'
+              ? 'text-sm font-medium text-gray-900 dark:text-gray-100'
+              : 'hidden text-sm font-medium text-teal-100 sm:inline'
           }
         >
           {user?.fullName}
         </span>
         <svg
-          className={`h-4 w-4 shrink-0 ${compact ? 'text-gray-500' : 'text-indigo-200'}`}
+          className={`h-4 w-4 shrink-0 ${compact ? 'text-gray-500 dark:text-gray-400' : 'text-teal-200'}`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -75,8 +76,8 @@ export function ProfileDropdown({ onNavigate, compact = false } = {}) {
   return (
     <Dropdown trigger={trigger} align={compact ? 'left' : 'right'}>
       <div className="px-4 py-3">
-        <p className="text-sm font-semibold text-gray-900">{user?.fullName}</p>
-        <p className="mt-0.5 truncate text-xs text-gray-500">{user?.email}</p>
+        <p className="text-sm font-semibold text-gray-900 dark:text-white">{user?.fullName}</p>
+        <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">{user?.email}</p>
       </div>
       <DropdownDivider />
       <DropdownItem to={dashboardPath} onClick={onNavigate}>

@@ -7,7 +7,7 @@ require("dotenv").config({ quiet: true });
 const { Worker, Queue } = require("bullmq");
 const { sendMail } = require("../utils/mail");
 const { logger } = require("../config/logger");
-const { JobAlert } = require("../models/JobAlert");
+const jobAlertRepository = require("../repositories/jobAlertRepository");
 
 const REDIS_URL = process.env.REDIS_URL;
 if (!REDIS_URL) {
@@ -127,7 +127,7 @@ worker.on("completed", async (job) => {
   logger.debug("Email job completed", { jobId: job.id, jobName: job.name });
   if (job.name === "JOB_ALERT" && job.data?.alertId) {
     try {
-      await JobAlert.updateOne({ _id: job.data.alertId }, { $set: { lastSentAt: new Date() } });
+      await jobAlertRepository.updateLastSentAt(job.data.alertId);
     } catch (err) {
       logger.error("JOB_ALERT lastSentAt update failed", { error: err.message, alertId: job.data.alertId });
     }

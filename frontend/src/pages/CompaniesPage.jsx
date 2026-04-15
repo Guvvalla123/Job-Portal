@@ -74,7 +74,7 @@ export function CompaniesPage() {
             {company.logoUrl ? (
               <img src={company.logoUrl} alt="" className="h-12 w-12 rounded-lg object-cover" loading="lazy" />
             ) : (
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-lg font-semibold text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-300">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-teal-100 text-lg font-semibold text-teal-700 dark:bg-teal-950/50 dark:text-teal-300">
                 {company.name?.charAt(0)?.toUpperCase() || 'C'}
               </div>
             )}

@@ -8,24 +8,21 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap" rel="stylesheet" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="CareerSync - Find your dream job. Connect with top employers, discover opportunities that match your skills, and take the next step in your career." />
-    <meta name="theme-color" content="#4f46e5" />
+    <meta name="theme-color" content="#0F766E" />
     <title>CareerSync | Find Your Dream Job</title>
     <script>
       ;(function () {
         try {
-          var key = 'careersync-theme'
-          var stored = localStorage.getItem(key)
-          var dark =
-            stored === 'dark' || (stored !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+          var dark = window.matchMedia('(prefers-color-scheme: dark)').matches
           var root = document.documentElement
           if (dark) {
             root.classList.add('dark')
-            root.style.backgroundColor = '#030712'
-            document.body.style.backgroundColor = '#030712'
+            root.style.backgroundColor = '#0F172A'
+            document.body.style.backgroundColor = '#0F172A'
           } else {
             root.classList.remove('dark')
-            root.style.backgroundColor = '#f9fafb'
-            document.body.style.backgroundColor = '#f9fafb'
+            root.style.backgroundColor = '#F8FAFC'
+            document.body.style.backgroundColor = '#F8FAFC'
           }
         } catch (e) {}
       })()
@@ -45,10 +42,10 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        background-color: #f9fafb;
+        background-color: #f8fafc;
       }
       .dark #app-loading {
-        background-color: #030712;
+        background-color: #0f172a;
       }
       #app-loading .app-loading-bar {
         position: fixed;
@@ -60,7 +57,7 @@
         align-items: center;
         padding: 0 16px;
         gap: 12px;
-        background: rgba(49, 46, 129, 0.97);
+        background: rgba(15, 118, 110, 0.97);
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         box-sizing: border-box;
       }
@@ -93,14 +90,14 @@
         width: 48px;
         height: 48px;
         border-radius: 50%;
-        border: 3px solid #e0e7ff;
-        border-top-color: #4f46e5;
+        border: 3px solid #ccfbf1;
+        border-top-color: #0f766e;
         animation: app-loading-spin 0.75s linear infinite;
         box-sizing: border-box;
       }
       .dark #app-loading .app-loading-spinner {
-        border-color: #312e81;
-        border-top-color: #818cf8;
+        border-color: #134e4a;
+        border-top-color: #5eead4;
       }
       #app-loading .app-loading-label {
         font-size: 14px;

@@ -11,7 +11,7 @@ function ResumePreviewFallback() {
       role="status"
       aria-label="Loading resume preview"
     >
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-200 border-t-indigo-600 dark:border-indigo-900 dark:border-t-indigo-400" />
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-teal-200 border-t-teal-700 dark:border-teal-900 dark:border-t-teal-400" />
     </div>
   )
 }
