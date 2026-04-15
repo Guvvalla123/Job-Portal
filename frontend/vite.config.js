@@ -15,9 +15,9 @@ export default defineConfig(({ mode }) => {
     '',
   )
 
-  // Vitest sets VITEST=true; skipping the Tailwind Vite plugin avoids rare
-  // post-run hangs and speeds transforms (unit tests do not rely on Tailwind).
-  const isVitest = process.env.VITEST === 'true'
+  // Skip Tailwind during Vitest: `mode === 'test'` is reliable; `process.env.VITEST`
+  // is not always set and leaving Tailwind mounted can hang or slow test teardown.
+  const isVitest = mode === 'test' || process.env.VITEST === 'true'
 
   return {
     build: {
@@ -38,17 +38,6 @@ export default defineConfig(({ mode }) => {
       },
     },
     plugins: [react(), ...(isVitest ? [] : [tailwindcss()])],
-    test: {
-      globals: true,
-      environment: 'jsdom',
-      setupFiles: ['./src/test/setup.js'],
-      include: ['src/**/*.{test,spec}.{js,jsx}'],
-      coverage: {
-        provider: 'v8',
-        reporter: ['text', 'html'],
-        exclude: ['node_modules/', 'src/test/'],
-      },
-    },
     server: {
       port: 5173,
       proxy: {

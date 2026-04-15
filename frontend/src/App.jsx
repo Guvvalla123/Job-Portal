@@ -3,6 +3,7 @@ import { ErrorBoundary } from 'react-error-boundary'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AppLayout } from './layouts/AppLayout.jsx'
 import { RecruiterLayout } from './layouts/RecruiterLayout.jsx'
+import { AdminLayout } from './layouts/AdminLayout.jsx'
 import { ProtectedRoute } from './components/ProtectedRoute.jsx'
 import { useAuth } from './context/useAuth.jsx'
 import { AppBootstrapSkeleton } from './components/AppBootstrapSkeleton.jsx'
@@ -38,6 +39,7 @@ const AdminJobsPage = lazy(() => import('./pages/admin/AdminJobsPage.jsx').then(
 const AdminCompaniesPage = lazy(() => import('./pages/admin/AdminCompaniesPage.jsx').then((m) => ({ default: m.AdminCompaniesPage })))
 const AdminApplicationsPage = lazy(() => import('./pages/admin/AdminApplicationsPage.jsx').then((m) => ({ default: m.AdminApplicationsPage })))
 const AdminAuditLogPage = lazy(() => import('./pages/admin/AdminAuditLogPage.jsx').then((m) => ({ default: m.AdminAuditLogPage })))
+const AdminSecurityPage = lazy(() => import('./pages/admin/AdminSecurityPage.jsx').then((m) => ({ default: m.AdminSecurityPage })))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage.jsx').then((m) => ({ default: m.NotFoundPage })))
 const ServerErrorPage = lazy(() => import('./pages/ServerErrorPage.jsx').then((m) => ({ default: m.ServerErrorPage })))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage.jsx').then((m) => ({ default: m.PrivacyPage })))
@@ -137,65 +139,24 @@ function App() {
           <Route path="interviews" element={<RecruiterInterviewsPage />} />
         </Route>
         <Route
-          path="/admin/dashboard"
+          path="/admin"
           element={
             <RouteSegmentBoundary>
               <ProtectedRoute roles={['admin']}>
-                <AdminDashboardPage />
+                <AdminLayout />
               </ProtectedRoute>
             </RouteSegmentBoundary>
           }
-        />
-        <Route
-          path="/admin/users"
-          element={
-            <RouteSegmentBoundary>
-              <ProtectedRoute roles={['admin']}>
-                <AdminUsersPage />
-              </ProtectedRoute>
-            </RouteSegmentBoundary>
-          }
-        />
-        <Route
-          path="/admin/jobs"
-          element={
-            <RouteSegmentBoundary>
-              <ProtectedRoute roles={['admin']}>
-                <AdminJobsPage />
-              </ProtectedRoute>
-            </RouteSegmentBoundary>
-          }
-        />
-        <Route
-          path="/admin/companies"
-          element={
-            <RouteSegmentBoundary>
-              <ProtectedRoute roles={['admin']}>
-                <AdminCompaniesPage />
-              </ProtectedRoute>
-            </RouteSegmentBoundary>
-          }
-        />
-        <Route
-          path="/admin/applications"
-          element={
-            <RouteSegmentBoundary>
-              <ProtectedRoute roles={['admin']}>
-                <AdminApplicationsPage />
-              </ProtectedRoute>
-            </RouteSegmentBoundary>
-          }
-        />
-        <Route
-          path="/admin/audit-logs"
-          element={
-            <RouteSegmentBoundary>
-              <ProtectedRoute roles={['admin']}>
-                <AdminAuditLogPage />
-              </ProtectedRoute>
-            </RouteSegmentBoundary>
-          }
-        />
+        >
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<AdminDashboardPage />} />
+          <Route path="users" element={<AdminUsersPage />} />
+          <Route path="jobs" element={<AdminJobsPage />} />
+          <Route path="companies" element={<AdminCompaniesPage />} />
+          <Route path="applications" element={<AdminApplicationsPage />} />
+          <Route path="audit-logs" element={<AdminAuditLogPage />} />
+          <Route path="security" element={<AdminSecurityPage />} />
+        </Route>
         <Route path="/dashboard" element={<RouteSegmentBoundary><DashboardRedirect /></RouteSegmentBoundary>} />
         <Route path="/500" element={<RouteSegmentBoundary><ServerErrorPage /></RouteSegmentBoundary>} />
         <Route

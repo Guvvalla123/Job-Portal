@@ -85,7 +85,7 @@ export function AdminUsersPage() {
         <div className="min-w-0">
           <Link
             to="/admin/dashboard"
-            className="text-sm font-medium text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300"
+            className="text-sm font-medium text-teal-700 hover:text-teal-800 dark:text-teal-400 dark:hover:text-teal-300"
           >
             ← Admin overview
           </Link>
@@ -161,7 +161,7 @@ export function AdminUsersPage() {
                     <td className="px-4 py-3">
                       <select
                         aria-label={`Role for ${u.fullName}`}
-                        className="max-w-[9rem] rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs font-medium shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-60 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+                        className="max-w-[9rem] rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs font-medium shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 disabled:opacity-60 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
                         value={u.role}
                         disabled={busy}
                         onChange={(e) => {

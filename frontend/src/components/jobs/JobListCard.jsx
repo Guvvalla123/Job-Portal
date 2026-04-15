@@ -18,7 +18,7 @@ export const JobListCard = memo(function JobListCard({ job }) {
         <div className="min-w-0 flex-1">
           <Link
             to={`/jobs/${job._id}`}
-            className="line-clamp-2 text-base font-semibold text-gray-900 transition-colors hover:text-indigo-600 dark:text-white dark:hover:text-indigo-400"
+            className="line-clamp-2 text-base font-semibold text-gray-900 transition-colors hover:text-teal-700 dark:text-white dark:hover:text-teal-400"
           >
             {job.title}
           </Link>
@@ -67,7 +67,7 @@ export const JobListCard = memo(function JobListCard({ job }) {
       <div className="mt-auto border-t border-gray-100 pt-4 dark:border-gray-700/80">
         <Link
           to={`/jobs/${job._id}`}
-          className="text-sm font-semibold text-indigo-600 transition-colors hover:text-indigo-500 dark:text-indigo-400"
+          className="text-sm font-semibold text-teal-700 transition-colors hover:text-[#0C5F5A] dark:text-teal-400"
         >
           View Details &rarr;
         </Link>

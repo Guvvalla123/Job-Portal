@@ -1,5 +1,5 @@
-const { Job } = require("../models/Job");
-const { JobAlert } = require("../models/JobAlert");
+const jobRepository = require("../repositories/jobRepository");
+const jobAlertRepository = require("../repositories/jobAlertRepository");
 const { addEmailJob } = require("../queues/emailQueue");
 const { logger } = require("../config/logger");
 const { findMatchingAlerts, formatJobSalary } = require("./jobAlertService");
@@ -19,14 +19,7 @@ async function runDigest(frequency) {
   const since = new Date(Date.now() - windowMs);
   const now = new Date();
 
-  const jobs = await Job.find({
-    createdAt: { $gte: since },
-    isActive: { $ne: false },
-    isDraft: { $ne: true },
-    $or: [{ expiresAt: null }, { expiresAt: { $exists: false } }, { expiresAt: { $gt: now } }],
-  })
-    .populate("company", "name")
-    .lean();
+  const jobs = await jobRepository.findCreatedInWindowForDigest(since, now);
 
   let enqueued = 0;
 
@@ -50,7 +43,7 @@ async function runDigest(frequency) {
             companyName: job.company?.name || "",
             jobLink,
           });
-          await JobAlert.updateOne({ _id: alert._id }, { $set: { lastSentAt: new Date() } });
+          await jobAlertRepository.updateLastSentAt(alert._id);
           enqueued += 1;
         } catch (err) {
           logger.error("[JobAlertDigest] enqueue failed", { email: user?.email, error: err.message });

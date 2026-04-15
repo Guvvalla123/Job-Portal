@@ -4,7 +4,7 @@ export function NotFoundPage() {
   return (
     <div className="flex min-h-[60dvh] flex-col items-center justify-center px-4 text-center">
       <p
-        className="text-8xl font-semibold text-indigo-600 dark:text-indigo-400"
+        className="text-8xl font-semibold text-teal-700 dark:text-teal-400"
         aria-hidden="true"
       >
         404
@@ -16,7 +16,7 @@ export function NotFoundPage() {
       <div className="mt-8 flex flex-wrap justify-center gap-3">
         <Link
           to="/"
-          className="rounded-lg bg-indigo-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-950"
+          className="rounded-lg bg-teal-700 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#0C5F5A] focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-950"
         >
           Back to home
         </Link>

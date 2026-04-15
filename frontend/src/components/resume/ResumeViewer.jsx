@@ -158,7 +158,7 @@ export function ResumeViewer({ path, applicationId, title = 'Resume' }) {
     return (
       <div className="flex min-h-[min(75dvh,45rem)] items-center justify-center text-gray-500 dark:text-gray-400">
         <div className="text-center">
-          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-600 dark:border-indigo-900 dark:border-t-indigo-400" />
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-teal-200 border-t-teal-600 dark:border-teal-900 dark:border-t-teal-400" />
           <p className="mt-4 text-sm font-medium">Loading resume…</p>
           {loadHint === 'still' && (
             <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">Still loading resume…</p>
@@ -191,7 +191,7 @@ export function ResumeViewer({ path, applicationId, title = 'Resume' }) {
               type="button"
               onClick={() => handleRetryLoad()}
               disabled={openingTab || !resumePath}
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-500 disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-400"
+              className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#0C5F5A] disabled:opacity-50 dark:bg-teal-600 dark:hover:bg-teal-500"
             >
               Retry
             </button>
@@ -200,7 +200,7 @@ export function ResumeViewer({ path, applicationId, title = 'Resume' }) {
             type="button"
             onClick={() => void handleOpenInNewTab()}
             disabled={openingTab || !resumePath}
-            className="rounded-lg border border-indigo-200 bg-white px-4 py-2 text-sm font-medium text-indigo-700 shadow-sm transition-colors hover:bg-indigo-50 disabled:opacity-50 dark:border-indigo-800 dark:bg-gray-900 dark:text-indigo-300 dark:hover:bg-indigo-950/40"
+            className="rounded-lg border border-teal-200 bg-white px-4 py-2 text-sm font-medium text-teal-700 shadow-sm transition-colors hover:bg-teal-50 disabled:opacity-50 dark:border-teal-800 dark:bg-gray-900 dark:text-teal-300 dark:hover:bg-teal-950/40"
           >
             {openingTab ? 'Opening…' : 'Try open in new tab'}
           </button>
@@ -227,7 +227,7 @@ export function ResumeViewer({ path, applicationId, title = 'Resume' }) {
           type="button"
           onClick={() => void handleOpenInNewTab()}
           disabled={openingTab}
-          className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-500 disabled:opacity-60 dark:bg-indigo-500 dark:hover:bg-indigo-400"
+          className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-teal-700 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#0C5F5A] disabled:opacity-60 dark:bg-teal-600 dark:hover:bg-teal-500"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
             <path

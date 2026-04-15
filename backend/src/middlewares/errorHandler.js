@@ -64,9 +64,9 @@ const errorHandler = (err, req, res, _next) => {
   if (err.name === "MulterError") {
     const msg =
       err.code === "LIMIT_FILE_SIZE"
-        ? "File too large. Resume must be less than 2MB."
+        ? "File too large. Images: max 2MB. PDF resumes: max 5MB."
         : err.code === "LIMIT_UNEXPECTED_FILE"
-          ? "Unexpected field name. Use 'resume' for resume upload."
+          ? "Unexpected file field for this upload."
           : err.message;
     return errorPayload(400, msg, "UPLOAD_ERROR", [{ field: err.field || "file", message: msg }]);
   }

@@ -46,10 +46,28 @@ function clearRefreshTokenCookie(res) {
   });
 }
 
+/**
+ * CSRF cookie path must be "/" so SPA pages (e.g. /candidate/dashboard) can read it via
+ * document.cookie for X-CSRF-Token. Path "/api" only exposes the cookie to URLs under /api,
+ * which never matches client-side routes on the dev server.
+ */
+const CSRF_COOKIE_PATH = "/";
+
 /** CSRF cookie is not httpOnly — must be cleared on logout with the same path/flags as setCsrfCookie. */
 function clearCsrfCookie(res) {
   const isProd = env.NODE_ENV === "production";
   const sameSite = env.COOKIE_SAME_SITE || (isProd ? "strict" : "lax");
+  const base = { httpOnly: false, secure: isProd, sameSite, maxAge: 0, expires: new Date(0) };
+  res.cookie(CSRF_COOKIE, "", { ...base, path: CSRF_COOKIE_PATH });
+  /* Legacy path from older deploys — remove so browsers do not send duplicate jid_csrf values */
+  res.cookie(CSRF_COOKIE, "", { ...base, path: "/api" });
+}
+
+/** Double-submit CSRF: readable cookie + matching X-CSRF-Token header on mutations. */
+function setCsrfCookie(res, token) {
+  const isProd = env.NODE_ENV === "production";
+  const sameSite = env.COOKIE_SAME_SITE || (isProd ? "strict" : "lax");
+  /* Drop legacy CSRF cookie so only one jid_csrf is sent on /api requests */
   res.cookie(CSRF_COOKIE, "", {
     httpOnly: false,
     secure: isProd,
@@ -58,16 +76,11 @@ function clearCsrfCookie(res) {
     maxAge: 0,
     expires: new Date(0),
   });
-}
-
-/** Double-submit CSRF: readable cookie + matching X-CSRF-Token header on mutations. */
-function setCsrfCookie(res, token) {
-  const isProd = env.NODE_ENV === "production";
   res.cookie(CSRF_COOKIE, token, {
     httpOnly: false,
     secure: isProd,
-    sameSite: env.COOKIE_SAME_SITE || (isProd ? "strict" : "lax"),
-    path: "/api",
+    sameSite,
+    path: CSRF_COOKIE_PATH,
     maxAge: 24 * 60 * 60 * 1000,
   });
 }

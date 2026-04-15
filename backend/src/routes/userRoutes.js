@@ -1,6 +1,4 @@
 const express = require("express");
-const multer = require("multer");
-const { ApiError } = require("../utils/apiError");
 const {
   changePassword,
   updateProfile,
@@ -11,45 +9,21 @@ const {
   toggleSavedJob,
   getSavedJobs,
   deleteAccount,
+  exportMyData,
 } = require("../controllers/userController");
 const { requireAuth, requireRole } = require("../middlewares/auth");
 const { validate, validateParams } = require("../middlewares/validate");
 const { updateProfileSchema, changePasswordSchema } = require("../validations/userValidation");
 const { mongoIdParam } = require("../validations/common");
 const { ROLES } = require("../constants/roles");
+const { singleImage, singlePdf } = require("../middlewares/upload");
 
 const router = express.Router();
 
-const imageUpload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (_req, file, cb) => {
-    const allowed = ["image/jpeg", "image/png", "image/webp"];
-    if (allowed.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new ApiError(400, "Only JPEG, PNG and WebP images are allowed."));
-    }
-  },
-});
-
-const RESUME_MAX_SIZE = 2 * 1024 * 1024; // 2MB
-
-const resumeUpload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: RESUME_MAX_SIZE },
-  fileFilter: (_req, file, cb) => {
-    if (file.mimetype !== "application/pdf") {
-      return cb(new ApiError(400, "Only PDF files are allowed"));
-    }
-    cb(null, true);
-  },
-});
-
 router.patch("/change-password", requireAuth, validate(changePasswordSchema), changePassword);
 router.patch("/profile", requireAuth, validate(updateProfileSchema), updateProfile);
-router.post("/profile/image", requireAuth, imageUpload.single("image"), uploadProfileImage);
-router.post("/profile/resume", requireAuth, resumeUpload.single("resume"), uploadResume);
+router.post("/profile/image", requireAuth, singleImage("image"), uploadProfileImage);
+router.post("/profile/resume", requireAuth, singlePdf("resume"), uploadResume);
 router.get("/profile/resume/file", requireAuth, streamMyResumePdf);
 router.delete("/profile/resume", requireAuth, deleteResume);
 router.post(
@@ -60,6 +34,7 @@ router.post(
   toggleSavedJob
 );
 router.get("/saved-jobs", requireAuth, requireRole(ROLES.CANDIDATE), getSavedJobs);
+router.get("/me/data-export", requireAuth, exportMyData);
 router.delete("/account", requireAuth, deleteAccount);
 
 module.exports = { userRoutes: router };

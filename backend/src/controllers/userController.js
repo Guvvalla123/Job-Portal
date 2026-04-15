@@ -13,6 +13,14 @@ const { fetchResumePdfBuffer } = require("../services/resumeStreamService");
 const authService = require("../services/authService");
 const jobRepository = require("../repositories/jobRepository");
 const { cascadeBeforeUserDelete } = require("../utils/userDeleteCascade");
+const { buildPersonalDataExport } = require("../services/userDataExportService");
+
+/** Best-effort Cloudinary public_id from legacy profile URLs (when profileImagePublicId was not stored). */
+function profileImagePublicIdFromUrl(url) {
+  if (!url || typeof url !== "string") return null;
+  const m = url.match(/\/upload\/(?:v\d+\/)?(.+?)\.(jpg|jpeg|png|webp)(?:\?|#|$)/i);
+  return m ? m[1] : null;
+}
 
 /**
  * Upload image to Cloudinary using stream (works well for images).
@@ -117,7 +125,7 @@ const uploadProfileImage = asyncHandler(async (req, res) => {
 
   const user = await User.findByIdAndUpdate(
     req.user.userId,
-    { profileImageUrl: result.secure_url },
+    { profileImageUrl: result.secure_url, profileImagePublicId: result.public_id || "" },
     { returnDocument: "after", runValidators: true }
   ).select("-password -refreshToken -resumeUrl -resumePublicId");
 
@@ -257,13 +265,40 @@ const toggleSavedJob = asyncHandler(async (req, res) => {
 
 const deleteAccount = asyncHandler(async (req, res) => {
   const userId = req.user.userId;
-  const user = await User.findById(userId);
+  const user = await User.findById(userId).select("profileImagePublicId profileImageUrl resumePublicId");
   if (!user) throw new ApiError(404, "User not found");
+
+  if (user.resumePublicId) {
+    try {
+      await deleteFromCloudinary(user.resumePublicId, "raw");
+    } catch (err) {
+      logger.warn("Account delete: resume Cloudinary cleanup failed", { error: err.message });
+    }
+  }
+
+  const imgPid = user.profileImagePublicId || profileImagePublicIdFromUrl(user.profileImageUrl);
+  if (imgPid) {
+    try {
+      await deleteFromCloudinary(imgPid, "image");
+    } catch (err) {
+      logger.warn("Account delete: profile image Cloudinary cleanup failed", { error: err.message });
+    }
+  }
 
   await cascadeBeforeUserDelete(userId);
   await User.findByIdAndDelete(userId);
 
   return success(res, {}, "Account deleted successfully");
+});
+
+const exportMyData = asyncHandler(async (req, res) => {
+  const payload = await buildPersonalDataExport(req.user.userId);
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  res.setHeader(
+    "Content-Disposition",
+    `attachment; filename="careersync-data-export-${String(req.user.userId)}.json"`
+  );
+  return res.status(200).send(`${JSON.stringify(payload, null, 2)}\n`);
 });
 
 const getSavedJobs = asyncHandler(async (req, res) => {
@@ -289,4 +324,5 @@ module.exports = {
   toggleSavedJob,
   getSavedJobs,
   deleteAccount,
+  exportMyData,
 };

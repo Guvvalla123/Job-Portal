@@ -1,0 +1,480 @@
+================================================================================
+CAREERSYNC — FRONTEND SUMMARY
+Last Updated: March 27, 2026
+================================================================================
+
+1. WHAT THE FRONTEND IS
+CareerSync (branded in index.html title/meta and config/site.js default VITE_SITE_NAME)
+is a React 19 SPA for a job portal: public job and company discovery, candidate
+dashboard (profile, applications, saved jobs, job alerts, resume, data export),
+recruiter workspace (jobs, companies, applicant pipeline, interviews), and admin
+console (platform stats, users, jobs, companies, applications, audit logs, MFA security).
+
+2. TECH STACK
+(From frontend/package.json — exact version ranges)
+
+Dependencies:
+  @hookform/resolvers ^5.2.2
+  @sentry/react ^8.55.0
+  @tanstack/react-query ^5.90.21
+  axios ^1.13.6
+  framer-motion ^12.38.0
+  prop-types ^15.8.1
+  react ^19.2.0
+  react-dom ^19.2.0
+  react-error-boundary ^4.0.14
+  react-helmet-async ^3.0.0
+  react-hook-form ^7.71.2
+  react-router-dom ^7.13.1
+  recharts ^3.8.1
+  sonner ^2.0.7
+  web-vitals ^4.2.4
+  zod ^4.3.6
+
+DevDependencies:
+  @eslint/js ^9.39.1
+  @playwright/test ^1.59.1
+  @tailwindcss/vite ^4.2.1
+  @testing-library/jest-dom ^6.9.1
+  @testing-library/react ^16.3.2
+  @testing-library/user-event ^14.6.1
+  @types/react ^19.2.7
+  @types/react-dom ^19.2.3
+  @vitejs/plugin-react ^5.1.1
+  cross-env ^7.0.3
+  eslint ^9.39.1
+  eslint-config-prettier ^9.1.0
+  eslint-plugin-react-hooks ^7.0.1
+  eslint-plugin-react-refresh ^0.4.24
+  globals ^16.5.0
+  happy-dom ^15.11.7
+  jsdom ^25.0.1
+  msw ^2.13.0
+  prettier ^3.4.2
+  tailwindcss ^4.2.1
+  vite ^7.3.1
+  vitest ^2.1.9
+  @vitest/ui ^2.1.9
+
+3. FOLDER STRUCTURE
+frontend/
+  package.json, vite.config.js, index.html
+  scripts/ — e.g. replace-seo-domain.js (referenced by npm run build)
+  e2e/ — Playwright specs
+
+frontend/src/
+  main.jsx — root: Sentry (optional), QueryClient, ThemeProvider, AuthProvider, Router, Toaster, ErrorBoundary
+  App.jsx — route table, lazy pages, RouteSegmentBoundary (per-route ErrorBoundary), DashboardRedirect
+  index.css — global styles
+
+  api/
+    apiClient.js — axios instance, CSRF header from cookie `jid_csrf`, Bearer from memory, refresh coordinator, interceptors, restoreSessionFromCookie, setAccessToken/getAccessToken/clearSession
+    authRefreshCoordinator.js — single-flight POST /auth/refresh (exported factory + REFRESH_TIMEOUT_MS 10000, etc.)
+    authMfaApi.js — postMfaSetup, postMfaEnable, postMfaDisable
+    userApi.js — getMe, profile/resume/saved jobs/account/password/data export helpers
+    jobsApi.js — public jobs, job detail, recruiter jobs/analytics CRUD
+    applicationsApi.js — candidate + recruiter application APIs, fetchApplicationResume (blob)
+    companyApi.js — recruiter company CRUD + logo upload
+    adminApi.js — admin stats, users, jobs, companies, applications, audit logs
+    notificationsApi.js — list, unread count, mark read, mark all read, delete
+    jobAlertsApi.js — listJobAlerts, createJobAlert, deleteJobAlert (no PATCH wrapper)
+    authRefreshCoordinator.test.js — unit tests for coordinator
+
+  config/
+    site.js — SITE_NAME, SITE_LOGO_MARK, SITE_URL, SUPPORT_EMAIL, GA_MEASUREMENT_ID, SOCIAL_LINKS (VITE_* env overrides)
+
+  context/
+    AuthContext.jsx — bootstrap via refresh + getMe, login/logout/updateUser, storage sync
+    ThemeContext.jsx — system dark/light via matchMedia, applyThemeToDocument
+    useAuth.jsx — context consumer hook
+
+  features/recruiter/
+    applicationPipeline.js — status column helpers
+    ApplicantDetailModal.jsx — applicant detail UI
+    ApplicantsPipelinePanel.jsx — pipeline board
+    PipelineFunnelStrip.jsx — funnel visualization
+    recruiterSchemas.js — job form zod + defaults
+
+  hooks/
+    useCountUp.js, useCountUp.test.js
+    useDebouncedValue.js
+    useHeaderScrolled.js
+
+  layouts/
+    AppLayout.jsx — header, DesktopNav/MobileSheet, main, Footer, FloatingRecruiterFab, DashboardBottomNav
+    RecruiterLayout.jsx — sidebar + Outlet
+    AdminLayout.jsx — admin sidebar + Outlet
+    components/ — DesktopNav.jsx, MobileSheet.jsx, NavLinks.jsx, layoutNavStyles.js
+
+  components/
+    ui/ — design system (see section 8)
+    notifications/ — NotificationBell.jsx, NotificationDropdown.jsx, NotificationBell.test.jsx
+    layout/ — PageShell.jsx (AnimatedPage, Outlet), RouteFallback.jsx, AuthLayout.jsx
+    jobs/ — JobCard.jsx, JobListCard.jsx
+    resume/ — LazyResumeViewer.jsx, ResumeViewer.jsx
+    navigation/ — DashboardBottomNav.jsx
+    __tests__/ — ProtectedRoute.test.jsx, SaveJobButton.test.jsx
+    Plus: ProfileDropdown, Footer, SaveJobButton, ProtectedRoute, ErrorFallback, SeoHead, AnalyticsTracker,
+    ScrollToTop, AppBootstrapSkeleton, CandidateDashboardSkeleton, JobDetailsSkeleton, JobCardSkeleton.jsx (standalone),
+    CompanyCardSkeleton, ProfileCompletion, ResumeSection, PasswordStrength, SectionWave, FloatingRecruiterFab, etc.
+
+  lib/
+    queryKeys.js — TanStack Query key factories + userScopedQueryKeyPrefixes
+    queryOptions.js — CACHE_TIERS (staleTime/gcTime presets)
+    authConstants.js — AUTH_KEYS, CSRF_COOKIE_NAME `jid_csrf`, SESSION_ENDED_KEY, session flags
+    authEvents.js — session expiry pub/sub
+    authRoutes.js — isAuthRoute helper
+    postLoginRedirect.js — getPostLoginPath
+    prefetchDashboard.js — prefetchDashboardForRole
+    adminNav.js — admin sidebar metadata
+    themeStorage.js — getSystemPrefersDark, applyThemeToDocument
+    sessionUser.js — toPersistedSessionUser
+    axiosQuiet.js — optional quiet axios helper
+    reportWebVitals.js — web-vitals reporting
+    analytics.js — GA helpers
+    openApplicationResumeTab.js — resume open helper
+    index.js — re-exports query keys, CACHE_TIERS, prefetch, auth exports
+
+  pages/
+    HomePage, LoginPage, RegisterPage, ForgotPasswordPage, ResetPasswordPage
+    JobsPage, JobDetailsPage, CompaniesPage, CompanyDetailsPage
+    AboutPage, ContactPage, PrivacyPage, TermsPage, CookiesPage
+    NotFoundPage, ServerErrorPage, UnauthorizedPage
+    PlaceholderPage.jsx — exists but not routed in App.jsx (legacy/utility)
+    candidate/CandidateDashboardPage.jsx, candidate/dashboard/candidateDashboardConstants.jsx
+    recruiter/ — RecruiterOverviewPage, RecruiterJobsPage, RecruiterCompaniesPage, RecruiterInterviewsPage
+    admin/ — AdminDashboardPage, AdminUsersPage, AdminJobsPage, AdminCompaniesPage, AdminApplicationsPage,
+             AdminAuditLogPage, AdminSecurityPage
+    LoginPage.test.jsx
+
+  utils/
+    getApiErrorMessage.js, formatSalary.js, filterPublicJobs.js, etc.
+
+  __tests__/
+    setup/setupTests.js — Vitest, Testing Library cleanup, MSW server listen/reset
+    setup/msw/server.js, handlers/authHandlers.js, notificationsHandlers.js
+    setup/testUtils.jsx
+
+4. ALL ROUTES
+(From src/App.jsx — nested paths are full URL paths)
+
+/ → HomePage | Access: public | Status: complete
+
+/login → LoginPage | public | complete (email/password + admin MFA verify step)
+
+/register → RegisterPage | public | complete
+
+/forgot-password → ForgotPasswordPage | public | complete
+
+/reset-password/:token → ResetPasswordPage | public | complete
+
+/jobs → JobsPage | public | complete
+
+/jobs/:id → JobDetailsPage | public | complete
+
+/companies → CompaniesPage | public | complete
+
+/companies/:id → CompanyDetailsPage | public | complete
+
+/about → AboutPage | public | complete
+
+/contact → ContactPage | public | complete
+
+/candidate/dashboard → CandidateDashboardPage | candidate (ProtectedRoute roles=['candidate']) | complete
+
+/recruiter → Navigate to /recruiter/dashboard | recruiter | complete
+
+/recruiter/dashboard → RecruiterOverviewPage | recruiter | complete
+
+/recruiter/jobs → RecruiterJobsPage | recruiter | complete
+
+/recruiter/companies → RecruiterCompaniesPage | recruiter | complete
+
+/recruiter/interviews → RecruiterInterviewsPage | recruiter | complete
+
+/admin → Navigate to /admin/dashboard | admin | complete
+
+/admin/dashboard → AdminDashboardPage | admin | complete
+
+/admin/users → AdminUsersPage | admin | complete
+
+/admin/jobs → AdminJobsPage | admin | complete
+
+/admin/companies → AdminCompaniesPage | admin | complete
+
+/admin/applications → AdminApplicationsPage | admin | complete
+
+/admin/audit-logs → AdminAuditLogPage | admin | complete
+
+/admin/security → AdminSecurityPage | admin | complete
+
+/dashboard → DashboardRedirect (role-based redirect to candidate/recruiter/admin dashboard or login) | public (auth-aware) | complete
+
+/500 → ServerErrorPage | public | complete
+
+/unauthorized → UnauthorizedPage | public | complete
+
+/careers → Navigate to /about | public | redirect (partial: content merged into About marketing)
+
+/press → Navigate to /about | public | redirect (partial)
+
+/privacy → PrivacyPage | public | complete
+
+/terms → TermsPage | public | complete
+
+/cookies → CookiesPage | public | complete
+
+/resources/career-tips → Navigate to /about | public | redirect (partial)
+
+/resources/resume → Navigate to /about | public | redirect (partial)
+
+/resources/interview → Navigate to /about | public | redirect (partial)
+
+* (no match) → NotFoundPage | public | complete
+
+5. AUTH SYSTEM
+Token storage:
+  Access JWT: in-memory only (`accessTokenMemory` in apiClient.js), plus axios default Authorization header.
+  Optional localStorage keys `currentUser` and `accessToken` (AUTH_KEYS) cleared on logout; user snapshot uses
+  toPersistedSessionUser — not trusted for auth until getMe runs.
+  Refresh token: httpOnly cookie `jid_refresh` (not readable by JS); rotation via POST /api/v1/auth/refresh.
+
+Bootstrap flow (AuthContext.jsx):
+  On mount: if SESSION_ENDED not set → restoreSessionFromCookie() → single-flight refresh → endBootstrap gate.
+  Then GET /auth/csrf-token (best-effort), then getMe() → setUser or clear on failure.
+
+Refresh flow:
+  authRefreshCoordinator: one global POST /auth/refresh; 401 on API requests triggers getRefreshPromise(), retry once with _retry.
+  peekInFlightRefresh lets requests wait for ongoing refresh without duplicate POSTs.
+
+Logout flow:
+  performLogout: POST /auth/logout with Bearer if present (skipGlobalErrorToast), setSessionEndedFlag, clearSession + clearPersistedAuthKeys,
+  queryClient.clear(), window.location.replace('/login').
+
+Session expiry:
+  apiClient 401 handling clears session + toast; emitSessionExpired → AuthContext replaces to /login?session=expired.
+  Cross-tab: storage listener on SESSION_ENDED_KEY.
+
+6. API LAYER
+apiClient.js:
+  baseURL: VITE_API_URL resolved to `/api/v1` in dev or full URL with `/api/v1` suffix (see resolveApiBase).
+  withCredentials: true; timeout 15000 (120000 for resume blob GET).
+  Request interceptor: await bootstrap promise; await in-flight refresh; set X-CSRF-Token from document cookie;
+    set Bearer from memory; strip Content-Type for FormData; Accept for blob GETs.
+  Response interceptor: 401 → refresh + retry once; toasts for 403/5xx unless skipGlobalErrorToast; ECONNABORTED message rewrite.
+
+authRefreshCoordinator.js — createAuthRefreshCoordinator(deps): getRefreshPromise, peekInFlightRefresh, resetForTests.
+
+userApi.js — getMe, updateProfile, uploadProfileImage, uploadResume, deleteResume, getSavedJobs, toggleSavedJob, deleteAccount, changePassword, fetchMyDataExport, triggerDownloadDataExport.
+
+jobsApi.js — listPublicJobs, getJobById, listMyJobs, getRecruiterAnalytics, getRecruiterApplicationTrend, createJob, updateJob, deleteJob.
+
+applicationsApi.js — listMyApplications, applyToJob (Idempotency-Key header), listApplicationsForJob, getApplication, updateApplicationStatus, updateRecruiterNotes, updateInterview, listUpcomingInterviews, fetchApplicationResume.
+
+companyApi.js — listMyCompanies, createCompany, updateCompany, deleteCompany, uploadCompanyLogo.
+
+adminApi.js — getStats, getStatsTrend, getUsers, updateUserRole, toggleUserStatus, deleteUser, getJobs, updateJobStatus, toggleJobStatus, deleteJob, getCompanies, deleteCompany, getApplications, getAuditLogs.
+
+notificationsApi.js — getNotifications, getUnreadCount, markAsRead, markAllAsRead, deleteNotification.
+
+jobAlertsApi.js — listJobAlerts, createJobAlert, deleteJobAlert.
+
+authMfaApi.js — postMfaSetup, postMfaEnable, postMfaDisable.
+
+Login/MFA in LoginPage uses apiClient.post('/auth/login'...) and '/auth/mfa/verify-login' directly (not separate api file).
+
+Interceptors, CSRF, error handling: see apiClient.js (section above). Global QueryCache onError in main.jsx redirects to /500 on status >= 500.
+
+7. STATE MANAGEMENT
+AuthContext — user, loading/isLoading, isAuthenticated, login, logout, updateUser.
+
+ThemeContext — preference: 'system', dark, resolvedDark, setTheme/cycleTheme no-op (deprecated API stability).
+
+TanStack Query (main.jsx):
+  defaultOptions.queries: staleTime 30s, gcTime 5min, retry once except 401/403, refetchOnWindowFocus/reconnect true.
+  mutations: retry false.
+  QueryCache onError: if status >= 500 → window.location.href = '/500'.
+
+queryKeys (lib/queryKeys.js) — auth.me, jobs.list/detail/infiniteList/recommended, companies.list/detail, user.applications/savedJobs/jobAlerts, recruiter.*, admin.*, notifications.*.
+userScopedQueryKeyPrefixes — prefixes removed on logout intent (documented in queryKeys.js).
+
+8. UI COMPONENTS (components/ui/)
+Exports from components/ui/index.js:
+
+Button — props: children, variant (primary|gradient|secondary|ghost|danger|primary-outline|success), size (sm|md|lg|icon|icon-sm), disabled, loading, loadingText, type, className, icon, iconPosition, ...rest (PropTypes in file).
+
+Input — props: id, label, error, success, hint, icon, iconPosition, className, containerClassName, disabled, ...rest.
+
+Select — props: id, label, error, options [{value,label}], placeholder, className, containerClassName, ...rest.
+
+Card — props: children, className, hover, padding (none|sm|default|lg), variant (default|elevated|bordered|flat|glass|premium), as, ...rest.
+CardHeader — props: title, subtitle, action, className.
+
+Modal — props: open, onClose, title, children, size (sm|md|lg|xl).
+
+Dropdown — props: trigger, children, align (right|left|center), className. Context for DropdownItem close.
+DropdownItem — props: children, onClick, to, className, danger.
+DropdownDivider — no props.
+
+Tooltip — props: children, content, placement (top|bottom|left|right), delay (default 200).
+
+Badge — props: children, variant, size, className.
+
+Tabs — props: tabs (array of { id, label, count? }), activeTab, onChange, className, variant (underline|pills).
+
+Skeleton — props: className.
+Also exports JobCardSkeleton, ApplicationRowSkeleton from Skeleton.jsx (shimmer building blocks).
+
+EmptyState — props: icon (component), title, description, actionLabel, actionHref, onAction, className.
+Exports EmptyStateIcons (jobs, saved, applications, search).
+
+PageHeader — props: label, title, description, actions, className.
+
+LoadingState — props: label, className, size (sm|md|lg).
+
+Sheet — props: open, onClose, title, children, side (left|right), fullWidth.
+
+Table — props: children, className.
+TableHead, TableBody, TableRow — children, className.
+TableCell — as (td|th), children, className, ...rest.
+
+9. EACH PAGE — DETAILED
+
+HomePage — Route: /. Status: complete. Features: hero, category cards, featured jobs (useQuery + apiClient/recommended pattern in file), stats, marketing sections, SaveJobButton for authed candidates. Data: public jobs query, auth user optional. Issues: relies on external Unsplash URLs (config in page).
+
+LoginPage — /login. complete. RHF+zod, MFA step, prefetchDashboardForRole after login, CSRF fetch, navigate via getPostLoginPath. Data: POST /auth/login, /auth/mfa/verify-login.
+
+RegisterPage — /register. complete (standard registration flow in codebase).
+
+ForgotPasswordPage — /forgot-password. complete.
+
+ResetPasswordPage — /reset-password/:token. complete.
+
+JobsPage — /jobs. complete. useInfiniteQuery listPublicJobs, URL search params sync, Sheet filters, EmptyState, JobListCard.
+
+JobDetailsPage — /jobs/:id. complete. Job detail query, apply modal, LazyResumeViewer, SaveJobButton, JSON-LD JobPosting, apply mutation with idempotency.
+
+CompaniesPage — /companies. complete. GET /companies with q/page via apiClient.
+
+CompanyDetailsPage — /companies/:id. complete. Company + jobs; simple loading/error strings (no dedicated skeleton component).
+
+AboutPage — /about. complete (static/marketing).
+
+ContactPage — /contact. complete.
+
+PrivacyPage, TermsPage, CookiesPage — /privacy, /terms, /cookies. complete (legal content).
+
+CandidateDashboardPage — /candidate/dashboard. complete. Large tabbed UI: overview, saved jobs, job alerts (create/delete only — no PATCH), applications, profile (RHF+zod), resume, password, data export, delete account; multiple useQuery/useMutation; ProfileCompletion, ResumeSection.
+
+RecruiterOverviewPage — /recruiter/dashboard. complete. Analytics cards/charts from getRecruiterAnalytics + trend query.
+
+RecruiterJobsPage — /recruiter/jobs. complete. Job form (react-hook-form + jobSchema), list, edit, delete, ApplicantsPipelinePanel pipeline.
+
+RecruiterCompaniesPage — /recruiter/companies. complete. Company CRUD + logo upload.
+
+RecruiterInterviewsPage — /recruiter/interviews. complete. listUpcomingInterviews + scheduling context per implementation.
+
+AdminDashboardPage — /admin/dashboard. complete. Recharts line chart, stat cards from getStats/getStatsTrend.
+
+AdminUsersPage — /admin/users. complete. Paginated users, search, role/status actions.
+
+AdminJobsPage — /admin/jobs. complete. Platform job list, toggle/status/delete.
+
+AdminCompaniesPage — /admin/companies. complete. List + delete company.
+
+AdminApplicationsPage — /admin/applications. complete. Filter by status, pagination.
+
+AdminAuditLogPage — /admin/audit-logs. complete. Filters action/userId/dates, pagination.
+
+AdminSecurityPage — /admin/security. complete. Admin TOTP setup/enable/disable via authMfaApi + getMe.
+
+NotFoundPage — *. complete.
+
+ServerErrorPage — /500. complete (used by QueryCache and manual navigation).
+
+UnauthorizedPage — /unauthorized. complete.
+
+PlaceholderPage — not mounted in App.jsx (routes redirect to /about instead). Status: unused in current router.
+
+10. NOTIFICATIONS UI
+NotificationBell (header when authenticated, DesktopNav): useQuery unread count (refetchInterval 30s, stale 10s); toggles dropdown; badge 1–99+.
+
+NotificationDropdown: useInfiniteQuery getNotifications(page,20); mark all read; per-row mark read on activate; navigate to n.link if set; delete per row; type icons/colors for APPLICATION_*, INTERVIEW_*, JOB_ALERT_MATCH, GENERAL; skeleton rows while loading; empty state; "Load more" when hasNextPage.
+
+11. LOADING + ERROR HANDLING
+Skeletons: JobDetailsSkeleton, CandidateDashboardSkeleton, JobCardSkeleton (ui + standalone), CompanyCardSkeleton, ui/Skeleton + JobCardSkeleton/ApplicationRowSkeleton, AppBootstrapSkeleton (full-screen initial auth in App.jsx).
+
+Error boundaries: react-error-boundary in main.jsx (ErrorFallback), per-route SectionErrorFallback in App.jsx, RecruiterLayout/AdminLayout Suspense with RouteFallback.
+
+Toasts: sonner Toaster in main.jsx (top-right, richColors, 4s default).
+
+Empty states: EmptyState + EmptyStateIcons across Jobs, Home, Candidate tabs.
+
+Query errors: JobsPage/Company list use EmptyState; JobDetailsPage shows red box on error; main.jsx QueryCache redirects to /500 for server errors on queries.
+
+12. TESTING STATUS
+Infrastructure: exists — Vitest + jsdom (vite.config.js test block), @testing-library/react, MSW server in src/__tests__/setup (beforeAll listen, afterEach reset, afterAll close), setupTests.js.
+
+Existing tests (Vitest match src/**/*.{test,spec}.{js,jsx}):
+  src/api/authRefreshCoordinator.test.js
+  src/components/__tests__/ProtectedRoute.test.jsx
+  src/components/__tests__/SaveJobButton.test.jsx
+  src/components/notifications/NotificationBell.test.jsx
+  src/hooks/useCountUp.test.js
+  src/pages/LoginPage.test.jsx
+
+Missing tests (not exhaustive): Most pages (admin, recruiter, candidate dashboard, Jobs, Job details, companies), most components, E2E full flow default-off.
+
+E2E (e2e/smoke.spec.js): Playwright — public tests home + jobs heading always run; authenticated apply flow skipped unless E2E_FULL=1 (requires API, seed, preview per spec comment).
+
+13. KNOWN BUGS
+No bug tracker or labeled bug list in the repository. A scan of frontend/src for TODO/FIXME/HACK/BUG did not find bug-tracking labels (only neutral comments such as GA placeholder text in config/site.js).
+
+14. MISSING FEATURES
+Candidate missing:
+  — PATCH /job-alerts/:id: backend supports update; frontend jobAlertsApi.js has no update function and Candidate dashboard only create/delete alerts (no edit UI).
+
+Recruiter missing:
+  — (vs backend capabilities) Any recruiter-only backend endpoints not wrapped in dedicated files are called via apiClient inline in specific pages only; no separate gap identified beyond product scope.
+
+Admin missing:
+  — Full MFA “verify login” UI lives on LoginPage; AdminSecurityPage covers authenticator enrollment for admins only (matches backend admin MFA routes).
+
+Global missing:
+  — PlaceholderPage content for /careers, /press, /resources/* not reachable as standalone routes (App.jsx redirects those URLs to /about).
+  — Duplicate JobCardSkeleton implementations: components/ui/Skeleton.jsx exports JobCardSkeleton and components/JobCardSkeleton.jsx defines another (potential maintenance drift).
+
+15. SCRIPTS
+(From frontend/package.json)
+
+npm run dev — vite dev server (port 5173 per vite.config.js).
+
+npm run backend:dev — npm --prefix ../backend run dev.
+
+npm run build — node scripts/replace-seo-domain.js && vite build.
+
+npm run preview — vite preview.
+
+npm run lint — eslint . --ext js,jsx.
+
+npm run lint:fix — eslint with --fix.
+
+npm run format — prettier write src/**/*.{js,jsx,json,css}.
+
+npm run format:check — prettier check.
+
+npm run test — cross-env VITEST=true vitest run.
+
+npm run test:watch — vitest watch.
+
+npm run test:ui — vitest --ui.
+
+npm run test:coverage — vitest run --coverage.
+
+npm run test:e2e — playwright test.
+
+npm run analyze — npx vite-bundle-visualizer.
+
+================================================================================
+END
+================================================================================

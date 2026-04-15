@@ -1,5 +1,5 @@
-const { JobAlert } = require("../models/JobAlert");
-const { Job } = require("../models/Job");
+const jobAlertRepository = require("../repositories/jobAlertRepository");
+const jobRepository = require("../repositories/jobRepository");
 const { addEmailJob } = require("../queues/emailQueue");
 const { logger } = require("../config/logger");
 
@@ -91,11 +91,7 @@ async function findMatchingAlerts(job, options = {}) {
   let skip = 0;
 
   while (true) {
-    const batch = await JobAlert.find(baseFilter)
-      .populate("user", "email fullName")
-      .skip(skip)
-      .limit(BATCH_SIZE)
-      .lean();
+    const batch = await jobAlertRepository.findWithUserPaginated(baseFilter, skip, BATCH_SIZE);
 
     if (!batch.length) break;
 
@@ -117,7 +113,7 @@ async function findMatchingAlerts(job, options = {}) {
  */
 async function matchAlertsForJob(job) {
   try {
-    const populatedJob = await Job.findById(job._id).populate("company", "name");
+    const populatedJob = await jobRepository.findByIdPopulateCompanyName(job._id);
     if (!populatedJob || populatedJob.isActive === false || populatedJob.isDraft) return;
     const exp = populatedJob.expiresAt;
     if (exp && new Date(exp) <= new Date()) return;

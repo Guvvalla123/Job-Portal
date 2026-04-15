@@ -14,18 +14,14 @@ export async function updateProfile(payload) {
 export async function uploadProfileImage(file) {
   const formData = new FormData()
   formData.append('image', file)
-  const { data } = await apiClient.post('/users/profile/image', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  })
+  const { data } = await apiClient.post('/users/profile/image', formData)
   return data.data
 }
 
 export async function uploadResume(file) {
   const formData = new FormData()
   formData.append('resume', file)
-  const { data } = await apiClient.post('/users/profile/resume', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  })
+  const { data } = await apiClient.post('/users/profile/resume', formData)
   return data.data
 }
 
@@ -53,4 +49,23 @@ export async function deleteAccount() {
 export async function changePassword(body) {
   const { data } = await apiClient.patch('/users/change-password', body)
   return data.data
+}
+
+/** Portable JSON export (GDPR-style); response body is the export object (not wrapped in `data.data`). */
+export async function fetchMyDataExport() {
+  const { data } = await apiClient.get('/users/me/data-export')
+  return data
+}
+
+export function triggerDownloadDataExport(obj, filename = 'careersync-data-export.json') {
+  const blob = new Blob([`${JSON.stringify(obj, null, 2)}\n`], {
+    type: 'application/json;charset=utf-8',
+  })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.rel = 'noopener'
+  a.click()
+  URL.revokeObjectURL(url)
 }

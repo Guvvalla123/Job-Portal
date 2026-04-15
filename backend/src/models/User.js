@@ -58,6 +58,8 @@ const userSchema = new mongoose.Schema(
     projects: [projectSchema],
     education: [educationSchema],
     profileImageUrl: { type: String, default: "" },
+    /** Cloudinary public_id for profile image — used for reliable delete on account removal. */
+    profileImagePublicId: { type: String, default: "" },
     resumeUrl: { type: String, default: "" },
     resumePublicId: { type: String, default: "" },
     resumeFileName: { type: String, default: "" },
@@ -68,6 +70,9 @@ const userSchema = new mongoose.Schema(
     passwordResetToken: { type: String, default: "" },
     passwordResetExpires: { type: Date },
     savedJobs: [{ type: mongoose.Schema.Types.ObjectId, ref: "Job" }],
+    /** Encrypted TOTP secret (AES-256-GCM); never exposed in API responses. */
+    mfaTotpSecretEnc: { type: String, default: "", select: false },
+    mfaEnabled: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
@@ -90,6 +95,7 @@ userSchema.set("toJSON", {
     delete ret.__v;
     delete ret.password;
     delete ret.refreshToken;
+    delete ret.mfaTotpSecretEnc;
     return ret;
   },
 });

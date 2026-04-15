@@ -1,19 +1,34 @@
 const crypto = require("crypto");
 const { ApiError } = require("../utils/apiError");
 const { signAccessToken, signRefreshToken, verifyRefreshToken } = require("../utils/jwt");
+const { signMfaChallengeToken } = require("../utils/mfaChallengeJwt");
 const { queueEmail } = require("../queues/emailQueue");
 const { blacklist: blacklistToken } = require("../utils/tokenBlacklist");
 const userRepository = require("../repositories/userRepository");
 const { env } = require("../config/env");
+const { ROLES } = require("../constants/roles");
 
 const hashToken = (token) => crypto.createHash("sha256").update(token).digest("hex");
 
 /**
+ * `amfa` on JWT: admin portal satisfied MFA step for this session (always true for non-admin or admin without TOTP).
+ */
+function initialAmfaForUser(user) {
+  if (user.role !== ROLES.ADMIN) return true;
+  if (!user.mfaEnabled) {
+    return !env.adminMfaRequired;
+  }
+  return false;
+}
+
+/**
  * Issue access + refresh tokens, persist refresh hash. Used by login and register.
  * @param {import("mongoose").Document} user - User document with _id, role, fullName, email
+ * @param {{ amfaSatisfied?: boolean }} [opts]
  */
-const issueSessionForUser = async (user) => {
-  const payload = { userId: user._id.toString(), role: user.role };
+const issueSessionForUser = async (user, opts = {}) => {
+  const amfaSatisfied = opts.amfaSatisfied !== undefined ? opts.amfaSatisfied : initialAmfaForUser(user);
+  const payload = { userId: user._id.toString(), role: user.role, amfa: amfaSatisfied };
   const accessToken = signAccessToken(payload);
   const refreshToken = signRefreshToken(payload);
   const refreshTokenHash = hashToken(refreshToken);
@@ -37,7 +52,7 @@ const register = async (data) => {
 };
 
 const login = async (email, password) => {
-  const user = await userRepository.findByEmail(email);
+  const user = await userRepository.findByEmail(email).select("+mfaTotpSecretEnc");
   if (!user) throw new ApiError(401, "Invalid credentials");
 
   const isValid = await user.comparePassword(password);
@@ -47,17 +62,27 @@ const login = async (email, password) => {
     throw new ApiError(403, "Your account has been disabled. Please contact support.");
   }
 
+  if (user.role === ROLES.ADMIN && user.mfaEnabled) {
+    return {
+      mfaPending: true,
+      mfaToken: signMfaChallengeToken(user._id),
+      user: { id: user._id, fullName: user.fullName, email: user.email, role: user.role },
+    };
+  }
+
   return issueSessionForUser(user);
 };
 
 const getMe = async (userId) => {
   const user = await userRepository.findById(
     userId,
-    "-password -refreshToken -passwordResetToken -resumeUrl -resumePublicId"
+    "-password -refreshToken -passwordResetToken -resumeUrl -resumePublicId -mfaTotpSecretEnc"
   );
   if (!user) throw new ApiError(404, "User not found");
   const u = user.toObject ? user.toObject() : { ...user };
   u.hasResume = Boolean(u.resumeFileName && String(u.resumeFileName).trim());
+  u.mfaEnabled = Boolean(user.mfaEnabled);
+  u.adminMfaRequired = env.adminMfaRequired;
   return { user: u };
 };
 
@@ -107,11 +132,12 @@ const resetPassword = async (token, password) => {
 
   if (!user) throw new ApiError(400, "Invalid or expired reset link. Please request a new one.");
 
-  await userRepository.updateById(user._id, {
-    password,
-    passwordResetToken: "",
-    passwordResetExpires: undefined,
-  });
+  const doc = await userRepository.findById(user._id, "+password");
+  if (!doc) throw new ApiError(400, "Invalid or expired reset link. Please request a new one.");
+  doc.password = password;
+  doc.passwordResetToken = "";
+  doc.passwordResetExpires = undefined;
+  await doc.save();
 
   return {};
 };
@@ -126,7 +152,7 @@ const refreshTokens = async (refreshToken) => {
     throw new ApiError(401, "Invalid or expired refresh token");
   }
 
-  const user = await userRepository.findById(payload.userId, "refreshToken isActive");
+  const user = await userRepository.findById(payload.userId, "refreshToken isActive role mfaEnabled");
   if (!user || !user.refreshToken) throw new ApiError(401, "Invalid refresh token");
 
   if (!user.isActive) {
@@ -139,18 +165,31 @@ const refreshTokens = async (refreshToken) => {
     throw new ApiError(401, "Refresh token reused - session revoked");
   }
 
-  const newPayload = { userId: payload.userId, role: payload.role };
+  let nextAmfa = payload.amfa;
+  if (nextAmfa === undefined) {
+    if (user.role !== ROLES.ADMIN || !user.mfaEnabled) {
+      nextAmfa = true;
+    } else {
+      nextAmfa = false;
+    }
+  }
+
+  if (user.role === ROLES.ADMIN && user.mfaEnabled && nextAmfa !== true) {
+    throw new ApiError(401, "Session incomplete — sign in again with two-factor authentication.");
+  }
+
+  const newPayload = { userId: payload.userId, role: payload.role, amfa: nextAmfa };
   const accessToken = signAccessToken(newPayload);
   const newRefreshToken = signRefreshToken(newPayload);
   const newRefreshTokenHash = hashToken(newRefreshToken);
 
   await userRepository.updateById(user._id, { refreshToken: newRefreshTokenHash });
 
-  const fullUser = await userRepository.findById(user._id, "fullName email role");
+  const refreshedUser = await userRepository.findById(user._id, "fullName email role mfaEnabled");
   return {
     accessToken,
     refreshTokenForCookie: newRefreshToken,
-    user: { id: fullUser._id, fullName: fullUser.fullName, email: fullUser.email, role: fullUser.role },
+    user: { id: refreshedUser._id, fullName: refreshedUser.fullName, email: refreshedUser.email, role: refreshedUser.role },
   };
 };
 
@@ -199,6 +238,28 @@ const invalidateSessionByRefreshCookie = async (refreshToken) => {
   }
 };
 
+const mfaService = require("./mfaService");
+
+/**
+ * Complete admin login after TOTP (mfaToken from password step).
+ */
+const completeMfaLogin = async (mfaToken, code) => {
+  const { verifyMfaChallengeToken } = require("../utils/mfaChallengeJwt");
+  let userId;
+  try {
+    userId = verifyMfaChallengeToken(mfaToken);
+  } catch {
+    throw new ApiError(401, "Invalid or expired MFA challenge. Please sign in again.");
+  }
+
+  const user = await mfaService.verifyLoginTotp(userId, code);
+  if (user.role !== ROLES.ADMIN) {
+    throw new ApiError(403, "MFA login is only valid for administrator accounts.");
+  }
+
+  return issueSessionForUser(user, { amfaSatisfied: true });
+};
+
 module.exports = {
   register,
   login,
@@ -209,4 +270,6 @@ module.exports = {
   changePassword,
   logout,
   invalidateSessionByRefreshCookie,
+  completeMfaLogin,
+  issueSessionForUser,
 };

@@ -128,7 +128,7 @@ export function JobsPage() {
         <link rel="canonical" href="/jobs" />
       </Helmet>
       <PageHeader title="Browse jobs" />
-      <div className="type-body mt-1 max-w-2xl text-gray-600 dark:text-gray-400">
+      <div className="type-body mt-1 max-w-2xl text-slate-600 dark:text-slate-300">
         {jobsQuery.isPending && jobs.length === 0 ? (
           <Skeleton className="h-5 w-44 sm:w-56" />
         ) : pagination.total != null ? (
@@ -139,7 +139,7 @@ export function JobsPage() {
       </div>
 
       {/* Filters — desktop */}
-      <Card padding="default" className="hidden lg:block">
+      <Card padding="default" className="hidden border-slate-200/80 dark:border-slate-700/80 lg:block">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <Input
             placeholder="Search roles, skills..."
@@ -231,28 +231,24 @@ export function JobsPage() {
 
       <Sheet open={filtersOpen} onClose={() => setFiltersOpen(false)} title="Filters">
         <div className="space-y-4">
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">Search</label>
-            <input
-              placeholder="Roles, skills..."
-              value={searchInput}
-              onChange={(e) => {
-                setSearchInput(e.target.value)
-              }}
-              className="w-full min-h-11 rounded-lg border border-gray-300 px-4 py-2.5 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-            />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">Location</label>
-            <input
-              placeholder="City, remote..."
-              value={location}
-              onChange={(e) => {
-                setLocation(e.target.value)
-              }}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm"
-            />
-          </div>
+          <Input
+            id="jobs-sheet-q"
+            label="Search"
+            placeholder="Roles, skills..."
+            value={searchInput}
+            onChange={(e) => {
+              setSearchInput(e.target.value)
+            }}
+          />
+          <Input
+            id="jobs-sheet-location"
+            label="Location"
+            placeholder="City, remote..."
+            value={location}
+            onChange={(e) => {
+              setLocation(e.target.value)
+            }}
+          />
           <Select
             label="Job type"
             placeholder="All types"
@@ -294,7 +290,9 @@ export function JobsPage() {
           ))}
         </div>
       ) : jobsQuery.isError ? (
-        <div className="rounded-lg bg-red-50 p-4 text-center text-red-600">Could not load jobs. Please try again.</div>
+        <div className="rounded-lg bg-red-50 p-4 text-center text-red-700 dark:bg-red-950/40 dark:text-red-300">
+          Could not load jobs. Please try again.
+        </div>
       ) : (
       <>
       {/* Job cards — responsive grid */}
@@ -306,7 +304,7 @@ export function JobsPage() {
 
       {/* Empty state */}
       {!jobsQuery.isPending && !jobsQuery.isFetchingNextPage && jobs.length === 0 && (
-        <div className="rounded-xl bg-white shadow-sm ring-1 ring-gray-100">
+        <div className="rounded-xl bg-white shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-900/80 dark:ring-slate-700/80">
           <EmptyState
             icon={EmptyStateIcons.search}
             title="No jobs found"
@@ -320,7 +318,7 @@ export function JobsPage() {
       {jobsQuery.hasNextPage && jobs.length > 0 ? (
         <div className="flex flex-col items-center gap-2 pt-6">
           {pagination.total != null && (
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               Showing {jobs.length} of {pagination.total}
             </p>
           )}

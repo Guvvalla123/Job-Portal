@@ -1,6 +1,6 @@
 /**
  * Central caps for paginated list queries (Zod .max()).
- * Documented in docs/API_CONTRACT.md — change both code and doc together.
+ * Documented in docs/api/API_CONTRACT.md — change both code and doc together.
  */
 module.exports = {
   /** Public job search (GET /api/v1/jobs) */

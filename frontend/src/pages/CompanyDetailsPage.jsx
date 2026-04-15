@@ -9,7 +9,7 @@ import { formatSalaryRange } from '../utils/formatSalary.js'
 
 const TYPE_COLORS = {
   'full-time': 'bg-emerald-50 text-emerald-700',
-  'part-time': 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300',
+  'part-time': 'bg-teal-50 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300',
   contract: 'bg-amber-50 text-amber-700',
   internship: 'bg-purple-50 text-purple-700',
 }
@@ -44,7 +44,7 @@ export function CompanyDetailsPage() {
           {company?.logoUrl ? (
             <img src={company.logoUrl} alt="" className="h-20 w-20 rounded-xl object-cover" loading="lazy" />
           ) : (
-            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-2xl font-bold text-indigo-600">
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-teal-100 text-2xl font-bold text-teal-700">
               {company?.name?.charAt(0)?.toUpperCase() || 'C'}
             </div>
           )}
@@ -52,7 +52,7 @@ export function CompanyDetailsPage() {
             <h1 className="text-2xl font-bold text-gray-900">{company?.name}</h1>
             {company?.location && <p className="mt-1 text-gray-500">{company.location}</p>}
             {company?.website && (
-              <a href={company.website} target="_blank" rel="noreferrer" className="mt-2 inline-block text-sm font-medium text-indigo-600 hover:text-indigo-500">
+              <a href={company.website} target="_blank" rel="noreferrer" className="mt-2 inline-block text-sm font-medium text-teal-700 hover:text-[#0C5F5A]">
                 Visit website &rarr;
               </a>
             )}
@@ -72,7 +72,7 @@ export function CompanyDetailsPage() {
             {jobs.map((job) => (
               <div key={job._id} className="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0 flex-1">
-                  <Link to={`/jobs/${job._id}`} className="font-medium text-gray-900 hover:text-indigo-600">{job.title}</Link>
+                  <Link to={`/jobs/${job._id}`} className="font-medium text-gray-900 hover:text-teal-700">{job.title}</Link>
                   <p className="mt-0.5 text-sm text-gray-500">{job.location}</p>
                   <div className="mt-1.5 flex flex-wrap gap-1.5">
                     {job.employmentType && (
@@ -85,7 +85,7 @@ export function CompanyDetailsPage() {
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <SaveJobButton jobId={job._id} />
-                  <Link to={`/jobs/${job._id}`} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">View & Apply</Link>
+                  <Link to={`/jobs/${job._id}`} className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-[#0C5F5A]">View & Apply</Link>
                 </div>
               </div>
             ))}

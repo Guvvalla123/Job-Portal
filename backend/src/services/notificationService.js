@@ -1,4 +1,4 @@
-const { Notification } = require("../models/Notification");
+const notificationRepository = require("../repositories/notificationRepository");
 const { ApiError } = require("../utils/apiError");
 
 /**
@@ -11,7 +11,7 @@ const { ApiError } = require("../utils/apiError");
  * @param {object} [params.meta]
  */
 async function createNotification({ userId, type, title, message, link, meta }) {
-  const doc = await Notification.create({
+  const doc = await notificationRepository.create({
     user: userId,
     type,
     title,
@@ -27,11 +27,7 @@ async function createNotification({ userId, type, title, message, link, meta }) 
  * @param {import("mongoose").Types.ObjectId | string} userId
  */
 async function markAsRead(notificationId, userId) {
-  const updated = await Notification.findOneAndUpdate(
-    { _id: notificationId, user: userId },
-    { $set: { read: true, readAt: new Date() } },
-    { new: true }
-  );
+  const updated = await notificationRepository.findOneAndMarkRead(notificationId, userId);
   if (!updated) throw new ApiError(404, "Notification not found");
   return updated;
 }
@@ -40,11 +36,7 @@ async function markAsRead(notificationId, userId) {
  * @param {import("mongoose").Types.ObjectId | string} userId
  */
 async function markAllAsRead(userId) {
-  const now = new Date();
-  await Notification.updateMany(
-    { user: userId, read: false },
-    { $set: { read: true, readAt: now } }
-  );
+  await notificationRepository.updateManyMarkAllRead(userId);
 }
 
 /**
@@ -55,14 +47,8 @@ async function markAllAsRead(userId) {
 async function getNotifications(userId, page = 1, limit = 20) {
   const p = Math.max(1, Number(page) || 1);
   const l = Math.min(50, Math.max(1, Number(limit) || 20));
-  const skip = (p - 1) * l;
-  const filter = { user: userId };
 
-  const [notifications, total, unreadCount] = await Promise.all([
-    Notification.find(filter).sort({ createdAt: -1 }).skip(skip).limit(l).lean(),
-    Notification.countDocuments(filter),
-    Notification.countDocuments({ ...filter, read: false }),
-  ]);
+  const { notifications, total, unreadCount } = await notificationRepository.findByUserPaginated(userId, p, l);
 
   const totalPages = total === 0 ? 0 : Math.ceil(total / l);
 
@@ -80,7 +66,7 @@ async function getNotifications(userId, page = 1, limit = 20) {
  * @param {import("mongoose").Types.ObjectId | string} userId
  */
 async function getUnreadCount(userId) {
-  const count = await Notification.countDocuments({ user: userId, read: false });
+  const count = await notificationRepository.countUnreadByUser(userId);
   return { count };
 }
 
@@ -89,7 +75,7 @@ async function getUnreadCount(userId) {
  * @param {import("mongoose").Types.ObjectId | string} userId
  */
 async function deleteNotification(notificationId, userId) {
-  const deleted = await Notification.findOneAndDelete({ _id: notificationId, user: userId });
+  const deleted = await notificationRepository.findOneAndDeleteForUser(notificationId, userId);
   if (!deleted) throw new ApiError(404, "Notification not found");
   return deleted;
 }
@@ -98,7 +84,7 @@ async function deleteNotification(notificationId, userId) {
 async function deleteOldNotifications() {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - 30);
-  const result = await Notification.deleteMany({ createdAt: { $lt: cutoff } });
+  const result = await notificationRepository.deleteManyOlderThan(cutoff);
   return { deletedCount: result.deletedCount };
 }
 

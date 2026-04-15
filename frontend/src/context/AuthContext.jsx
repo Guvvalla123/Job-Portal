@@ -6,6 +6,7 @@ import {
   getAccessToken,
   restoreSessionFromCookie,
   setAccessToken,
+  startBootstrap,
 } from '../api/apiClient.js'
 import { getMe } from '../api/userApi.js'
 import {
@@ -20,40 +21,19 @@ import { toPersistedSessionUser } from '../lib/sessionUser.js'
 import { subscribeToSessionExpiry } from '../lib/authEvents.js'
 const AuthContext = createContext(null)
 
-function parseStoredSessionUser(raw) {
-  try {
-    const o = JSON.parse(raw)
-    if (!o?.id) return null
-    return {
-      id: o.id,
-      role: o.role,
-      fullName: typeof o.fullName === 'string' ? o.fullName : typeof o.name === 'string' ? o.name : '',
-    }
-  } catch {
-    return null
-  }
-}
-
 export function AuthProvider({ children }) {
+  /** Synchronous gate: bootstrapPromise exists before any child effect can fire apiClient (fixes race with useEffect restore). */
+  startBootstrap()
   const queryClient = useQueryClient()
   const logoutInProgress = useRef(false)
   /** Bumps on login/logout so in-flight /auth/me cannot overwrite a newer session. */
   const authEpoch = useRef(0)
 
-  const [user, setUser] = useState(() => {
-    if (typeof window === 'undefined') return null
-    if (isSessionIntentionallyEnded()) {
-      try {
-        localStorage.removeItem(AUTH_KEYS.USER)
-        localStorage.removeItem(AUTH_KEYS.ACCESS_TOKEN)
-      } catch {
-        /* ignore */
-      }
-      return null
-    }
-    const raw = localStorage.getItem(AUTH_KEYS.USER)
-    return raw ? parseStoredSessionUser(raw) : null
-  })
+  /**
+   * Never trust localStorage for “logged in” before the server validates the session.
+   * Same pattern as major apps: show bootstrap until refresh + /auth/me succeed (or we clear and show login).
+   */
+  const [user, setUser] = useState(null)
   /** Until bootstrap finishes (cookie refresh + optional /me). */
   const [loading, setLoading] = useState(true)
 
@@ -64,6 +44,10 @@ export function AuthProvider({ children }) {
 
     const { clearCache = true, redirectToLogin = true } = options
     const token = getAccessToken()
+
+    if (redirectToLogin) {
+      setSessionEndedFlag()
+    }
 
     if (options.callServer !== false) {
       try {
@@ -78,10 +62,6 @@ export function AuthProvider({ children }) {
       } catch {
         /* still clear client + block restore; server may still drop cookie */
       }
-    }
-
-    if (redirectToLogin) {
-      setSessionEndedFlag()
     }
 
     clearSession()
@@ -143,6 +123,15 @@ export function AuthProvider({ children }) {
     const epochAtStart = authEpoch.current
 
     ;(async () => {
+      if (typeof window !== 'undefined' && isSessionIntentionallyEnded()) {
+        try {
+          localStorage.removeItem(AUTH_KEYS.USER)
+          localStorage.removeItem(AUTH_KEYS.ACCESS_TOKEN)
+        } catch {
+          /* ignore */
+        }
+      }
+
       const restored = await restoreSessionFromCookie()
       if (cancelled || epochAtStart !== authEpoch.current) return
 
@@ -156,12 +145,6 @@ export function AuthProvider({ children }) {
         }
         setLoading(false)
         return
-      }
-
-      if (restored.user) {
-        setUser(restored.user)
-        const minimal = toPersistedSessionUser(restored.user)
-        if (minimal) localStorage.setItem(AUTH_KEYS.USER, JSON.stringify(minimal))
       }
 
       try {

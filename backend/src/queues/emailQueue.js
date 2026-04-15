@@ -5,7 +5,7 @@
 const { Queue } = require("bullmq");
 const { sendMail } = require("../utils/mail");
 const { logger } = require("../config/logger");
-const { JobAlert } = require("../models/JobAlert");
+const jobAlertRepository = require("../repositories/jobAlertRepository");
 const { env } = require("../config/env");
 const { incEmailDirectFallback, incEmailDirectFallbackFailed } = require("../config/metrics");
 
@@ -14,7 +14,11 @@ let emailQueue = null;
 function warnDirectEmailFallback(emailType) {
   logger.warn("email_queue_direct_fallback", {
     emailType,
-    hint: "Set REDIS_URL and run npm run worker:email (and worker:job-alert-digest if using digests) for durable delivery.",
+    hint:
+      "REDIS_URL is not set — emails are sent in-process (no BullMQ queue). " +
+      "For local Redis: from the backend folder run `docker compose up -d redis`, then set REDIS_URL=redis://127.0.0.1:6379 in .env, " +
+      "restart the API, and run `npm run worker:email` (plus `npm run worker:job-alert-digest` if you use digest alerts). " +
+      "See backend/docker-compose.yml and .env.example.",
   });
   incEmailDirectFallback();
 }
@@ -85,9 +89,9 @@ const addEmailJob = async (type, payload, options = {}) => {
       sendMail({ to: p.userEmail, subject, html })
         .then(() => {
           if (!p.alertId) return null;
-          return JobAlert.updateOne({ _id: p.alertId }, { $set: { lastSentAt: new Date() } }).catch((e) =>
-            logger.error("JOB_ALERT lastSentAt update failed", { error: e.message, alertId: p.alertId })
-          );
+          return jobAlertRepository
+            .updateLastSentAt(p.alertId)
+            .catch((e) => logger.error("JOB_ALERT lastSentAt update failed", { error: e.message, alertId: p.alertId }));
         })
         .catch((err) => {
           incEmailDirectFallbackFailed();

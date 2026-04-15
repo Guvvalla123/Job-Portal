@@ -23,7 +23,7 @@ export function AuthLayout({ title, subtitle, bullets = [], children }) {
   if (reduceMotion) {
     return (
       <div className="flex min-h-[calc(100dvh-3.5rem)] flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <aside className="relative order-1 overflow-hidden bg-linear-to-br from-slate-950 via-indigo-950 to-indigo-900 px-6 py-10 sm:px-10 lg:order-0 lg:flex lg:min-h-[calc(100dvh-3.5rem)] lg:flex-col lg:justify-center lg:px-14 lg:py-16 xl:px-20">
+        <aside className="relative order-1 overflow-hidden bg-linear-to-br from-slate-950 via-teal-950 to-teal-900 px-6 py-10 sm:px-10 lg:order-0 lg:flex lg:min-h-[calc(100dvh-3.5rem)] lg:flex-col lg:justify-center lg:px-14 lg:py-16 xl:px-20">
           <div
             className="pointer-events-none absolute inset-0 opacity-[0.12]"
             style={{
@@ -34,8 +34,8 @@ export function AuthLayout({ title, subtitle, bullets = [], children }) {
               backgroundSize: '48px 48px',
             }}
           />
-          <div className="pointer-events-none absolute -left-24 top-1/4 h-72 w-72 rounded-full bg-indigo-500/25 blur-3xl motion-safe:animate-pulse" />
-          <div className="pointer-events-none absolute -right-16 bottom-1/4 h-64 w-64 rounded-full bg-indigo-400/20 blur-3xl motion-safe:animate-pulse motion-safe:[animation-delay:1.2s]" />
+          <div className="pointer-events-none absolute -left-24 top-1/4 h-72 w-72 rounded-full bg-teal-500/25 blur-3xl motion-safe:animate-pulse" />
+          <div className="pointer-events-none absolute -right-16 bottom-1/4 h-64 w-64 rounded-full bg-teal-400/20 blur-3xl motion-safe:animate-pulse motion-safe:[animation-delay:1.2s]" />
 
           <div className="relative z-10 mx-auto w-full max-w-lg lg:mx-0">
             <div>
@@ -54,7 +54,7 @@ export function AuthLayout({ title, subtitle, bullets = [], children }) {
               {title}
             </h1>
 
-            <p className="mt-4 max-w-md text-base leading-relaxed text-indigo-100/90 sm:text-lg">{subtitle}</p>
+            <p className="mt-4 max-w-md text-base leading-relaxed text-teal-100/90 sm:text-lg">{subtitle}</p>
 
             {bullets.length > 0 && (
               <ul className="mt-8 hidden space-y-4 sm:block">
@@ -74,9 +74,9 @@ export function AuthLayout({ title, subtitle, bullets = [], children }) {
         </aside>
 
         <div className="relative order-2 flex flex-1 items-center justify-center px-4 py-8 sm:px-6 lg:px-10 lg:py-12 xl:px-16">
-          <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-indigo-950/5 via-transparent to-indigo-500/5 dark:from-indigo-950/20 dark:to-indigo-950/10 lg:bg-linear-to-br" />
+          <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-teal-950/5 via-transparent to-teal-500/5 dark:from-teal-950/20 dark:to-teal-950/10 lg:bg-linear-to-br" />
           <div className="relative z-10 w-full max-w-md">
-            <div className="rounded-2xl border border-white/50 bg-white/80 p-8 shadow-2xl shadow-indigo-950/15 ring-1 ring-white/60 backdrop-blur-xl dark:border-white/10 dark:bg-gray-900/75 dark:shadow-black/40 dark:ring-white/10 sm:p-10">
+            <div className="rounded-2xl border border-white/50 bg-white/80 p-8 shadow-2xl shadow-teal-950/15 ring-1 ring-white/60 backdrop-blur-xl dark:border-white/10 dark:bg-gray-900/75 dark:shadow-black/40 dark:ring-white/10 sm:p-10">
               {children}
             </div>
           </div>
@@ -89,7 +89,7 @@ export function AuthLayout({ title, subtitle, bullets = [], children }) {
     <div className="flex min-h-[calc(100dvh-3.5rem)] flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       {/* Brand panel */}
       <aside
-        className="relative order-1 overflow-hidden bg-linear-to-br from-slate-950 via-indigo-950 to-indigo-900 px-6 py-10 sm:px-10 lg:order-0 lg:flex lg:min-h-[calc(100dvh-3.5rem)] lg:flex-col lg:justify-center lg:px-14 lg:py-16 xl:px-20"
+        className="relative order-1 overflow-hidden bg-linear-to-br from-slate-950 via-teal-950 to-teal-900 px-6 py-10 sm:px-10 lg:order-0 lg:flex lg:min-h-[calc(100dvh-3.5rem)] lg:flex-col lg:justify-center lg:px-14 lg:py-16 xl:px-20"
       >
         {/* Grid pattern */}
         <div
@@ -103,8 +103,8 @@ export function AuthLayout({ title, subtitle, bullets = [], children }) {
           }}
         />
         {/* Ambient orbs */}
-        <div className="pointer-events-none absolute -left-24 top-1/4 h-72 w-72 rounded-full bg-indigo-500/25 blur-3xl motion-safe:animate-pulse" />
-        <div className="pointer-events-none absolute -right-16 bottom-1/4 h-64 w-64 rounded-full bg-indigo-400/20 blur-3xl motion-safe:animate-pulse motion-safe:[animation-delay:1.2s]" />
+        <div className="pointer-events-none absolute -left-24 top-1/4 h-72 w-72 rounded-full bg-teal-500/25 blur-3xl motion-safe:animate-pulse" />
+        <div className="pointer-events-none absolute -right-16 bottom-1/4 h-64 w-64 rounded-full bg-teal-400/20 blur-3xl motion-safe:animate-pulse motion-safe:[animation-delay:1.2s]" />
 
         <div className="relative z-10 mx-auto w-full max-w-lg lg:mx-0">
           <MotionDiv
@@ -133,7 +133,7 @@ export function AuthLayout({ title, subtitle, bullets = [], children }) {
           </MotionH1>
 
           <MotionP
-            className="mt-4 max-w-md text-base leading-relaxed text-indigo-100/90 sm:text-lg"
+            className="mt-4 max-w-md text-base leading-relaxed text-teal-100/90 sm:text-lg"
             initial={reduceMotion ? false : { opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ ...transition, delay: stagger * 2 }}
@@ -165,7 +165,7 @@ export function AuthLayout({ title, subtitle, bullets = [], children }) {
 
       {/* Form column */}
       <div className="relative order-2 flex flex-1 items-center justify-center px-4 py-8 sm:px-6 lg:px-10 lg:py-12 xl:px-16">
-        <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-indigo-950/5 via-transparent to-indigo-500/5 dark:from-indigo-950/20 dark:to-indigo-950/10 lg:bg-linear-to-br" />
+        <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-teal-950/5 via-transparent to-teal-500/5 dark:from-teal-950/20 dark:to-teal-950/10 lg:bg-linear-to-br" />
 
         <MotionDiv
           className="relative z-10 w-full max-w-md"
@@ -173,7 +173,7 @@ export function AuthLayout({ title, subtitle, bullets = [], children }) {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ ...transition, delay: reduceMotion ? 0 : 0.06 }}
         >
-          <div className="rounded-2xl border border-white/50 bg-white/80 p-8 shadow-2xl shadow-indigo-950/15 ring-1 ring-white/60 backdrop-blur-xl dark:border-white/10 dark:bg-gray-900/75 dark:shadow-black/40 dark:ring-white/10 sm:p-10">
+          <div className="rounded-2xl border border-white/50 bg-white/80 p-8 shadow-2xl shadow-teal-950/15 ring-1 ring-white/60 backdrop-blur-xl dark:border-white/10 dark:bg-gray-900/75 dark:shadow-black/40 dark:ring-white/10 sm:p-10">
             {children}
           </div>
         </MotionDiv>

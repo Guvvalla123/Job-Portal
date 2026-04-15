@@ -1,0 +1,671 @@
+================================================================================
+CAREERSYNC — BACKEND SUMMARY
+Last Updated: March 27, 2026
+================================================================================
+
+1. WHAT THE BACKEND DOES
+The API is an Express 5 job-portal backend for candidates, recruiters, and admins:
+MongoDB/Mongoose persistence, JWT sessions with httpOnly refresh cookies, CSRF on
+mutations, job listings and applications, companies, notifications, job alerts (with
+optional BullMQ email workers and digest scheduling when Redis is configured).
+
+2. TECH STACK
+(From backend/package.json — dependencies with version ranges as published)
+
+Dependencies:
+  @sentry/node ^8.55.1
+  bcryptjs ^3.0.3
+  bullmq ^5.71.0
+  cloudinary ^2.9.0
+  compression ^1.8.1
+  cookie-parser ^1.4.7
+  cors ^2.8.6
+  dotenv ^17.3.1
+  express ^5.2.1
+  express-rate-limit ^8.3.1
+  helmet ^8.1.0
+  hpp ^0.2.3
+  ioredis ^5.4.1
+  jsonwebtoken ^9.0.3
+  mongoose ^9.3.0
+  multer ^2.1.1
+  nodemailer ^8.0.2
+  opossum ^8.1.2
+  otplib ^12.0.1
+  prom-client ^15.1.3
+  uuid ^11.0.3
+  winston ^3.17.0
+  zod ^4.3.6
+
+DevDependencies:
+  cross-env ^7.0.3
+  eslint ^9.15.0
+  eslint-config-prettier ^9.1.0
+  jest ^29.7.0
+  jest-mock-extended ^4.0.0
+  mongodb-memory-server ^11.0.1
+  nodemon ^3.1.14
+  prettier ^3.4.2
+  supertest ^7.0.0
+
+Runtime: Node >=18.0.0 (engines in package.json)
+
+3. FOLDER STRUCTURE
+backend/src/config/
+  env.js — Zod-validated process.env; exports env + trustProxyHops, adminMfaRequired
+  security.js — CORS, Helmet, HPP, RATE_LIMITS, rateLimitingEnabled
+  db.js — MongoDB connection
+  logger.js — Winston request logging (excluded from Jest coverage collectCoverageFrom)
+  metrics.js — Prometheus metrics registry
+  sentry.js — Sentry init for server
+  cloudinary.js — Cloudinary SDK config
+  permissions.js — PERMISSIONS map (ABAC-style resource rules for jobs/applications/companies)
+
+backend/src/constants/
+  roles.js — ROLES: candidate, recruiter, admin
+  cookies.js — REFRESH_TOKEN_COOKIE jid_refresh, CSRF_COOKIE jid_csrf
+  applicationStatus.js — APPLICATION_STATUSES, INTERVIEW_STATUSES
+  passwordPolicy.js — PASSWORD_REGEX and message for register/reset/change password
+
+backend/src/models/
+  User.js, Job.js, Application.js, Company.js, Notification.js, JobAlert.js, AuditLog.js, indexes.js
+
+backend/src/routes/
+  index.js — /api/health, /api/ready, mounts /api/v1
+  v1/index.js — mounts auth, jobs, applications, users, companies, admin, job-alerts, notifications
+  authRoutes.js, jobRoutes.js, applicationRoutes.js, userRoutes.js, companyRoutes.js,
+  adminRoutes.js, jobAlertRoutes.js, notificationRoutes.js
+
+backend/src/controllers/
+  HTTP handlers: authController, jobController, applicationController, userController,
+  companyController, adminController, jobAlertController, notificationController
+
+backend/src/services/
+  authService, applicationService, jobService, jobAlertService, jobAlertDigestService,
+  notificationService, auditLogService, mfaService, resumeStreamService, userDataExportService
+
+backend/src/repositories/
+  userRepository, jobRepository, applicationRepository, companyRepository,
+  jobAlertRepository, notificationRepository, auditLogRepository
+
+backend/src/middlewares/
+  requestId, sanitizeInput, validate (Zod), auth (requireAuth/protect, requireRole),
+  authorize (job/application ownership), csrf, errorHandler, notFound, audit,
+  idempotency, upload (multer), requireAdminPortalAccess
+
+backend/src/queues/
+  emailQueue.js — BullMQ Queue "email", fallback direct send when no REDIS_URL
+
+backend/src/workers/
+  emailWorker.js — Worker on queue "email", DLQ queue "email:dlq"
+  jobAlertDigestWorker.js — Worker on queue "job-alert-digest", registers cron repeatables
+
+backend/src/utils/
+  apiResponse, apiError, asyncHandler, jwt (HS256 access/refresh), authCookies,
+  mail, cache (Redis or in-memory), tokenBlacklist, mfaSecretCrypto, mfaChallengeJwt,
+  userDeleteCascade
+
+backend/src/validations/
+  authValidation, jobValidation, applicationValidation, userValidation, companyValidation,
+  jobAlertValidation, common (mongoIdParam), paginationLimits (JOBS_LIST_MAX, APPLICATIONS_LIST_MAX)
+
+backend/src/__tests__/
+  Jest + Supertest integration tests (*.test.js), setup (testApp, testDb, factories, authAgent)
+
+backend/package.json — scripts, jest config (setupFiles: jest.setup.js, coverage excludes server.js, __tests__, logger.js)
+
+4. DATABASE MODELS
+
+User
+  Purpose: Accounts for candidates/recruiters/admins; profile, resume refs, saved jobs, MFA, sessions.
+  Key fields: fullName, email (unique, lowercase), password (bcrypt hashed on save, cost 12), role enum,
+    profile fields, experience/projects/education subdocs, profileImageUrl/profileImagePublicId,
+    resumeUrl/resumePublicId/resumeFileName/resumeSize/resumeUploadedAt, refreshToken (SHA-256 of refresh JWT stored),
+    isActive, passwordResetToken/passwordResetExpires, savedJobs [Job], mfaTotpSecretEnc (select:false),
+    mfaEnabled, timestamps.
+  Indexes: unique on email (schema).
+  Relationships: savedJobs → Job; referenced by Job.postedBy, Application.candidate, Company.createdBy, etc.
+  Special: toJSON strips password, refreshToken, mfaTotpSecretEnc; comparePassword method.
+
+Job
+  Purpose: Job postings linked to company and poster.
+  Key fields: title, description, location, employmentType, experienceLevel, minSalary, maxSalary, skills,
+    company (Company ref), postedBy (User ref), isActive, isDraft, expiresAt, timestamps.
+  Indexes: title, location, employmentType, experienceLevel, skills (indexed), isActive, isDraft, expiresAt;
+    text index on title, description, skills, location.
+  Relationships: company → Company; postedBy → User; Application.job → Job.
+  Special: public listings exclude drafts/expired/inactive per jobRepository filters.
+
+Application
+  Purpose: Candidate application to a job with pipeline and interview subdoc.
+  Key fields: job, candidate, coverLetter, status (APPLICATION_STATUSES), recruiterNotes, interview
+    (scheduledAt, timezone, durationMinutes, notes, status INTERVIEW_STATUSES), timestamps.
+  Indexes: unique { job, candidate }; { job, status }; sparse { interview.scheduledAt }.
+  Relationships: job → Job; candidate → User.
+  Special: one application per (job, candidate) pair.
+
+Company
+  Purpose: Employer entity for jobs.
+  Key fields: name, website, location, description, logoUrl, createdBy (User ref, optional), timestamps.
+  Indexes: { createdBy, createdAt }; text index on name.
+  Relationships: createdBy → User; Job.company → Company.
+
+Notification
+  Purpose: In-app notifications per user.
+  Key fields: user, type enum (APPLICATION_RECEIVED, APPLICATION_STATUS_CHANGED, INTERVIEW_SCHEDULED,
+    JOB_ALERT_MATCH, GENERAL), title, message, link, read, readAt, meta (Mixed), timestamps.
+  Indexes: { user, createdAt }; { user, read, createdAt }.
+  Relationships: user → User.
+
+JobAlert
+  Purpose: Candidate job-alert subscriptions with email frequency.
+  Key fields: user, keywords[], location, employmentType, salaryMin, frequency (IMMEDIATE|DAILY|WEEKLY),
+    isActive, lastSentAt, timestamps.
+  Indexes: { user, isActive }; { isActive, frequency }.
+  Relationships: user → User.
+
+AuditLog
+  Purpose: Immutable audit trail with TTL expiry.
+  Key fields: userId, action enum (create|update|delete|login|logout|register|resume_viewed),
+    resourceType, resourceId, changes (Mixed), ip, userAgent, timestamps.
+  Indexes: userId, action, resourceType, resourceId; TTL on createdAt (expireAfterSeconds from AUDIT_LOG_TTL_DAYS).
+  Relationships: userId → User.
+
+indexes.js (startup)
+  Purpose: ensureIndexes() — Job.ensureIndexes(), Application.ensureIndexes().
+
+5. COMPLETE API REFERENCE
+Base path for versioned API: /api/v1 (routes mounted at /api from app.js).
+Success JSON shape (when not noted otherwise): { success: true, message, data } per utils/apiResponse.js.
+Errors: typically { success: false, message, code, errors } via ApiError/errorHandler.
+
+GET /api/health
+  Auth: none
+  Body: —
+  Returns: JSON { success, message, timestamp, uptimeSeconds }
+  Notes: Liveness; no DB check.
+
+GET /api/ready
+  Auth: none
+  Body: —
+  Returns: 200 JSON when Mongo connected; 503 JSON when DB not ready
+
+GET /api/metrics
+  Auth: header X-Metrics-Token must equal env.METRICS_TOKEN when METRICS_TOKEN is set; else 403 JSON
+  Body: —
+  Returns: Prometheus text/plain metrics body (or 500 "metrics_unavailable")
+  Notes: Defined in app.js before apiRoutes; not subject to CSRF (GET).
+
+GET /api/v1/auth/csrf-token
+  Auth: none
+  Body: —
+  Returns: JSON data { csrfToken }; sets jid_csrf cookie
+  Notes: CSRF-exempt path in csrf.js
+
+POST /api/v1/auth/register
+  Auth: none (sets refresh + CSRF cookies)
+  Body: { fullName, email, password (PASSWORD_REGEX), role candidate|recruiter default candidate }
+  Returns: 201 JSON { user, accessToken, csrfToken }
+  Notes: Rate limited (auth limiter); CSRF exempt
+
+POST /api/v1/auth/login
+  Auth: none
+  Body: { email, password }
+  Returns: JSON { user, accessToken, csrfToken } OR { user, mfaRequired: true, mfaToken, csrfToken } for admin+TOTP
+  Notes: Rate limited (auth limiter); CSRF exempt
+
+POST /api/v1/auth/mfa/verify-login
+  Auth: none
+  Body: { mfaToken, code }
+  Returns: JSON { user, accessToken, csrfToken }
+  Notes: Completes admin MFA login
+
+POST /api/v1/auth/refresh
+  Auth: none (uses httpOnly cookie jid_refresh)
+  Body: {} (validated empty object)
+  Returns: JSON { user, accessToken, csrfToken }
+  Notes: Rate limited (auth limiter); CSRF exempt
+
+POST /api/v1/auth/mfa/setup
+  Auth: Bearer access JWT; role admin
+  Body: —
+  Returns: JSON { secret, otpauthUrl }
+  Notes: Requires MFA_ENCRYPTION_KEY when enabling (mfaService.requireMfaKey)
+
+POST /api/v1/auth/mfa/enable
+  Auth: Bearer; admin
+  Body: { secret, code }
+  Returns: JSON success message null data
+
+POST /api/v1/auth/mfa/disable
+  Auth: Bearer; admin
+  Body: { password }
+  Returns: JSON success message null data
+
+GET /api/v1/auth/me
+  Auth: Bearer
+  Body: —
+  Returns: JSON { user } plus hasResume, mfaEnabled, adminMfaRequired from getMe
+
+POST /api/v1/auth/logout
+  Auth: optional Bearer and/or refresh cookie (no requireAuth)
+  Body: —
+  Returns: 204 empty body
+  Notes: Clears refresh + CSRF cookies; blacklists access jti when decodable; CSRF exempt
+
+POST /api/v1/auth/forgot-password
+  Auth: none
+  Body: { email }
+  Returns: JSON generic success message
+  Notes: strict rate limiter; CSRF exempt
+
+POST /api/v1/auth/reset-password/:token
+  Auth: none
+  Body: { password (PASSWORD_REGEX) }
+  Returns: JSON success message
+  Notes: CSRF exempt (prefix /api/v1/auth/reset-password)
+
+GET /api/v1/jobs
+  Auth: none
+  Query: listJobsQuerySchema — q, location, employmentType, experienceLevel, page, limit (max JOBS_LIST_MAX 50), sort
+  Returns: JSON job list payload from jobService.listJobs
+
+GET /api/v1/jobs/me
+  Auth: Bearer; role recruiter or admin
+  Returns: JSON from jobService.listMyJobs
+
+GET /api/v1/jobs/analytics
+  Auth: Bearer; recruiter or admin
+  Returns: JSON from jobService.getRecruiterAnalytics
+
+GET /api/v1/jobs/analytics/trend
+  Auth: Bearer; recruiter or admin
+  Query: months (optional number, default 6 in controller)
+  Returns: JSON from jobService.getRecruiterApplicationTrend
+
+GET /api/v1/jobs/:id
+  Auth: none
+  Params: id Mongo ObjectId
+  Returns: JSON job detail from jobService.getJobById
+
+POST /api/v1/jobs
+  Auth: Bearer; recruiter or admin
+  Body: createJobSchema (title, description, location, employmentType, experienceLevel, minSalary, maxSalary,
+    skills, companyId, isDraft optional, expiresAt optional)
+  Returns: 201 JSON job payload from jobService.createJob
+  Notes: audit middleware create job
+
+PUT /api/v1/jobs/:id
+  Auth: Bearer; recruiter or admin; requireJobOwner("id")
+  Body: same as createJobSchema
+  Returns: JSON updated job
+  Notes: audit update
+
+DELETE /api/v1/jobs/:id
+  Auth: Bearer; recruiter or admin; requireJobOwner
+  Returns: JSON success from jobService.deleteJob
+  Notes: audit delete
+
+POST /api/v1/applications
+  Auth: Bearer; role candidate
+  Headers: optional Idempotency-Key (<=128 chars) for idempotency middleware
+  Body: { jobId, coverLetter optional }
+  Returns: 201 JSON { application, ... } from applicationService
+  Notes: idempotency + audit create
+
+GET /api/v1/applications/me
+  Auth: Bearer; candidate
+  Query: page, limit (max APPLICATIONS_LIST_MAX 100)
+  Returns: JSON candidate applications list
+
+GET /api/v1/applications/interviews/upcoming
+  Auth: Bearer; recruiter or admin
+  Returns: JSON upcoming interviews list
+
+GET /api/v1/applications/job/:jobId
+  Auth: Bearer; recruiter or admin; must own job
+  Query: status, q, skill, page, limit
+  Returns: JSON applications for job
+
+GET /api/v1/applications/:id/resume
+  Auth: Bearer; recruiter or admin; must own application’s job
+  Returns: PDF binary stream (application/pdf) with Content-Disposition; not JSON
+  Notes: audit resume_viewed
+
+PATCH /api/v1/applications/:id/status
+  Auth: Bearer; recruiter or admin; job owner
+  Body: { status: APPLICATION_STATUSES }
+  Returns: JSON updated application
+  Notes: audit
+
+GET /api/v1/applications/:id
+  Auth: Bearer; recruiter or admin; job owner
+  Returns: JSON application detail
+
+PATCH /api/v1/applications/:id/notes
+  Auth: Bearer; recruiter or admin; job owner
+  Body: { recruiterNotes optional }
+  Returns: JSON updated application
+  Notes: audit
+
+PATCH /api/v1/applications/:id/interview
+  Auth: Bearer; recruiter or admin; job owner
+  Body: updateInterviewSchema (scheduledAt, timezone, durationMinutes, notes, status, syncPipelineStatus)
+  Returns: JSON updated application
+  Notes: audit
+
+PATCH /api/v1/users/change-password
+  Auth: Bearer
+  Body: { oldPassword, newPassword }
+  Returns: JSON success
+
+PATCH /api/v1/users/profile
+  Auth: Bearer
+  Body: updateProfileSchema (partial profile fields)
+  Returns: JSON updated user
+
+POST /api/v1/users/profile/image
+  Auth: Bearer
+  Body: multipart field "image" (JPEG/PNG/WebP, max 2MB)
+  Returns: JSON with updated profile
+
+POST /api/v1/users/profile/resume
+  Auth: Bearer
+  Body: multipart field "resume" (PDF, max 5MB)
+  Returns: JSON with updated profile
+
+GET /api/v1/users/profile/resume/file
+  Auth: Bearer
+  Returns: PDF stream for own resume
+  Notes: not JSON
+
+DELETE /api/v1/users/profile/resume
+  Auth: Bearer
+  Returns: JSON success
+
+POST /api/v1/users/saved-jobs/:jobId
+  Auth: Bearer; candidate
+  Params: jobId ObjectId
+  Returns: JSON toggle result
+
+GET /api/v1/users/saved-jobs
+  Auth: Bearer; candidate
+  Returns: JSON saved jobs
+
+GET /api/v1/users/me/data-export
+  Auth: Bearer
+  Returns: JSON export from userDataExportService
+
+DELETE /api/v1/users/account
+  Auth: Bearer
+  Returns: JSON success; cascade deletes related data
+
+GET /api/v1/companies
+  Auth: none
+  Returns: JSON public companies list
+
+GET /api/v1/companies/me
+  Auth: Bearer; recruiter or admin
+  Returns: JSON user’s companies
+
+POST /api/v1/companies
+  Auth: Bearer; recruiter or admin
+  Body: createCompanySchema
+  Returns: JSON company
+
+PATCH /api/v1/companies/:id
+  Auth: Bearer; recruiter or admin
+  Body: updateCompanySchema
+  Returns: JSON company
+
+DELETE /api/v1/companies/:id
+  Auth: Bearer; recruiter or admin
+  Returns: JSON success
+
+POST /api/v1/companies/:id/logo
+  Auth: Bearer; recruiter or admin
+  Body: multipart "logo" image
+  Returns: JSON company with logo
+
+GET /api/v1/companies/:id
+  Auth: none
+  Params: id ObjectId
+  Returns: JSON public company
+
+All routes below use requireAuth + requireRole(ADMIN) + requireAdminPortalAccess:
+
+GET /api/v1/admin/stats
+  Returns: JSON { totalUsers, totalJobs, activeJobs, totalApplications, totalCompanies, newUsersThisMonth }
+
+GET /api/v1/admin/stats/trend
+  Returns: JSON { series } — last 6 months of newUsers/newJobs per month
+
+GET /api/v1/admin/users
+  Query: page, limit (max 100), search or q
+  Returns: JSON { users, pagination }
+
+GET /api/v1/admin/jobs
+  Query: page, limit, search or q
+  Returns: JSON { jobs with applicationCount, pagination }
+
+GET /api/v1/admin/companies
+  Query: page, limit, search or q
+  Returns: JSON { companies, pagination }
+
+GET /api/v1/admin/applications
+  Query: page, limit (max 100), status optional
+  Returns: JSON { applications, pagination }
+
+GET /api/v1/admin/audit-logs
+  Query: page, limit (max 100), action, userId, dateFrom, dateTo
+  Returns: JSON { logs, pagination }
+
+PATCH /api/v1/admin/users/:id/toggle-status
+  Body: —
+  Returns: JSON { user }
+
+PATCH /api/v1/admin/users/:id/role
+  Body: { role: candidate|recruiter|admin }
+  Returns: JSON { user }
+
+DELETE /api/v1/admin/users/:id
+  Returns: JSON success
+
+PATCH /api/v1/admin/jobs/:id/toggle-status
+  Returns: JSON { job }
+
+PATCH /api/v1/admin/jobs/:id/status
+  Body: { isActive: boolean }
+  Returns: JSON { job }
+
+DELETE /api/v1/admin/jobs/:id
+  Returns: JSON { job } — sets isActive false (deactivate)
+
+DELETE /api/v1/admin/companies/:id
+  Returns: JSON success
+
+POST /api/v1/job-alerts
+  Auth: Bearer; candidate
+  Body: createAlertSchema
+  Returns: 201 JSON { alert }
+
+GET /api/v1/job-alerts
+  Auth: Bearer; candidate
+  Returns: JSON { alerts }
+
+PATCH /api/v1/job-alerts/:id
+  Auth: Bearer; candidate
+  Body: updateAlertSchema
+  Returns: JSON { alert }
+
+DELETE /api/v1/job-alerts/:id
+  Auth: Bearer; candidate
+  Returns: JSON success
+
+GET /api/v1/notifications
+  Auth: Bearer
+  Query: page, limit (default 20 in controller)
+  Returns: JSON from notificationService.getNotifications
+
+GET /api/v1/notifications/unread-count
+  Auth: Bearer
+  Returns: JSON unread count
+
+PATCH /api/v1/notifications/read-all
+  Auth: Bearer
+  Returns: JSON success
+
+PATCH /api/v1/notifications/:id/read
+  Auth: Bearer
+  Returns: JSON { notification }
+
+DELETE /api/v1/notifications/:id
+  Auth: Bearer
+  Returns: JSON success
+
+6. MIDDLEWARE CHAIN
+(Order from app.js, after server loads app)
+
+1. app.set("trust proxy", env.trustProxyHops === 0 ? false : env.trustProxyHops)
+2. requestId
+3. logRequest (Winston)
+4. cors(corsOptions)
+5. helmet(helmetOptions)
+6. compression()
+7. hpp(hppOptions)
+8. cookieParser()
+9. csrfProtection on "/api" only (GET/HEAD/OPTIONS skip; test skips unless CSRF_ENFORCE_IN_TEST=true)
+10. express.json({ limit: "1mb" })
+11. express.urlencoded({ extended: true, limit: "1mb" })
+12. sanitizeInput
+13. If rateLimitingEnabled: rate limits on /api/v1/auth/login, register, refresh (auth RATE_LIMITS.auth);
+    /api/v1/auth/forgot-password (strict); /api (api RATE_LIMITS.api) skipping paths containing health, ready, metrics
+14. GET /api/metrics with metricsAuth (X-Metrics-Token vs env.METRICS_TOKEN)
+15. app.use("/api", apiRoutes) — routes/index mounts health, ready, /v1/*
+16. notFound
+17. errorHandler
+
+7. AUTH SYSTEM
+Access token: JWT HS256, signed with JWT_ACCESS_SECRET; payload includes userId, role, amfa (admin MFA step-up);
+  jwtid from crypto.randomUUID() per issue; verified via verifyAccessToken with algorithms pinned to HS256.
+  Logout blacklists access tokens by jti in cache (Redis or memory) for remaining TTL.
+
+Refresh token: JWT HS256 with JWT_REFRESH_SECRET; new jti each issue; httpOnly cookie jid_refresh path /api/v1/auth;
+  SameSite from COOKIE_SAME_SITE or strict in production / lax in dev; Secure in production.
+  Only SHA-256 hash of full refresh JWT string stored on User.refreshToken (authService.hashToken).
+
+CSRF: Double-submit cookie jid_csrf (readable, path /) must match header X-CSRF-Token on unsafe methods;
+  exempt paths listed in middlewares/csrf.js (health, ready, metrics, auth bootstrap, reset-password).
+
+RBAC: roles candidate, recruiter, admin (constants/roles.js). requireRole enforces route roles.
+  requireAdminPortalAccess: after admin role, loads user mfaEnabled; if mfaEnabled requires JWT amfa === true;
+  if env.adminMfaRequired and user not mfaEnabled — 403 MFA_ENROLLMENT_REQUIRED.
+
+config/permissions.js defines PERMISSIONS for job/application/company ownership used by authorize middleware.
+
+8. EMAIL SYSTEM
+Primary queue: BullMQ Queue name "email" (queues/emailQueue.js), Redis via ioredis when REDIS_URL set.
+  defaultJobOptions: attempts 3, exponential backoff delay 5000 ms, removeOnComplete count 100, removeOnFail count 500.
+
+Job names handled by emailWorker: raw send (to, subject, html|text), JOB_ALERT, APPLICATION_RECEIVED,
+  APPLICATION_STATUS_CHANGED or STATUS_CHANGED, INTERVIEW_SCHEDULED.
+
+Fallback when no Redis: addEmailJob in-process direct sendMail for JOB_ALERT, APPLICATION_RECEIVED,
+  APPLICATION_STATUS_CHANGED, INTERVIEW_SCHEDULED; queueEmail for legacy "send" jobs; other types log
+  "No Redis; typed email job skipped (not implemented for direct fallback)".
+
+emailWorker: DLQ queue "email:dlq" on final failure after attempts; concurrency 5.
+
+Digest: separate queue "job-alert-digest" (workers/jobAlertDigestWorker.js); repeat cron daily 0 8 * * * UTC,
+  weekly 0 9 * * 1 UTC; calls jobAlertDigestService.runDigest(DAILY|WEEKLY).
+
+9. SECURITY
+Rate limits (config/security.js RATE_LIMITS when rateLimitingEnabled = NODE_ENV production OR RATE_LIMIT_ENABLED true):
+  auth: 15 min window, max 100 dev / 10 prod
+  strict: 15 min, max 20 dev / 5 prod (forgot-password)
+  api: 15 min, max 1000 dev / 200 prod (skips health, ready, metrics paths)
+  write/public defined in RATE_LIMITS but only auth, strict, api used in app.js
+
+Validation: Zod middleware on routes; body size 1mb JSON; multer file type/size limits (images 2MB, PDF 5MB).
+
+Sanitization: sanitizeInput strips Mongo operator keys and prototype pollution patterns.
+
+Encryption: passwords bcrypt 12; refresh token hash SHA-256; MFA TOTP secret encrypted (mfaSecretCrypto);
+  password reset token stored as SHA-256 of raw token.
+
+Helmet CSP, HSTS, CORS allowlist from CLIENT_URL, compression, HPP whitelist.
+
+10. ENVIRONMENT VARIABLES
+(From src/config/env.js Zod schema; defaults where applicable. .env.example lists additional comments.)
+
+NODE_ENV — required enum: development | production | test (default development)
+PORT — default "5000"
+CLIENT_URL — comma-separated valid URLs (default http://localhost:5173)
+MONGODB_URI — required non-empty string
+JWT_ACCESS_SECRET — required min 32 chars
+JWT_REFRESH_SECRET — required min 32 chars
+JWT_ACCESS_EXPIRES — default "15m"
+JWT_REFRESH_EXPIRES — default "7d"
+RATE_LIMIT_ENABLED — optional bool (true if "true" or "1")
+COOKIE_SAME_SITE — optional strict | lax | none
+CLOUDINARY_CLOUD_NAME — required
+CLOUDINARY_API_KEY — required
+CLOUDINARY_API_SECRET — required
+METRICS_TOKEN — optional min 16 chars when set (empty → undefined)
+AUDIT_LOG_TTL_DAYS — default 365 (coerced number)
+TRUST_PROXY_HOPS — optional int 0–10; default production 1, non-production 0
+SENTRY_DSN — optional URL
+SENTRY_RELEASE — optional max 200 chars
+REDIS_URL — optional non-empty when set
+REQUIRE_SMTP — optional bool; when true requires SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS
+SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM — optional (SMTP_FROM not enforced by REQUIRE_SMTP refine)
+ADMIN_MFA_REQUIRED — optional bool
+MFA_ENCRYPTION_KEY — optional; required min 32 chars when ADMIN_MFA_REQUIRED in production
+REQUIRE_REDIS_IN_PRODUCTION — optional bool; when true in production REDIS_URL required
+
+Exported helpers: trustProxyHops (computed), adminMfaRequired (boolean from ADMIN_MFA_REQUIRED)
+
+11. TESTING STATUS
+Total tests: 67
+Passing: 67
+Failing: 0
+Failing tests with reason: (none)
+
+Coverage (Jest run with --coverage, last run in this repo):
+  Statements: 49.04%
+  Branches: 23.33%
+  Functions: 40.84%
+  Lines: 51.5%
+
+Low coverage areas (examples from coverage report; file % lines):
+  src/config/db.js 0%
+  src/config/permissions.js 0%
+  src/models/indexes.js 0%
+  src/services/jobAlertDigestService.js 0%
+  src/services/mfaService.js ~21.6% lines
+  src/services/notificationService.js ~21.7% lines
+  src/services/resumeStreamService.js ~10% lines
+  src/services/jobService.js ~38.2% lines
+  src/controllers/adminController.js ~18.4% lines
+  src/controllers/userController.js ~20.9% lines
+  src/queues/emailQueue.js ~43.4% lines
+  src/middlewares/csrf.js ~37.5% lines
+  src/config/sentry.js ~27.3% lines
+
+12. WHAT IS COMPLETE vs MISSING
+Complete: Versioned REST API under /api/v1 for auth, jobs, applications, users, companies, admin, job-alerts,
+  notifications; health/ready/metrics; JWT + refresh cookie + CSRF; Zod validation; audit logging; BullMQ email
+  worker and digest worker; Redis optional with in-memory fallbacks; Cloudinary uploads; Jest suite all passing.
+
+Partial: Email without Redis uses direct fallback only for specific job types; other types skipped with warning
+  (emailQueue.js). Digest worker and jobAlertDigestService run in separate process — not exercised by Jest (0% digest
+  service coverage). SMTP optional unless REQUIRE_SMTP — mail may be debug-logged when not configured.
+
+Broken: (none identified from automated tests — all 67 tests passed)
+
+Missing features: (not inferred from code beyond explicit gaps) — direct fallback does not implement every
+  BullMQ email job type for no-Redis mode (see log line in emailQueue.js).
+
+================================================================================
+END
+================================================================================

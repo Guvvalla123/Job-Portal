@@ -2,8 +2,7 @@ const { ApiError } = require("../utils/apiError");
 const { matchAlertsForJob } = require("./jobAlertService");
 const jobRepository = require("../repositories/jobRepository");
 const applicationRepository = require("../repositories/applicationRepository");
-const { Application } = require("../models/Application");
-const { Company } = require("../models/Company");
+const companyRepository = require("../repositories/companyRepository");
 const { logger } = require("../config/logger");
 const cache = require("../utils/cache");
 
@@ -22,7 +21,7 @@ const createJob = async (payload, userId) => {
     expiresAt,
   } = payload;
 
-  const company = await Company.findById(companyId);
+  const company = await companyRepository.findById(companyId);
   if (!company) throw new ApiError(404, "Company not found");
   if (company.createdBy.toString() !== userId) throw new ApiError(403, "You do not own this company");
 
@@ -125,7 +124,7 @@ const updateJob = async (id, payload, userId) => {
   } = payload;
 
   if (companyId) {
-    const company = await Company.findById(companyId);
+    const company = await companyRepository.findById(companyId);
     if (!company) throw new ApiError(404, "Company not found");
     if (company.createdBy.toString() !== userId) throw new ApiError(403, "You do not own this company");
     job.company = company._id;
@@ -189,16 +188,8 @@ const getRecruiterApplicationTrend = async (userId, monthCount = 6) => {
     start.setHours(0, 0, 0, 0);
     const end = new Date(start);
     end.setMonth(end.getMonth() + 1);
-    const applications = await Application.countDocuments({
-      job: { $in: jobIds },
-      createdAt: { $gte: start, $lt: end },
-    });
-    // All trend metrics use createdAt for consistent time-series bucketing
-    const hired = await Application.countDocuments({
-      job: { $in: jobIds },
-      status: "hired",
-      createdAt: { $gte: start, $lt: end },
-    });
+    const applications = await applicationRepository.countByJobsCreatedBetween(jobIds, start, end);
+    const hired = await applicationRepository.countByJobsCreatedBetweenWithStatus(jobIds, start, end, "hired");
     series.push({
       month: start.toISOString().slice(0, 7),
       applications,

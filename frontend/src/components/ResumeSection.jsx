@@ -46,6 +46,7 @@ export function ResumeSection({ user, onUserUpdate, compact = false }) {
       onUserUpdate?.(nextUser)
       updateUser(nextUser)
       await queryClient.invalidateQueries({ queryKey: queryKeys.auth.me() })
+      await queryClient.refetchQueries({ queryKey: queryKeys.auth.me() })
       toast.success('Resume uploaded successfully')
       fileInputRef.current?.value && (fileInputRef.current.value = '')
     },
@@ -91,7 +92,8 @@ export function ResumeSection({ user, onUserUpdate, compact = false }) {
     deleteResumeMutation.mutate()
   }
 
-  const hasResume = Boolean(user?.resumeUrl)
+  /** API omits `resumeUrl` for privacy; use `hasResume` + filename from backend. */
+  const hasResume = Boolean(user?.hasResume || user?.resumeFileName?.trim())
   const isUploading = uploadResumeMutation.isPending
   const isDeleting = deleteResumeMutation.isPending
   const isBusy = isUploading || isDeleting
@@ -120,7 +122,7 @@ export function ResumeSection({ user, onUserUpdate, compact = false }) {
               <button
                 type="button"
                 onClick={() => setPreviewOpen(true)}
-                className="text-xs font-semibold text-indigo-600 hover:text-indigo-500"
+                className="text-xs font-semibold text-teal-700 hover:text-[#0C5F5A]"
               >
                 View
               </button>
@@ -134,7 +136,7 @@ export function ResumeSection({ user, onUserUpdate, compact = false }) {
           size="xl"
         >
           {previewOpen && hasResume ? (
-            <ResumeViewer path="/users/profile/resume/file" title={displayName || 'Resume'} />
+            <LazyResumeViewer path="/users/profile/resume/file" title={displayName || 'Resume'} />
           ) : null}
         </Modal>
       </>
@@ -167,7 +169,7 @@ export function ResumeSection({ user, onUserUpdate, compact = false }) {
               <button
                 type="button"
                 onClick={() => setPreviewOpen(true)}
-                className="rounded-lg border border-indigo-200 px-3 py-1.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50"
+                className="rounded-lg border border-teal-200 px-3 py-1.5 text-xs font-semibold text-teal-700 hover:bg-teal-50"
               >
                 View
               </button>
@@ -184,7 +186,7 @@ export function ResumeSection({ user, onUserUpdate, compact = false }) {
           </div>
 
           <label
-            className={`flex cursor-pointer flex-col items-center gap-1 rounded-lg border-2 border-dashed border-gray-200 p-4 text-center transition-colors hover:border-indigo-300 ${isUploading ? 'pointer-events-none opacity-60' : ''}`}
+            className={`flex cursor-pointer flex-col items-center gap-1 rounded-lg border-2 border-dashed border-gray-200 p-4 text-center transition-colors hover:border-teal-300 ${isUploading ? 'pointer-events-none opacity-60' : ''}`}
           >
             <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
@@ -205,7 +207,7 @@ export function ResumeSection({ user, onUserUpdate, compact = false }) {
         </div>
       ) : (
         <label
-          className={`mt-4 flex cursor-pointer flex-col items-center gap-1 rounded-lg border-2 border-dashed border-gray-200 p-6 text-center transition-colors hover:border-indigo-300 hover:bg-gray-50/50 ${isUploading ? 'pointer-events-none opacity-60' : ''}`}
+          className={`mt-4 flex cursor-pointer flex-col items-center gap-1 rounded-lg border-2 border-dashed border-gray-200 p-6 text-center transition-colors hover:border-teal-300 hover:bg-gray-50/50 ${isUploading ? 'pointer-events-none opacity-60' : ''}`}
         >
           <svg className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />

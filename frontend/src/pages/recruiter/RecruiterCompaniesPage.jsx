@@ -147,7 +147,7 @@ export function RecruiterCompaniesPage() {
               {...companyForm.register('name')}
               id="rc2-companyName"
               placeholder="Acme Inc."
-              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-950 dark:text-white"
+              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 dark:border-gray-600 dark:bg-gray-950 dark:text-white"
             />
             {companyForm.formState.errors.name && (
               <p className="mt-1.5 text-sm text-red-600">{companyForm.formState.errors.name.message}</p>
@@ -213,7 +213,7 @@ export function RecruiterCompaniesPage() {
                     className="mb-3 h-14 w-14 rounded-xl object-cover ring-1 ring-gray-100 dark:ring-gray-700"
                   />
                 ) : (
-                  <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-xl bg-indigo-100 text-lg font-bold text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300">
+                  <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-xl bg-teal-100 text-lg font-bold text-teal-700 dark:bg-teal-950/60 dark:text-teal-300">
                     {company.name?.charAt(0)?.toUpperCase() || 'C'}
                   </div>
                 )}
@@ -224,7 +224,7 @@ export function RecruiterCompaniesPage() {
                     href={company.website}
                     target="_blank"
                     rel="noreferrer"
-                    className="mt-1 truncate text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-400"
+                    className="mt-1 truncate text-sm font-medium text-teal-700 hover:underline dark:text-teal-400"
                   >
                     {company.website}
                   </a>

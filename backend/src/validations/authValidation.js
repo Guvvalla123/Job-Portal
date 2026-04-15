@@ -25,4 +25,27 @@ const resetPasswordSchema = z.object({
 
 const refreshSchema = z.object({});
 
-module.exports = { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema, refreshSchema };
+const mfaVerifyLoginSchema = z.object({
+  mfaToken: z.string().min(20, "mfaToken is required"),
+  code: z.string().min(6).max(12),
+});
+
+const mfaEnableSchema = z.object({
+  secret: z.string().min(16),
+  code: z.string().min(6).max(12),
+});
+
+const mfaDisableSchema = z.object({
+  password: z.string().min(1, "Password is required"),
+});
+
+module.exports = {
+  registerSchema,
+  loginSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  refreshSchema,
+  mfaVerifyLoginSchema,
+  mfaEnableSchema,
+  mfaDisableSchema,
+};

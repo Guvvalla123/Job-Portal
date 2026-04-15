@@ -27,7 +27,7 @@ export function ContactPage() {
               For the fastest response, write to{' '}
               <a
                 href={mailto}
-                className="font-medium text-indigo-600 underline hover:text-indigo-500 dark:text-indigo-400"
+                className="font-medium text-teal-700 underline hover:text-[#0C5F5A] dark:text-teal-400"
               >
                 {SUPPORT_EMAIL}
               </a>
@@ -46,7 +46,7 @@ export function ContactPage() {
                 <strong className="text-gray-900 dark:text-gray-100">Password or login:</strong> try{' '}
                 <Link
                   to="/forgot-password"
-                  className="font-medium text-indigo-600 underline hover:text-indigo-500 dark:text-indigo-400"
+                  className="font-medium text-teal-700 underline hover:text-[#0C5F5A] dark:text-teal-400"
                 >
                   Forgot password
                 </Link>{' '}
@@ -54,11 +54,11 @@ export function ContactPage() {
               </li>
               <li>
                 <strong className="text-gray-900 dark:text-gray-100">Privacy &amp; data:</strong> see our{' '}
-                <Link to="/privacy" className="font-medium text-indigo-600 underline hover:text-indigo-500 dark:text-indigo-400">
+                <Link to="/privacy" className="font-medium text-teal-700 underline hover:text-[#0C5F5A] dark:text-teal-400">
                   Privacy Policy
                 </Link>{' '}
                 and{' '}
-                <Link to="/terms" className="font-medium text-indigo-600 underline hover:text-indigo-500 dark:text-indigo-400">
+                <Link to="/terms" className="font-medium text-teal-700 underline hover:text-[#0C5F5A] dark:text-teal-400">
                   Terms of Service
                 </Link>
                 .
@@ -70,7 +70,7 @@ export function ContactPage() {
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Learn more</h2>
             <p className="type-body-sm">
               New to the platform? Read{' '}
-              <Link to="/about" className="font-medium text-indigo-600 underline hover:text-indigo-500 dark:text-indigo-400">
+              <Link to="/about" className="font-medium text-teal-700 underline hover:text-[#0C5F5A] dark:text-teal-400">
                 About CareerSync
               </Link>{' '}
               for an overview of what we offer candidates and recruiters.
@@ -81,7 +81,7 @@ export function ContactPage() {
         <p className="type-body-sm mt-10">
           <Link
             to="/"
-            className="font-medium text-indigo-600 underline hover:text-indigo-500 dark:text-indigo-400"
+            className="font-medium text-teal-700 underline hover:text-[#0C5F5A] dark:text-teal-400"
           >
             ← Back to home
           </Link>

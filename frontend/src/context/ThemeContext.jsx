@@ -1,38 +1,40 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { applyThemeToDocument, getSystemPrefersDark } from '../lib/themeStorage.js'
 
 const ThemeContext = createContext(null)
 
-const THEME_KEY = 'careersync-theme'
-
-function readInitialDark() {
-  if (typeof window === 'undefined') return false
-  const stored = localStorage.getItem(THEME_KEY)
-  if (stored === 'dark') return true
-  if (stored === 'light') return false
-  return window.matchMedia('(prefers-color-scheme: dark)').matches
-}
-
+/**
+ * Syncs `dark` class on `<html>` with system color scheme (no manual theme preference).
+ */
 export function ThemeProvider({ children }) {
-  const [dark, setDark] = useState(() => readInitialDark())
+  const [systemDark, setSystemDark] = useState(() =>
+    typeof window !== 'undefined' ? getSystemPrefersDark() : false,
+  )
 
   useEffect(() => {
-    const root = document.documentElement
-    if (dark) {
-      root.classList.add('dark')
-      localStorage.setItem(THEME_KEY, 'dark')
-    } else {
-      root.classList.remove('dark')
-      localStorage.setItem(THEME_KEY, 'light')
-    }
-  }, [dark])
+    applyThemeToDocument(systemDark)
+  }, [systemDark])
 
-  const toggle = () => setDark((d) => !d)
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    const onChange = () => setSystemDark(mq.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
 
-  return (
-    <ThemeContext.Provider value={{ dark, toggle }}>
-      {children}
-    </ThemeContext.Provider>
+  const value = useMemo(
+    () => ({
+      preference: 'system',
+      dark: systemDark,
+      resolvedDark: systemDark,
+      /** @deprecated No-op — theme toggle removed; reserved for API stability */
+      setTheme() {},
+      cycleTheme() {},
+    }),
+    [systemDark],
   )
+
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
 }
 
 export function useTheme() {

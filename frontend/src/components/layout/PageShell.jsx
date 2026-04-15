@@ -1,6 +1,9 @@
 import { Suspense } from 'react'
 import { useLocation, useOutlet } from 'react-router-dom'
+import { motion, useReducedMotion } from 'framer-motion'
 import { RouteFallback } from './RouteFallback.jsx'
+
+const MotionOutlet = motion.div
 
 /**
  * Consistent horizontal rhythm + max width for all routes.
@@ -8,7 +11,8 @@ import { RouteFallback } from './RouteFallback.jsx'
  */
 export function PageShell({ children }) {
   const { pathname } = useLocation()
-  const isFullBleed = pathname === '/' || pathname.startsWith('/recruiter')
+  const isFullBleed =
+    pathname === '/' || pathname.startsWith('/recruiter') || pathname.startsWith('/admin')
 
   if (isFullBleed) {
     return <div className="w-full min-w-0 flex-1">{children}</div>
@@ -28,13 +32,20 @@ export function PageShell({ children }) {
 export function AnimatedPage() {
   const { pathname } = useLocation()
   const outlet = useOutlet()
+  const reduceMotion = useReducedMotion()
 
   return (
-    <div
+    <MotionOutlet
       key={pathname}
-      className="motion-safe:animate-page-enter min-h-[min(50dvh,var(--container-md))] w-full min-w-0"
+      initial={reduceMotion ? false : { opacity: 0.9, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{
+        duration: reduceMotion ? 0 : 0.22,
+        ease: [0.22, 1, 0.36, 1],
+      }}
+      className="min-h-[min(50dvh,var(--container-md))] w-full min-w-0"
     >
       <Suspense fallback={<RouteFallback />}>{outlet}</Suspense>
-    </div>
+    </MotionOutlet>
   )
 }

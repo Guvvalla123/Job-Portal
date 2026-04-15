@@ -46,7 +46,7 @@ const queryClient = new QueryClient({
         return failureCount < 1
       },
       retryDelay: 1000,
-      /** Reduces layout thrash / surprise refetch; per-query can override (e.g. notifications). */
+      /** Avoids parallel refetches on tab focus (amplifies 401/refresh storms with cookie auth). */
       refetchOnWindowFocus: false,
       refetchOnReconnect: true,
     },
