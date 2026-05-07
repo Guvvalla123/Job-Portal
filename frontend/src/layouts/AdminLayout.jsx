@@ -66,6 +66,29 @@ const ROUTE_ICONS = {
       />
     </svg>
   ),
+  '/admin/subscriptions': () => (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M5.25 9.75 8.25 4.5l3.75 5.25L15.75 4.5l3 5.25M5.25 19.5h13.5a.75.75 0 0 0 .684-1.06l-1.688-3.375H6.254l-1.688 3.375A.75.75 0 0 0 5.25 19.5Z"
+      />
+    </svg>
+  ),
+  '/admin/job-reports': () => (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3 3v18M3 3h13l-1 4 1 4H3"
+      />
+    </svg>
+  ),
+  '/admin/revenue': () => (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M11 3v18M6 8v10M16 5v14M21 12v6" />
+    </svg>
+  ),
   '/admin/audit-logs': () => (
     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />

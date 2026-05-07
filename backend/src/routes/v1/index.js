@@ -10,10 +10,14 @@ const { companyRoutes } = require("../companyRoutes");
 const { adminRoutes } = require("../adminRoutes");
 const { jobAlertRoutes } = require("../jobAlertRoutes");
 const { notificationRoutes } = require("../notificationRoutes");
+const { subscriptionRoutes } = require("../subscriptionRoutes");
+const { atsRoutes } = require("../atsRoutes");
 
 const router = express.Router();
 
 router.use("/auth", authRoutes);
+router.use("/subscriptions", subscriptionRoutes);
+router.use("/ats", atsRoutes);
 router.use("/jobs", jobRoutes);
 router.use("/applications", applicationRoutes);
 router.use("/users", userRoutes);

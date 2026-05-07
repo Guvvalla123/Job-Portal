@@ -206,7 +206,18 @@ export function __getRefreshCoordinatorForTests() {
 
 apiClient.interceptors.request.use(
   async (config) => {
-    if (bootstrapPromise && config.skipAuthBootstrapWait !== true) {
+    const PUBLIC_ROUTES = [
+      '/companies',
+      '/jobs',
+      '/auth/csrf-token',
+      '/auth/login',
+      '/auth/register',
+      '/auth/forgot-password',
+      '/auth/reset-password',
+    ]
+    const isPublicRoute = PUBLIC_ROUTES.some((route) => config.url?.includes(route))
+
+    if (!isPublicRoute && bootstrapPromise && config.skipAuthBootstrapWait !== true) {
       await bootstrapPromise.catch(() => {})
     }
     // Wait for an in-flight refresh only — never call getRefreshPromise() here (would start refresh on every request).
@@ -305,7 +316,9 @@ async function restoreSessionFromCookie() {
 }
 
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    return response
+  },
   async (error) => {
     const originalRequest = error.config
     const status = error.response?.status

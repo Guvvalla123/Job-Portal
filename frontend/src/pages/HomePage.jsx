@@ -6,7 +6,7 @@ import { queryKeys } from '../lib/queryKeys.js'
 import { CACHE_TIERS } from '../lib/queryOptions.js'
 import { apiClient } from '../api/apiClient.js'
 import { SaveJobButton } from '../components/SaveJobButton.jsx'
-import { Card, Badge, JobCardSkeleton, Skeleton, EmptyState, EmptyStateIcons } from '../components/ui/index.js'
+import { Card, Badge, JobCardSkeleton, Skeleton, EmptyState, EmptyStateIcons, Button } from '../components/ui/index.js'
 import { SectionWave } from '../components/SectionWave.jsx'
 import { useCountUp } from '../hooks/useCountUp.js'
 import { formatSalaryRange } from '../utils/formatSalary.js'
@@ -315,27 +315,33 @@ export function HomePage() {
               Premium job discovery — rich company profiles, transparent roles, and applications that respect your time.
             </p>
             <div className="mt-10 flex flex-wrap justify-center gap-3 sm:gap-4 animate-fade-in-up" style={{ animationDelay: '0.28s' }}>
-              <Link
+              <Button
                 to="/jobs"
-                className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#0F766E] px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-black/20 transition-[background-color,box-shadow,transform] duration-200 hover:bg-[#0C5F5A] hover:shadow-xl active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+                variant="primary"
+                size="lg"
+                className="shadow-lg shadow-black/20 hover:shadow-xl focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 md:px-8 md:py-3.5 md:text-base"
               >
                 Explore jobs
-              </Link>
+              </Button>
               {!isAuthenticated && (
-                <Link
+                <Button
                   to="/register"
-                  className="inline-flex min-h-12 items-center justify-center rounded-xl border-2 border-white/45 bg-white/10 px-8 py-3.5 text-base font-semibold text-white backdrop-blur-md transition-[border-color,background-color] duration-200 hover:border-white/70 hover:bg-white/16 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+                  variant="primary-outline"
+                  size="lg"
+                  className="border-2 border-white/45 !bg-white/10 !text-white shadow-none backdrop-blur-md hover:!border-white/70 hover:!bg-white/16 hover:!shadow-none focus-visible:!ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 dark:!border-white/45 dark:!bg-white/10 dark:!text-white dark:hover:!bg-white/16 md:px-8 md:py-3.5 md:text-base"
                 >
                   Create free account
-                </Link>
+                </Button>
               )}
               {user?.role === 'recruiter' && (
-                <Link
+                <Button
                   to="/recruiter/dashboard"
-                  className="inline-flex min-h-12 items-center justify-center rounded-xl border-2 border-white/45 bg-white/10 px-8 py-3.5 text-base font-semibold text-white backdrop-blur-md transition-colors duration-200 hover:bg-white/15"
+                  variant="primary-outline"
+                  size="lg"
+                  className="border-2 border-white/45 !bg-white/10 !text-white shadow-none backdrop-blur-md hover:!border-white/70 hover:!bg-white/16 dark:!border-white/45 dark:!bg-white/10 dark:!text-white dark:hover:!bg-white/16 md:px-8 md:py-3.5 md:text-base"
                 >
                   Post a role
-                </Link>
+                </Button>
               )}
             </div>
           </div>
@@ -392,13 +398,15 @@ export function HomePage() {
                 </h2>
                 <p className="type-body-sm mt-2 max-w-xl">Hand-picked openings with salary clarity and stack tags — updated as teams post.</p>
               </div>
-              <Link
+              <Button
                 to="/jobs"
-                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-teal-700 shadow-sm transition-colors duration-200 hover:border-teal-200 hover:bg-teal-50 dark:border-gray-600 dark:bg-gray-800 dark:text-teal-300 dark:hover:border-teal-800 dark:hover:bg-teal-950/40"
+                variant="secondary"
+                size="md"
+                className="inline-flex items-center gap-2 rounded-lg !font-semibold !text-teal-700 hover:!border-teal-200 hover:!bg-teal-50 dark:!border-gray-600 dark:!bg-gray-800 dark:!text-teal-300 dark:hover:!border-teal-800 dark:hover:!bg-teal-950/40"
               >
                 View all jobs
                 <span aria-hidden>→</span>
-              </Link>
+              </Button>
             </div>
 
             {featuredJobsQuery.isPending ? (
@@ -503,13 +511,13 @@ export function HomePage() {
                 <Link
                   key={cat.title}
                   to={cat.href}
-                  className="group rounded-xl border border-gray-200/80 bg-white p-6 shadow-sm ring-1 ring-gray-100 transition-[box-shadow,transform,border-color] duration-200 hover:-translate-y-0.5 hover:border-teal-200/80 hover:shadow-md dark:border-gray-700/80 dark:bg-gray-800/50 dark:ring-gray-700/60 dark:hover:border-teal-800/80 motion-reduce:hover:translate-y-0"
+                  className="group rounded-xl border border-gray-200/80 bg-white p-6 shadow-sm ring-1 ring-gray-100 outline-none transition-[box-shadow,transform,border-color] duration-200 hover:-translate-y-0.5 hover:border-teal-200/80 hover:shadow-md focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:border-gray-700/80 dark:bg-gray-800/50 dark:ring-gray-700/60 dark:hover:border-teal-700/90 dark:hover:bg-gray-800/70 dark:focus-visible:ring-teal-400 dark:focus-visible:ring-offset-gray-900 motion-reduce:hover:translate-y-0"
                 >
                   <div className={`inline-flex rounded-lg p-3 transition-opacity duration-200 group-hover:opacity-90 ${cat.iconWrap}`}>
                     {cat.icon}
                   </div>
                   <h3 className="mt-4 text-base font-semibold text-gray-900 dark:text-white">{cat.title}</h3>
-                  <p className="type-body-sm mt-1">{cat.blurb}</p>
+                  <p className="type-body-sm mt-1 text-gray-600 dark:text-gray-400">{cat.blurb}</p>
                   <span className="link-primary mt-4 inline-flex items-center text-sm">
                     Explore roles <span className="ml-1 transition-transform duration-200 group-hover:translate-x-0.5">→</span>
                   </span>
@@ -534,12 +542,14 @@ export function HomePage() {
                   Discover teams with open reqs — logos, locations, and culture in one place.
                 </p>
               </div>
-              <Link
+              <Button
                 to="/companies"
-                className="inline-flex shrink-0 items-center rounded-xl bg-white/10 px-5 py-2.5 text-sm font-semibold text-white ring-1 ring-white/20 backdrop-blur-sm transition hover:bg-white/20"
+                variant="secondary"
+                size="md"
+                className="inline-flex shrink-0 items-center !rounded-xl !border-0 !bg-white/10 !px-5 !py-2.5 !text-sm !font-semibold !text-white !shadow-none ring-1 ring-white/20 backdrop-blur-sm hover:!bg-white/20 hover:!border-transparent dark:!bg-white/10 dark:hover:!bg-white/20"
               >
                 View directory →
-              </Link>
+              </Button>
             </div>
 
             <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -677,18 +687,22 @@ export function HomePage() {
                 Join professionals who use CareerSync to discover roles worth their skills — free for candidates.
               </p>
               <div className="mt-10 flex flex-wrap justify-center gap-3">
-                <Link
+                <Button
                   to="/register"
-                  className="inline-flex items-center rounded-lg bg-white px-8 py-3.5 text-base font-semibold text-teal-700 shadow-md transition-[background-color,box-shadow] duration-200 hover:bg-teal-50 hover:shadow-lg"
+                  variant="secondary"
+                  size="lg"
+                  className="!rounded-lg !border-0 !bg-white !px-8 !py-3.5 !text-base !font-semibold !text-teal-700 shadow-md hover:!bg-teal-50 hover:shadow-lg"
                 >
                   Create free account
-                </Link>
-                <Link
+                </Button>
+                <Button
                   to="/jobs"
-                  className="inline-flex items-center rounded-lg border border-white/35 bg-white/10 px-8 py-3.5 text-base font-semibold text-white backdrop-blur-sm transition-colors duration-200 hover:bg-white/15"
+                  variant="primary-outline"
+                  size="lg"
+                  className="!rounded-lg !border border-white/35 !bg-white/10 !px-8 !py-3.5 !text-base !font-semibold !text-white shadow-none backdrop-blur-sm hover:!bg-white/15 hover:!border-white/50 dark:!border-white/35 dark:!bg-white/10 dark:!text-white"
                 >
                   Browse open roles
-                </Link>
+                </Button>
               </div>
             </div>
           </section>

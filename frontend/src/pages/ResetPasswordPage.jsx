@@ -93,6 +93,7 @@ export function ResetPasswordPage() {
           variant="gradient"
           size="lg"
           loading={mutation.isPending}
+          loadingText="Resetting…"
           disabled={mutation.isPending}
         >
           Reset password

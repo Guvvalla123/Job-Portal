@@ -4,7 +4,7 @@ import { Helmet } from 'react-helmet-async'
 import { queryKeys } from '../lib/queryKeys.js'
 import { CACHE_TIERS } from '../lib/queryOptions.js'
 import { Link } from 'react-router-dom'
-import { apiClient } from '../api/apiClient.js'
+import { listCompanies } from '../api/companyApi.js'
 import { CompanyCardSkeleton } from '../components/CompanyCardSkeleton.jsx'
 import { PageHeader, EmptyState, EmptyStateIcons } from '../components/ui/index.js'
 
@@ -12,19 +12,20 @@ export function CompaniesPage() {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
 
-  const filters = { search, page }
-  const query = useQuery({
-    queryKey: queryKeys.companies.list(filters),
-    queryFn: async () => {
-      const response = await apiClient.get('/companies', { params: { q: search, page, limit: 12 } })
-      return response.data.data
-    },
+  const { data, isPending, isError } = useQuery({
+    queryKey: queryKeys.companies.list({ q: search, page }),
+    queryFn: () =>
+      listCompanies({
+        q: search,
+        page,
+        limit: 12,
+      }),
     staleTime: CACHE_TIERS.public.staleTime,
     gcTime: CACHE_TIERS.public.gcTime,
   })
 
-  const companies = query.data?.companies || []
-  const pagination = query.data?.pagination || {}
+  const companies = data?.companies || []
+  const pagination = data?.pagination || {}
   const totalPages = pagination.totalPages || 1
 
   return (
@@ -53,15 +54,15 @@ export function CompaniesPage() {
         </div>
       </div>
 
-      {query.isLoading && (
+      {isPending && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[...Array(6)].map((_, i) => (
             <CompanyCardSkeleton key={i} />
           ))}
         </div>
       )}
-      {query.isError && <div className="rounded-lg bg-red-50 p-4 text-center text-red-600">Could not load companies.</div>}
-      {!query.isLoading && !query.isError && (
+      {isError && <p>Failed to load companies</p>}
+      {!isPending && !isError && (
       <>
       {companies.length > 0 ? (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -69,7 +70,7 @@ export function CompaniesPage() {
           <Link
             key={String(company.id ?? company._id)}
             to={`/companies/${company.id ?? company._id}`}
-            className="flex items-start gap-4 rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200/80 transition-shadow duration-200 hover:shadow-md dark:bg-gray-800/90 dark:ring-gray-700/80"
+            className="flex items-start gap-4 rounded-xl border border-gray-200/80 bg-white p-5 shadow-sm transition-shadow duration-200 hover:shadow-md dark:border-gray-700 dark:bg-gray-900 dark:shadow-gray-800"
           >
             {company.logoUrl ? (
               <img src={company.logoUrl} alt="" className="h-12 w-12 rounded-lg object-cover" loading="lazy" />
@@ -80,9 +81,9 @@ export function CompaniesPage() {
             )}
             <div className="min-w-0 flex-1">
               <h2 className="font-semibold text-gray-900 dark:text-white">{company.name}</h2>
-              {company.location && <p className="mt-0.5 text-sm text-gray-600 dark:text-gray-400">{company.location}</p>}
+              {company.location && <p className="mt-0.5 text-sm text-gray-600 dark:text-gray-300">{company.location}</p>}
               {company.description && (
-                <p className="mt-1 line-clamp-2 text-sm text-gray-600 dark:text-gray-400">{company.description}</p>
+                <p className="mt-1 line-clamp-2 text-sm text-gray-500 dark:text-gray-400">{company.description}</p>
               )}
             </div>
           </Link>

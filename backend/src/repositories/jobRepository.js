@@ -49,6 +49,7 @@ const SORT_MAP = {
   oldest: { createdAt: 1 },
   salary_high: { maxSalary: -1, createdAt: -1 },
   salary_low: { minSalary: 1, createdAt: -1 },
+  "most-clicked": { clickCount: -1, createdAt: -1 },
 };
 
 const findWithFilter = (filter, options = {}) => {
@@ -78,8 +79,79 @@ const buildListFilter = (query) => {
   if (query.location) filter.location = new RegExp(escapeRegex(query.location), "i");
   if (query.employmentType) filter.employmentType = query.employmentType;
   if (query.experienceLevel) filter.experienceLevel = query.experienceLevel;
+  if (query.category) filter.category = query.category;
+  if (Array.isArray(query.tags) && query.tags.length > 0) {
+    filter.tags = { $all: query.tags };
+  }
+  if (query.isVerified === true || query.isVerified === false) {
+    filter.isVerified = query.isVerified;
+  }
+  if (query.postedWithin) {
+    const now = Date.now();
+    const start = new Date();
+    if (query.postedWithin === "today") {
+      start.setHours(0, 0, 0, 0);
+    } else if (query.postedWithin === "3days") {
+      start.setTime(now - 3 * 24 * 60 * 60 * 1000);
+    } else if (query.postedWithin === "7days") {
+      start.setTime(now - 7 * 24 * 60 * 60 * 1000);
+    }
+    filter.createdAt = { $gte: start };
+  }
   if (query.q) filter.$text = { $search: query.q };
   return filter;
+};
+
+const incrementClickCount = (id) =>
+  Job.findOneAndUpdate(
+    { _id: id },
+    { $inc: { clickCount: 1 } },
+    { new: true, select: "_id clickCount" }
+  ).lean();
+
+const findFreshPublicJobs = (options = {}) => {
+  const { limit = 20 } = options;
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const filter = {
+    ...publicJobVisibilityFilter(),
+    createdAt: { $gte: since },
+  };
+  return Job.find(filter)
+    .populate("company", "name logoUrl location")
+    .sort({ createdAt: -1 })
+    .limit(Math.min(100, Math.max(1, Number(limit) || 20)))
+    .lean();
+};
+
+const findExpiringWithin24h = () => {
+  const now = new Date();
+  const until = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  return Job.find({
+    isActive: true,
+    isDraft: false,
+    expiresAt: { $gt: now, $lte: until },
+  })
+    .populate("company", "name logoUrl location")
+    .sort({ expiresAt: 1 })
+    .lean();
+};
+
+const findPublicByCategory = (category, options = {}) => {
+  const { page = 1, limit = 10 } = options;
+  const filter = {
+    ...publicJobVisibilityFilter(),
+    category,
+  };
+  const sortKey = options.sortKey || "newest";
+  return findWithFilter(filter, { page, limit, sortKey });
+};
+
+const countPublicByCategory = (category) => {
+  const filter = {
+    ...publicJobVisibilityFilter(),
+    category,
+  };
+  return count(filter);
 };
 
 module.exports = {
@@ -100,4 +172,9 @@ module.exports = {
   findJobIdsByPostedBy,
   updateById,
   buildListFilter,
+  incrementClickCount,
+  findFreshPublicJobs,
+  findExpiringWithin24h,
+  findPublicByCategory,
+  countPublicByCategory,
 };

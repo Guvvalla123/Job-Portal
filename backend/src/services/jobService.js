@@ -1,4 +1,5 @@
 const { ApiError } = require("../utils/apiError");
+const { ROLES } = require("../constants/roles");
 const { matchAlertsForJob } = require("./jobAlertService");
 const jobRepository = require("../repositories/jobRepository");
 const applicationRepository = require("../repositories/applicationRepository");
@@ -6,7 +7,7 @@ const companyRepository = require("../repositories/companyRepository");
 const { logger } = require("../config/logger");
 const cache = require("../utils/cache");
 
-const createJob = async (payload, userId) => {
+const createJob = async (payload, userId, options = {}) => {
   const {
     companyId,
     title,
@@ -19,13 +20,38 @@ const createJob = async (payload, userId) => {
     skills,
     isDraft,
     expiresAt,
+    applyUrl,
+    postedByCompanyName,
+    postedByCompanyLogo,
+    postedByCompanyWebsite,
+    category,
+    tags,
+    source,
+    postedBy,
+    isVerified,
   } = payload;
 
-  const company = await companyRepository.findById(companyId);
-  if (!company) throw new ApiError(404, "Company not found");
-  if (company.createdBy.toString() !== userId) throw new ApiError(403, "You do not own this company");
+  const isAdmin = options.role === ROLES.ADMIN;
+  const hasCompanyId = companyId != null && String(companyId).trim().length > 0;
+
+  let companyObjectId = null;
+  if (hasCompanyId) {
+    const company = await companyRepository.findById(companyId);
+    if (!company) throw new ApiError(404, "Company not found");
+    if (!isAdmin && company.createdBy.toString() !== userId) {
+      throw new ApiError(403, "You do not own this company");
+    }
+    companyObjectId = company._id;
+  } else if (!isAdmin) {
+    throw new ApiError(400, "Company is required");
+  }
 
   const draft = Boolean(isDraft);
+  const postedByValue = postedBy === undefined ? userId : postedBy;
+  const sourceValue =
+    source === "partner" || source === "scraped" || source === "manual" ? source : "manual";
+  const isVerifiedFinal = isAdmin && isVerified === true;
+
   const job = await jobRepository.create({
     title,
     description,
@@ -35,10 +61,18 @@ const createJob = async (payload, userId) => {
     minSalary,
     maxSalary,
     skills: Array.isArray(skills) ? skills : [],
-    company: company._id,
-    postedBy: userId,
+    company: companyObjectId,
+    postedBy: postedByValue,
     isDraft: draft,
     expiresAt: expiresAt || null,
+    applyUrl,
+    postedByCompanyName,
+    postedByCompanyLogo: postedByCompanyLogo ?? null,
+    postedByCompanyWebsite: postedByCompanyWebsite ?? null,
+    category,
+    tags: Array.isArray(tags) ? tags : [],
+    source: sourceValue,
+    isVerified: isVerifiedFinal,
   });
 
   invalidateJobListCache().catch(() => {});
@@ -50,12 +84,32 @@ const createJob = async (payload, userId) => {
 
 const invalidateJobListCache = () => cache.invalidatePattern("jobs:list");
 
+async function assertRecruiterCanModifyJob(job, userId) {
+  if (job.postedBy && job.postedBy.toString() === userId) return;
+  if (!job.postedBy && job.company) {
+    const company = await companyRepository.findById(job.company);
+    if (company && company.createdBy.toString() === userId) return;
+  }
+  throw new ApiError(403, "Not authorized to modify this job");
+}
+
 const listJobs = async (query) => {
   const key = cache.cacheKey("jobs:list", query);
   const cached = await cache.get(key);
   const ttl = cache.CACHE_TTL.jobsList || 30;
   const sortKey = query.sort || "newest";
-  const isCacheable = query.page === 1 && !query.q && !query.location && sortKey === "newest";
+  const hasTags = Array.isArray(query.tags) && query.tags.length > 0;
+  const isCacheable =
+    query.page === 1 &&
+    !query.q &&
+    !query.location &&
+    sortKey === "newest" &&
+    !query.category &&
+    !hasTags &&
+    query.isVerified === undefined &&
+    !query.postedWithin &&
+    !query.employmentType &&
+    !query.experienceLevel;
 
   if (cached) {
     const data = cached.data ?? cached;
@@ -105,7 +159,7 @@ const listMyJobs = async (userId) => {
 const updateJob = async (id, payload, userId) => {
   const job = await jobRepository.findById(id);
   if (!job) throw new ApiError(404, "Job not found");
-  if (job.postedBy.toString() !== userId) throw new ApiError(403, "Not authorized to update this job");
+  await assertRecruiterCanModifyJob(job, userId);
 
   const wasDraft = Boolean(job.isDraft);
 
@@ -152,7 +206,7 @@ const updateJob = async (id, payload, userId) => {
 const deleteJob = async (id, userId) => {
   const job = await jobRepository.findById(id);
   if (!job) throw new ApiError(404, "Job not found");
-  if (job.postedBy.toString() !== userId) throw new ApiError(403, "Not authorized to delete this job");
+  await assertRecruiterCanModifyJob(job, userId);
 
   job.isActive = false;
   await job.save();
@@ -199,6 +253,41 @@ const getRecruiterApplicationTrend = async (userId, monthCount = 6) => {
   return { series };
 };
 
+const trackJobClick = async (jobId) => {
+  const updated = await jobRepository.incrementClickCount(jobId);
+  if (!updated) throw new ApiError(404, "Job not found");
+  return { success: true, clickCount: updated.clickCount };
+};
+
+const getFreshJobs = async (limit = 20) => {
+  const jobs = await jobRepository.findFreshPublicJobs({ limit });
+  return { jobs };
+};
+
+const getExpiringJobs = async () => {
+  const jobs = await jobRepository.findExpiringWithin24h();
+  return { jobs };
+};
+
+const getJobsByCategory = async (category, page = 1, limit = 10) => {
+  const p = Math.max(1, Number(page) || 1);
+  const l = Math.min(50, Math.max(1, Number(limit) || 10));
+  const sortKey = "newest";
+  const [jobs, total] = await Promise.all([
+    jobRepository.findPublicByCategory(category, { page: p, limit: l, sortKey }),
+    jobRepository.countPublicByCategory(category),
+  ]);
+  return {
+    jobs,
+    pagination: {
+      total,
+      page: p,
+      limit: l,
+      totalPages: Math.ceil(total / l),
+    },
+  };
+};
+
 module.exports = {
   createJob,
   listJobs,
@@ -209,4 +298,8 @@ module.exports = {
   deleteJob,
   getRecruiterAnalytics,
   getRecruiterApplicationTrend,
+  trackJobClick,
+  getFreshJobs,
+  getExpiringJobs,
+  getJobsByCategory,
 };

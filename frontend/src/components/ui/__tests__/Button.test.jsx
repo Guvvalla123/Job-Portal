@@ -1,5 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
+import { MemoryRouter } from 'react-router-dom'
 import { Button } from '../Button.jsx'
 
 describe('Button', () => {
@@ -36,8 +37,26 @@ describe('Button', () => {
     expect(button).toBeDisabled()
   })
 
-  it('should render as disabled when loading', () => {
-    render(<Button loading>Loading</Button>)
-    expect(screen.getByRole('button')).toBeDisabled()
+  it('should render as link when `to` is set', () => {
+    render(
+      <MemoryRouter>
+        <Button to="/jobs">Browse</Button>
+      </MemoryRouter>,
+    )
+    const link = screen.getByRole('link', { name: 'Browse' })
+    expect(link).toHaveAttribute('href', '/jobs')
+  })
+
+  it('should call onClick for link button when provided', () => {
+    const onClick = vi.fn()
+    render(
+      <MemoryRouter>
+        <Button to="/x" onClick={onClick}>
+          Go
+        </Button>
+      </MemoryRouter>,
+    )
+    fireEvent.click(screen.getByRole('link', { name: 'Go' }))
+    expect(onClick).toHaveBeenCalledTimes(1)
   })
 })

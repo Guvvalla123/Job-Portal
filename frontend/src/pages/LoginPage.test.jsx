@@ -16,6 +16,7 @@ vi.mock('sonner', () => ({
 describe('LoginPage', () => {
   beforeEach(() => {
     localStorage.clear()
+    sessionStorage.clear()
     __resetRefreshStateForTests()
     vi.clearAllMocks()
   })

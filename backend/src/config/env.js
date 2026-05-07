@@ -87,6 +87,17 @@ const envSchema = z
      * When NODE_ENV=production and true, REDIS_URL must be set (shared idempotency + queues).
      */
     REQUIRE_REDIS_IN_PRODUCTION: boolish,
+    RAZORPAY_KEY_ID: z.preprocess((v) => (v === "" || v == null ? undefined : v), z.string().optional()),
+    RAZORPAY_KEY_SECRET: z.preprocess((v) => (v === "" || v == null ? undefined : v), z.string().optional()),
+    SUBSCRIPTION_PRICE_PAISE: z.coerce.number().int().min(1).default(2500),
+    OPENAI_API_KEY: z.preprocess((v) => (v === "" || v == null ? undefined : v), z.string().optional()),
+    FREE_ATS_CHECKS_PER_MONTH: z.coerce.number().int().min(0).default(3),
+    FREE_RESUME_REVIEWS_PER_MONTH: z.coerce.number().int().min(0).default(1),
+    /** Default job listing expiry window (days); used by features that read env (model may use its own default). */
+    JOB_EXPIRY_DAYS: z.coerce.number().int().min(1).max(365).default(7),
+    ADMIN_EMAIL: z.string().optional(),
+    ADMIN_PASSWORD: z.string().optional(),
+    ADMIN_NAME: z.string().optional(),
   })
   .superRefine((data, ctx) => {
     if (data.REQUIRE_SMTP) {

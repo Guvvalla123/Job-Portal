@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { apiClient } from '../api/apiClient.js'
 import { useAuth } from '../context/useAuth.jsx'
@@ -57,7 +57,7 @@ export function LoginPage() {
     defaultValues: { email: '', password: '' },
     resolver: zodResolver(loginSchema),
   })
-  const { login } = useAuth()
+  const { login, isAuthenticated, user: currentUser } = useAuth()
 
   const finishLoginSession = useCallback(
     async (inner, message) => {
@@ -130,6 +130,12 @@ export function LoginPage() {
     mfaMutation.mutate({ mfaToken: mfaCtx.mfaToken, code })
   }
 
+  /** Already logged in (active tab session) — skip the login UI and go straight to the role dashboard. */
+  if (isAuthenticated && currentUser && !mfaCtx) {
+    const fromPath = location.state?.from?.pathname
+    return <Navigate to={getPostLoginPath(currentUser.role, fromPath)} replace />
+  }
+
   return (
     <AuthLayout
       title="Welcome back. Your next role is closer than you think."
@@ -169,6 +175,7 @@ export function LoginPage() {
             variant="gradient"
             size="lg"
             loading={mfaMutation.isPending}
+            loadingText="Verifying…"
             disabled={mfaMutation.isPending}
           >
             Verify and continue
@@ -176,6 +183,7 @@ export function LoginPage() {
           <Button
             type="button"
             variant="secondary"
+            size="sm"
             className="w-full"
             onClick={() => {
               setMfaCtx(null)
@@ -219,6 +227,7 @@ export function LoginPage() {
             variant="gradient"
             size="lg"
             loading={loginMutation.isPending}
+            loadingText="Signing in…"
             disabled={loginMutation.isPending}
           >
             Sign In

@@ -13,7 +13,7 @@ export const queryKeys = {
   /** Public job listings - safe to cache longer */
   jobs: {
     list: (filters) => ['jobs', 'list', filters],
-    /** Filters without `page` — for useInfiniteQuery */
+    /** Filters object (incl. q, location, category, employmentType, experienceLevel, postedWithin, sort, limit) — for useInfiniteQuery */
     infiniteList: (filters) => ['jobs', 'list', 'infinite', filters],
     detail: (id) => ['jobs', 'detail', id],
     recommended: (limit = 6) => ['jobs', 'recommended', limit],
@@ -32,6 +32,21 @@ export const queryKeys = {
     jobAlerts: () => ['user', 'job-alerts'],
   },
 
+  /** Candidate subscription & Razorpay */
+  subscription: {
+    status: () => ['subscription', 'status'],
+    all: () => ['subscription'],
+  },
+
+  /** ATS resume analysis */
+  ats: {
+    /** @param {number} [page] */
+    history: (page) => ['ats', 'history', Number(page) || 1],
+    check: (id) => ['ats', 'check', id],
+    usage: () => ['ats', 'usage'],
+    all: () => ['ats'],
+  },
+
   /** Recruiter-specific */
   recruiter: {
     companies: () => ['recruiter', 'companies'],
@@ -48,6 +63,7 @@ export const queryKeys = {
   admin: {
     stats: () => ['admin', 'stats'],
     statsTrend: () => ['admin', 'stats-trend'],
+    revenueStats: () => ['admin', 'revenue-stats'],
     /** @param {number} [page]
      *  @param {string} [search] */
     users: (page, search) => {
@@ -72,6 +88,16 @@ export const queryKeys = {
       }
       return ['admin', 'audit-logs', Number(page) || 1, action ?? '', userId ?? '', dateFrom ?? '', dateTo ?? '']
     },
+    /** @param {number} [page] @param {string} [status] */
+    subscriptions: (page, status) => {
+      if (page == null && status == null) return ['admin', 'subscriptions']
+      return ['admin', 'subscriptions', Number(page) || 1, status ?? '']
+    },
+    /** @param {number} [page] @param {string} [status] */
+    jobReports: (page, status) => {
+      if (page == null && status == null) return ['admin', 'job-reports']
+      return ['admin', 'job-reports', Number(page) || 1, status ?? '']
+    },
   },
 
   /** Notifications - short stale for near real-time feel */
@@ -93,6 +119,8 @@ export const queryKeys = {
 export const userScopedQueryKeyPrefixes = [
   queryKeys.auth.all(),
   ['user'],
+  queryKeys.subscription.all(),
+  queryKeys.ats.all(),
   ['recruiter'],
   ['admin'],
   queryKeys.notifications.all(),

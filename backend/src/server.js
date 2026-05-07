@@ -4,6 +4,7 @@ initSentry();
 const { app } = require("./app");
 const { env } = require("./config/env");
 const { connectDB } = require("./config/db");
+const seedAdmin = require("./config/adminSeed");
 const { logger } = require("./config/logger");
 const cache = require("./utils/cache");
 const { closeQueue } = require("./queues/emailQueue");
@@ -50,6 +51,7 @@ const shutdown = async (signal) => {
 const startServer = async () => {
   try {
     await connectDB();
+    await seedAdmin();
     cache.initRedis();
     server = app.listen(Number(env.PORT), () => {
       logger.info(`Backend running on port ${env.PORT}`, { env: env.NODE_ENV });

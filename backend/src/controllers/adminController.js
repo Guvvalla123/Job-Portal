@@ -4,13 +4,17 @@ const { Job } = require("../models/Job");
 const { Application } = require("../models/Application");
 const { Company } = require("../models/Company");
 const { AuditLog } = require("../models/AuditLog");
+const { Subscription } = require("../models/Subscription");
+const { AtsCheck } = require("../models/AtsCheck");
 const { asyncHandler } = require("../utils/asyncHandler");
 const { ApiError } = require("../utils/apiError");
-const { success } = require("../utils/apiResponse");
+const { created, success } = require("../utils/apiResponse");
 const { ROLES } = require("../constants/roles");
 const jobRepository = require("../repositories/jobRepository");
 const { cascadeBeforeUserDelete } = require("../utils/userDeleteCascade");
-const { invalidateJobListCache } = require("../services/jobService");
+const jobService = require("../services/jobService");
+const jobReportService = require("../services/jobReportService");
+const { invalidateJobListCache } = jobService;
 
 function escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -25,15 +29,49 @@ const startOfCurrentMonth = () => {
 
 const getStats = asyncHandler(async (req, res) => {
   const monthStart = startOfCurrentMonth();
-  const [totalUsers, totalJobs, activeJobs, totalApplications, totalCompanies, newUsersThisMonth] =
-    await Promise.all([
-      User.countDocuments(),
-      Job.countDocuments(),
-      Job.countDocuments({ ...jobRepository.publicJobVisibilityFilter() }),
-      Application.countDocuments(),
-      Company.countDocuments(),
-      User.countDocuments({ createdAt: { $gte: monthStart } }),
-    ]);
+  const now = new Date();
+  const next24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+  const revenueMonthPromise = Subscription.aggregate([
+    { $unwind: "$paymentHistory" },
+    {
+      $match: {
+        "paymentHistory.status": "success",
+        "paymentHistory.paidAt": { $gte: monthStart },
+      },
+    },
+    { $group: { _id: null, totalPaise: { $sum: "$paymentHistory.amount" } } },
+  ]);
+
+  const [
+    totalUsers,
+    totalJobs,
+    activeJobs,
+    totalApplications,
+    totalCompanies,
+    newUsersThisMonth,
+    totalPremiumUsers,
+    atsChecksThisMonth,
+    revenueMonthAgg,
+    jobsExpiringNext24h,
+  ] = await Promise.all([
+    User.countDocuments(),
+    Job.countDocuments(),
+    Job.countDocuments({ ...jobRepository.publicJobVisibilityFilter() }),
+    Application.countDocuments(),
+    Company.countDocuments(),
+    User.countDocuments({ createdAt: { $gte: monthStart } }),
+    User.countDocuments({ isPremium: true, premiumExpiresAt: { $gt: now } }),
+    AtsCheck.countDocuments({ createdAt: { $gte: monthStart } }),
+    revenueMonthPromise,
+    Job.countDocuments({
+      isActive: true,
+      isDraft: false,
+      expiresAt: { $gt: now, $lte: next24h },
+    }),
+  ]);
+
+  const revenueThisMonthINR = (revenueMonthAgg[0]?.totalPaise || 0) / 100;
 
   return success(
     res,
@@ -44,6 +82,10 @@ const getStats = asyncHandler(async (req, res) => {
       totalApplications,
       totalCompanies,
       newUsersThisMonth,
+      totalPremiumUsers,
+      atsChecksThisMonth,
+      revenueThisMonthINR,
+      jobsExpiringNext24h,
     },
     "Platform stats loaded"
   );
@@ -495,6 +537,145 @@ const deleteJob = asyncHandler(async (req, res) => {
   return success(res, { job }, "Job deactivated");
 });
 
+const adminCreateJob = asyncHandler(async (req, res) => {
+  const payload = { ...req.body, source: "manual", postedBy: req.user.userId };
+  const result = await jobService.createJob(payload, req.user.userId, { role: ROLES.ADMIN });
+  return created(res, result, "Job created");
+});
+
+const verifyJob = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw new ApiError(400, "Invalid job id");
+  }
+  const job = await Job.findById(id);
+  if (!job) {
+    throw new ApiError(404, "Job not found");
+  }
+  job.isVerified = !job.isVerified;
+  await job.save();
+  invalidateJobListCache().catch(() => {});
+  return success(res, { job }, job.isVerified ? "Job marked as verified" : "Job verification removed");
+});
+
+const extendJobExpiry = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw new ApiError(400, "Invalid job id");
+  }
+  const days = Number(req.body?.days);
+  if (!Number.isFinite(days) || days < 1 || days > 30) {
+    throw new ApiError(400, "days must be a number between 1 and 30");
+  }
+  const job = await Job.findById(id);
+  if (!job) {
+    throw new ApiError(404, "Job not found");
+  }
+  const now = new Date();
+  const base =
+    job.expiresAt && job.expiresAt > now ? new Date(job.expiresAt.getTime()) : new Date(now.getTime());
+  job.expiresAt = new Date(base.getTime() + days * 24 * 60 * 60 * 1000);
+  await job.save();
+  invalidateJobListCache().catch(() => {});
+  return success(res, { job }, "Job expiry extended");
+});
+
+const getJobReports = asyncHandler(async (req, res) => {
+  const { page, limit, status, jobId, reason } = req.query;
+  const result = await jobReportService.getReports({ page, limit, status, jobId, reason });
+  return success(res, result);
+});
+
+const reviewJobReport = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { status, adminNotes } = req.body || {};
+  const report = await jobReportService.reviewReport(id, req.user.userId, status, adminNotes);
+  return success(res, { report }, "Report updated");
+});
+
+const getSubscriptions = asyncHandler(async (req, res) => {
+  const { page = "1", limit = "20", status } = req.query;
+  const pageNumber = Math.max(Number(page), 1);
+  const limitNumber = Math.min(Math.max(Number(limit), 1), 100);
+  const filter = {};
+  if (status && String(status).trim()) {
+    const s = String(status).trim();
+    if (["active", "expired", "cancelled", "trial"].includes(s)) {
+      filter.status = s;
+    }
+  }
+  const [subscriptions, total] = await Promise.all([
+    Subscription.find(filter)
+      .populate("user", "fullName email isPremium premiumExpiresAt")
+      .sort({ updatedAt: -1 })
+      .skip((pageNumber - 1) * limitNumber)
+      .limit(limitNumber)
+      .lean(),
+    Subscription.countDocuments(filter),
+  ]);
+  return success(
+    res,
+    {
+      subscriptions,
+      pagination: {
+        total,
+        page: pageNumber,
+        limit: limitNumber,
+        totalPages: Math.ceil(total / limitNumber) || 0,
+      },
+    },
+    "Subscriptions loaded"
+  );
+});
+
+const getRevenueStats = asyncHandler(async (_req, res) => {
+  const now = new Date();
+  const monthStart = startOfCurrentMonth();
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+  const [totalAgg, monthAgg] = await Promise.all([
+    Subscription.aggregate([
+      { $unwind: "$paymentHistory" },
+      { $match: { "paymentHistory.status": "success" } },
+      { $group: { _id: null, totalPaise: { $sum: "$paymentHistory.amount" } } },
+    ]),
+    Subscription.aggregate([
+      { $unwind: "$paymentHistory" },
+      {
+        $match: {
+          "paymentHistory.status": "success",
+          "paymentHistory.paidAt": { $gte: monthStart, $lte: monthEnd },
+        },
+      },
+      { $group: { _id: null, totalPaise: { $sum: "$paymentHistory.amount" } } },
+    ]),
+  ]);
+
+  const totalRevenueINR = (totalAgg[0]?.totalPaise || 0) / 100;
+  const revenueThisMonthINR = (monthAgg[0]?.totalPaise || 0) / 100;
+
+  const [totalPremiumUsers, activeSubscriptions, cancelledThisMonth] = await Promise.all([
+    User.countDocuments({ isPremium: true, premiumExpiresAt: { $gt: now } }),
+    Subscription.countDocuments({ status: "active", currentPeriodEnd: { $gt: now } }),
+    Subscription.countDocuments({
+      status: "cancelled",
+      cancelledAt: { $gte: monthStart, $lte: monthEnd },
+    }),
+  ]);
+
+  return success(
+    res,
+    {
+      totalRevenueINR,
+      revenueThisMonthINR,
+      totalPremiumUsers,
+      activeSubscriptions,
+      cancelledThisMonth,
+    },
+    "Revenue stats loaded"
+  );
+});
+
 module.exports = {
   getStats,
   getStatsTrend,
@@ -510,4 +691,11 @@ module.exports = {
   listAllApplications,
   listAuditLogs,
   deleteJob,
+  createJob: adminCreateJob,
+  verifyJob,
+  extendJobExpiry,
+  getJobReports,
+  reviewJobReport,
+  getSubscriptions,
+  getRevenueStats,
 };

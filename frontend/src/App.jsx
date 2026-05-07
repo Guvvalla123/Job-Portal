@@ -40,6 +40,13 @@ const AdminCompaniesPage = lazy(() => import('./pages/admin/AdminCompaniesPage.j
 const AdminApplicationsPage = lazy(() => import('./pages/admin/AdminApplicationsPage.jsx').then((m) => ({ default: m.AdminApplicationsPage })))
 const AdminAuditLogPage = lazy(() => import('./pages/admin/AdminAuditLogPage.jsx').then((m) => ({ default: m.AdminAuditLogPage })))
 const AdminSecurityPage = lazy(() => import('./pages/admin/AdminSecurityPage.jsx').then((m) => ({ default: m.AdminSecurityPage })))
+const AdminSubscriptionsPage = lazy(() =>
+  import('./pages/admin/AdminSubscriptionsPage.jsx').then((m) => ({ default: m.AdminSubscriptionsPage })),
+)
+const AdminJobReportsPage = lazy(() =>
+  import('./pages/admin/AdminJobReportsPage.jsx').then((m) => ({ default: m.AdminJobReportsPage })),
+)
+const AdminRevenuePage = lazy(() => import('./pages/admin/AdminRevenuePage.jsx').then((m) => ({ default: m.AdminRevenuePage })))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage.jsx').then((m) => ({ default: m.NotFoundPage })))
 const ServerErrorPage = lazy(() => import('./pages/ServerErrorPage.jsx').then((m) => ({ default: m.ServerErrorPage })))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage.jsx').then((m) => ({ default: m.PrivacyPage })))
@@ -80,7 +87,7 @@ function DashboardRedirect() {
       </div>
     )
   }
-  if (!user) return <Navigate to="/login" replace state={{ from: { pathname: '/dashboard' } }} />
+  if (!user) return <Navigate to="/" replace state={{ from: { pathname: '/dashboard' } }} />
   if (user.role === 'recruiter') return <Navigate to="/recruiter/dashboard" replace />
   if (user.role === 'admin') return <Navigate to="/admin/dashboard" replace />
   return <Navigate to="/candidate/dashboard" replace />
@@ -154,6 +161,9 @@ function App() {
           <Route path="jobs" element={<AdminJobsPage />} />
           <Route path="companies" element={<AdminCompaniesPage />} />
           <Route path="applications" element={<AdminApplicationsPage />} />
+          <Route path="subscriptions" element={<AdminSubscriptionsPage />} />
+          <Route path="job-reports" element={<AdminJobReportsPage />} />
+          <Route path="revenue" element={<AdminRevenuePage />} />
           <Route path="audit-logs" element={<AdminAuditLogPage />} />
           <Route path="security" element={<AdminSecurityPage />} />
         </Route>

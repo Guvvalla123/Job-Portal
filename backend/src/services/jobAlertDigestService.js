@@ -40,7 +40,7 @@ async function runDigest(frequency) {
             jobLocation: job.location || "",
             jobType: job.employmentType || "",
             salary: salary || undefined,
-            companyName: job.company?.name || "",
+            companyName: job.company?.name || job.postedByCompanyName || "",
             jobLink,
           });
           await jobAlertRepository.updateLastSentAt(alert._id);

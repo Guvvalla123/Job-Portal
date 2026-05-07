@@ -1,15 +1,12 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { apiClient } from '../api/apiClient.js'
-import { useAuth } from '../context/useAuth.jsx'
 import { getApiErrorMessage } from '../utils/getApiErrorMessage.js'
 import { trackUserRegistration } from '../lib/analytics.js'
-import { prefetchDashboardForRole } from '../lib/prefetchDashboard.js'
-import { getPostLoginPath } from '../lib/postLoginRedirect.js'
 import { Button, Input } from '../components/ui/index.js'
 import { AuthLayout } from '../components/layout/AuthLayout.jsx'
 import { SITE_LOGO_MARK, SITE_NAME } from '../config/site.js'
@@ -24,7 +21,6 @@ const registerSchema = z.object({
       /^(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).+$/,
       'Include one uppercase letter, one number, and one special character',
     ),
-  role: z.enum(['candidate', 'recruiter'], { required_error: 'Please select a role' }),
 })
 
 const BULLETS = [
@@ -39,6 +35,34 @@ const PASSWORD_RULES = [
   { id: 'num', label: 'One number', test: (p) => /[0-9]/.test(p) },
   { id: 'special', label: 'One special character', test: (p) => /[^A-Za-z0-9]/.test(p) },
 ]
+
+function PasswordRequirementMetIcon() {
+  return (
+    <svg className="h-4 w-4 text-green-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+      <path
+        fillRule="evenodd"
+        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
+        clipRule="evenodd"
+      />
+    </svg>
+  )
+}
+
+function PasswordRequirementUnmetIcon() {
+  return (
+    <svg
+      className="h-4 w-4 text-gray-300 dark:text-gray-600"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path strokeLinecap="round" d="M9 12h6" />
+    </svg>
+  )
+}
 
 function PasswordRequirements({ password }) {
   const checks = PASSWORD_RULES.map((r) => ({ ...r, ok: r.test(password || '') }))
@@ -76,13 +100,19 @@ function PasswordRequirements({ password }) {
           <span>Password strength</span>
         )}
       </p>
-      <ul className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
+      <ul className="space-y-1">
         {checks.map((c) => (
-          <li key={c.id} className="flex items-center gap-2">
-            <span className="w-4 shrink-0 tabular-nums" aria-hidden>
-              {c.ok ? '✅' : '❌'}
+          <li key={c.id} className="flex items-center gap-2 text-sm">
+            <span className="shrink-0" aria-hidden>
+              {c.ok ? <PasswordRequirementMetIcon /> : <PasswordRequirementUnmetIcon />}
             </span>
-            <span className={c.ok ? 'text-emerald-700 dark:text-emerald-400' : ''}>{c.label}</span>
+            <span
+              className={
+                c.ok ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-500'
+              }
+            >
+              {c.label}
+            </span>
           </li>
         ))}
       </ul>
@@ -97,33 +127,18 @@ export function RegisterPage() {
     handleSubmit,
     formState: { errors },
   } = useForm({
-    defaultValues: { fullName: '', email: '', password: '', role: 'candidate' },
+    defaultValues: { fullName: '', email: '', password: '' },
     resolver: zodResolver(registerSchema),
   })
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
-  const { login } = useAuth()
   const password = watch('password', '')
 
   const registerMutation = useMutation({
     mutationFn: (payload) => apiClient.post('/auth/register', payload, { skipGlobalErrorToast: true }),
-    onSuccess: async (response, payload) => {
-      const { user: userData, accessToken } = response.data.data
-      login({ user: userData, accessToken })
-      toast.success(response.data?.message || 'Welcome! Your account is ready.')
+    onSuccess: (_response, payload) => {
+      toast.success('Account created successfully! Please sign in to continue.')
       trackUserRegistration(payload?.role || 'candidate')
-      try {
-        await apiClient.get('/auth/csrf-token')
-      } catch {
-        /* best-effort */
-      }
-      try {
-        await prefetchDashboardForRole(queryClient, userData.role)
-      } catch {
-        /* prefetch is best-effort */
-      }
-      const targetPath = getPostLoginPath(userData.role, null)
-      queueMicrotask(() => navigate(targetPath, { replace: true }))
+      queueMicrotask(() => navigate('/login', { replace: true }))
     },
     onError: (error) => {
       toast.error(getApiErrorMessage(error, 'Registration failed.'))
@@ -145,7 +160,10 @@ export function RegisterPage() {
         </h2>
         <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Start your journey with {SITE_NAME}</p>
       </div>
-      <form className="mt-8 space-y-5" onSubmit={handleSubmit((v) => registerMutation.mutate(v))}>
+      <form
+        className="mt-8 space-y-5"
+        onSubmit={handleSubmit((v) => registerMutation.mutate({ ...v, role: 'candidate' }))}
+      >
         <Input
           id="reg-fullName"
           label="Full name"
@@ -173,32 +191,13 @@ export function RegisterPage() {
           />
           <PasswordRequirements password={password} />
         </div>
-        <div>
-          <label htmlFor="reg-role" className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-            I want to
-          </label>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex cursor-pointer items-center gap-2 rounded-xl border-2 border-gray-200 bg-white/50 px-4 py-3 text-sm font-medium transition-all duration-200 hover:border-teal-200 hover:shadow-md has-checked:border-teal-600 has-checked:bg-teal-50 has-checked:shadow-md has-checked:ring-2 has-checked:ring-teal-500/20 dark:border-gray-600 dark:bg-gray-800/50 dark:hover:border-teal-500/50 dark:has-checked:bg-teal-950/50 dark:has-checked:border-teal-500">
-              <input {...register('role')} type="radio" value="candidate" className="accent-teal-700" />
-              <span className="text-gray-700 dark:text-gray-200">Find a job</span>
-            </label>
-            <label className="flex cursor-pointer items-center gap-2 rounded-xl border-2 border-gray-200 bg-white/50 px-4 py-3 text-sm font-medium transition-all duration-200 hover:border-teal-200 hover:shadow-md has-checked:border-teal-600 has-checked:bg-teal-50 has-checked:shadow-md has-checked:ring-2 has-checked:ring-teal-500/20 dark:border-gray-600 dark:bg-gray-800/50 dark:hover:border-teal-500/50 dark:has-checked:bg-teal-950/50 dark:has-checked:border-teal-500">
-              <input {...register('role')} type="radio" value="recruiter" className="accent-teal-700" />
-              <span className="text-gray-700 dark:text-gray-200">Hire talent</span>
-            </label>
-          </div>
-          {errors.role && (
-            <p className="mt-1.5 text-sm text-red-600 dark:text-red-400" role="alert">
-              {errors.role.message}
-            </p>
-          )}
-        </div>
         <Button
           type="submit"
           className="w-full"
           variant="gradient"
           size="lg"
           loading={registerMutation.isPending}
+          loadingText="Creating account…"
           disabled={registerMutation.isPending}
         >
           Create Account

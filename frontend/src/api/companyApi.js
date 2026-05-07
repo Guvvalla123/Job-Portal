@@ -1,5 +1,13 @@
 import { apiClient } from './apiClient.js'
 
+export async function listCompanies(params = {}) {
+  const { q, page, limit } = params
+  const { data } = await apiClient.get('/companies', {
+    params: { q, page, limit },
+  })
+  return data.data
+}
+
 export async function listMyCompanies() {
   const { data } = await apiClient.get('/companies/me')
   return data.data.companies

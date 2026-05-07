@@ -67,6 +67,27 @@ export async function deleteJob(jobId) {
   return data.data
 }
 
+/** Admin create job — POST `/admin/jobs/create` */
+export async function createJob(payload) {
+  const { data } = await apiClient.post('/admin/jobs/create', payload)
+  return data.data
+}
+
+export async function verifyJob(jobId) {
+  const { data } = await apiClient.patch(`/admin/jobs/${jobId}/verify`)
+  return data.data
+}
+
+export async function extendJobExpiry(jobId, days) {
+  const { data } = await apiClient.patch(`/admin/jobs/${jobId}/extend`, { days })
+  return data.data
+}
+
+export async function reviewJobReport(reportId, payload) {
+  const { data } = await apiClient.patch(`/admin/job-reports/${reportId}`, payload)
+  return data.data
+}
+
 export async function getCompanies(page = 1, limit = 20, search = '') {
   const { data } = await apiClient.get('/admin/companies', {
     params: {
@@ -115,6 +136,39 @@ export async function getAuditLogs(page = 1, limit = 50, action = '', opts = {})
       ...(userId ? { userId } : {}),
       ...(dateFrom ? { dateFrom } : {}),
       ...(dateTo ? { dateTo } : {}),
+    },
+  })
+  return data.data
+}
+
+/** Revenue breakdown — GET `/admin/revenue` */
+export async function getRevenueStats() {
+  const { data } = await apiClient.get('/admin/revenue')
+  return data.data
+}
+
+/** Paginated subscriptions — GET `/admin/subscriptions` */
+export async function getSubscriptions(page = 1, limit = 20, status = '') {
+  const { data } = await apiClient.get('/admin/subscriptions', {
+    params: {
+      page,
+      limit,
+      ...(status ? { status } : {}),
+    },
+  })
+  return data.data
+}
+
+/** Job abuse reports — GET `/admin/job-reports` */
+export async function getJobReports(params = {}) {
+  const { page = 1, limit = 20, status = '', jobId = '', reason = '' } = params
+  const { data } = await apiClient.get('/admin/job-reports', {
+    params: {
+      page,
+      limit,
+      ...(status ? { status } : {}),
+      ...(jobId ? { jobId } : {}),
+      ...(reason ? { reason } : {}),
     },
   })
   return data.data

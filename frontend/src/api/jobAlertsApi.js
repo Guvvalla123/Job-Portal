@@ -10,6 +10,11 @@ export async function createJobAlert(payload) {
   return data.data
 }
 
+export async function updateJobAlert(id, payload) {
+  const { data } = await apiClient.patch(`/job-alerts/${id}`, payload)
+  return data.data
+}
+
 export async function deleteJobAlert(id) {
   const { data } = await apiClient.delete(`/job-alerts/${id}`)
   return data.data

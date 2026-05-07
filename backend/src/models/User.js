@@ -73,6 +73,25 @@ const userSchema = new mongoose.Schema(
     /** Encrypted TOTP secret (AES-256-GCM); never exposed in API responses. */
     mfaTotpSecretEnc: { type: String, default: "", select: false },
     mfaEnabled: { type: Boolean, default: false },
+    isPremium: { type: Boolean, default: false },
+    premiumExpiresAt: { type: Date, default: null },
+    atsChecksUsedThisMonth: { type: Number, default: 0, min: 0 },
+    atsChecksResetAt: {
+      type: Date,
+      default: () => {
+        const d = new Date();
+        return new Date(d.getFullYear(), d.getMonth(), 1);
+      },
+    },
+    resumeReviewsUsedThisMonth: { type: Number, default: 0, min: 0 },
+    resumeReviewsResetAt: {
+      type: Date,
+      default: () => {
+        const d = new Date();
+        return new Date(d.getFullYear(), d.getMonth(), 1);
+      },
+    },
+    lastActiveAt: { type: Date, default: Date.now },
   },
   { timestamps: true }
 );
@@ -85,6 +104,14 @@ userSchema.pre("save", async function preSave() {
 
 userSchema.methods.comparePassword = function comparePassword(plainTextPassword) {
   return bcrypt.compare(plainTextPassword, this.password);
+};
+
+userSchema.methods.canUseAtsChecker = function canUseAtsChecker() {
+  return this.isPremium === true || this.atsChecksUsedThisMonth < 3;
+};
+
+userSchema.methods.canUseResumeReview = function canUseResumeReview() {
+  return this.isPremium === true || this.resumeReviewsUsedThisMonth < 1;
 };
 
 userSchema.set("toJSON", {

@@ -72,6 +72,7 @@ export function ForgotPasswordPage() {
           variant="gradient"
           size="lg"
           loading={mutation.isPending}
+          loadingText="Sending…"
           disabled={mutation.isPending}
         >
           Send reset link

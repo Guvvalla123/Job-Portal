@@ -2,10 +2,13 @@ import { Helmet } from 'react-helmet-async'
 import { useQuery } from '@tanstack/react-query'
 import { queryKeys } from '../lib/queryKeys.js'
 import { CACHE_TIERS } from '../lib/queryOptions.js'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 import { apiClient } from '../api/apiClient.js'
 import { SaveJobButton } from '../components/SaveJobButton.jsx'
 import { formatSalaryRange } from '../utils/formatSalary.js'
+import { useAuth } from '../context/useAuth.jsx'
+import { listPublicJobs } from '../api/jobsApi.js'
 
 const TYPE_COLORS = {
   'full-time': 'bg-emerald-50 text-emerald-700',
@@ -16,6 +19,8 @@ const TYPE_COLORS = {
 
 export function CompanyDetailsPage() {
   const { id } = useParams()
+  const navigate = useNavigate()
+  const { user } = useAuth()
 
   const query = useQuery({
     queryKey: queryKeys.companies.detail(id),
@@ -25,12 +30,35 @@ export function CompanyDetailsPage() {
     },
     staleTime: CACHE_TIERS.detail.staleTime,
     gcTime: CACHE_TIERS.detail.gcTime,
+    enabled: !!id,
   })
+
+  const jobsQuery = useQuery({
+    queryKey: queryKeys.jobs.list({ company: id, limit: 20 }),
+    queryFn: async () => {
+      const data = await listPublicJobs({ page: 1, limit: 20 })
+      const jobs = data?.jobs ?? []
+      // Filter client-side to this company (API may not support `company` param yet).
+      return jobs.filter((j) => j?.company?._id === id || j?.company === id || j?.company?.id === id)
+    },
+    enabled: !!id,
+    staleTime: CACHE_TIERS.public.staleTime,
+    gcTime: CACHE_TIERS.public.gcTime,
+  })
+
+  const handleApplyClick = (jobId) => {
+    if (!user) {
+      toast.info('Please login in order to apply for this job')
+      return
+    }
+    navigate(`/jobs/${jobId}`)
+  }
 
   if (query.isLoading) return <div className="py-12 text-center text-gray-500">Loading company...</div>
   if (query.isError) return <div className="rounded-lg bg-red-50 p-6 text-center text-red-600">Company not found.</div>
 
-  const { company, jobs } = query.data || {}
+  const { company } = query.data || {}
+  const jobs = jobsQuery.data || []
 
   return (
     <>
@@ -70,7 +98,7 @@ export function CompanyDetailsPage() {
         {jobs?.length > 0 ? (
           <div className="divide-y divide-gray-50">
             {jobs.map((job) => (
-              <div key={job._id} className="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <div key={job.id || job._id} className="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0 flex-1">
                   <Link to={`/jobs/${job._id}`} className="font-medium text-gray-900 hover:text-teal-700">{job.title}</Link>
                   <p className="mt-0.5 text-sm text-gray-500">{job.location}</p>
@@ -85,7 +113,13 @@ export function CompanyDetailsPage() {
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <SaveJobButton jobId={job._id} />
-                  <Link to={`/jobs/${job._id}`} className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-[#0C5F5A]">View & Apply</Link>
+                  <button
+                    type="button"
+                    onClick={() => handleApplyClick(job._id)}
+                    className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-[#0C5F5A]"
+                  >
+                    View & Apply
+                  </button>
                 </div>
               </div>
             ))}

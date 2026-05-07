@@ -1,11 +1,11 @@
 export const linkBase =
-  'inline-flex min-h-10 items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors md:min-h-0 md:py-1.5'
+  'inline-flex min-h-10 items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F766E] md:min-h-0 md:py-1.5'
 
 export const activeStyle = ({ isActive }) =>
   `${linkBase} ${isActive ? 'bg-white/20 text-white' : 'text-teal-100 hover:bg-white/10 hover:text-white'}`
 
 export const mobileLinkBase =
-  'flex min-h-12 items-center rounded-xl px-4 py-3 text-base font-medium transition-colors active:scale-[0.99]'
+  'flex min-h-12 items-center rounded-xl px-4 py-3 text-base font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white active:scale-[0.99] dark:focus-visible:ring-teal-400 dark:focus-visible:ring-offset-gray-900'
 
 export const mobileActiveStyle = ({ isActive }) =>
   `${mobileLinkBase} ${isActive ? 'bg-teal-50 text-teal-900 dark:bg-teal-950/50 dark:text-teal-100' : 'text-gray-800 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800'}`

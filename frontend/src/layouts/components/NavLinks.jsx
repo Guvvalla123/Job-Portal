@@ -1,7 +1,8 @@
 import { NavLink } from 'react-router-dom'
 import { activeStyle, mobileActiveStyle } from './layoutNavStyles.js'
 
-export function DesktopNavLinks({ showAuthenticatedNav, user }) {
+/** Public routes — same order as mobile: Browse Jobs → Companies → About → Contact */
+export function PublicDesktopNavLinks() {
   return (
     <>
       <NavLink to="/jobs" className={activeStyle}>
@@ -16,23 +17,35 @@ export function DesktopNavLinks({ showAuthenticatedNav, user }) {
       <NavLink to="/contact" className={activeStyle}>
         Contact
       </NavLink>
-      {showAuthenticatedNav && user?.role === 'candidate' && (
-        <NavLink to="/candidate/dashboard" className={activeStyle}>
-          My Dashboard
-        </NavLink>
-      )}
-      {showAuthenticatedNav && user?.role === 'recruiter' && (
-        <NavLink to="/recruiter/dashboard" className={activeStyle}>
-          Recruiter Panel
-        </NavLink>
-      )}
-      {showAuthenticatedNav && user?.role === 'admin' && (
-        <NavLink to="/admin/dashboard" className={activeStyle}>
-          Admin Panel
-        </NavLink>
-      )}
     </>
   )
+}
+
+/** Shown after the divider when logged in — before notification bell and profile */
+export function DesktopDashboardNavLink({ user }) {
+  if (!user) return null
+  if (user.role === 'candidate') {
+    return (
+      <NavLink to="/candidate/dashboard" className={activeStyle}>
+        My Dashboard
+      </NavLink>
+    )
+  }
+  if (user.role === 'recruiter') {
+    return (
+      <NavLink to="/recruiter/dashboard" className={activeStyle}>
+        Recruiter Panel
+      </NavLink>
+    )
+  }
+  if (user.role === 'admin') {
+    return (
+      <NavLink to="/admin/dashboard" className={activeStyle}>
+        Admin Panel
+      </NavLink>
+    )
+  }
+  return null
 }
 
 export function MobileNavLinks({ showAuthenticatedNav, user, onNavigate }) {

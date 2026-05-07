@@ -133,7 +133,7 @@ async function matchAlertsForJob(job) {
           jobLocation: populatedJob.location || "",
           jobType: populatedJob.employmentType || "",
           salary: salary || undefined,
-          companyName: populatedJob.company?.name || "",
+          companyName: populatedJob.company?.name || populatedJob.postedByCompanyName || "",
           jobLink,
           alertId: String(alert._id),
         });

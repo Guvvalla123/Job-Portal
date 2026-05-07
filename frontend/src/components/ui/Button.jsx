@@ -1,5 +1,6 @@
 /* frontend/src/components/ui/Button.jsx */
 import PropTypes from 'prop-types'
+import { Link } from 'react-router-dom'
 
 /**
  * Button — primary / secondary / ghost hierarchy; gradient variant aliases to primary.
@@ -41,6 +42,7 @@ export function Button({
   className = '',
   icon,
   iconPosition = 'left',
+  to,
   ...props
 }) {
   const base =
@@ -48,12 +50,27 @@ export function Button({
 
   const sizeClass = sizes[size] || sizes.md
   const variantClass = variants[variant] || variants.primary
+  const classNames = `${base} ${variantClass} ${sizeClass} ${className}`.trim()
+
+  if (to) {
+    return (
+      <Link to={to} className={classNames} {...props}>
+        {icon && iconPosition === 'left' && (
+          <span className="shrink-0 [&>svg]:h-4 [&>svg]:w-4">{icon}</span>
+        )}
+        {children}
+        {icon && iconPosition === 'right' && (
+          <span className="shrink-0 [&>svg]:h-4 [&>svg]:w-4">{icon}</span>
+        )}
+      </Link>
+    )
+  }
 
   return (
     <button
       type={type}
       disabled={disabled || loading}
-      className={`${base} ${variantClass} ${sizeClass} ${className}`}
+      className={classNames}
       aria-busy={loading}
       aria-disabled={disabled || loading}
       {...props}
@@ -117,4 +134,5 @@ Button.propTypes = {
   icon: PropTypes.node,
   iconPosition: PropTypes.oneOf(['left', 'right']),
   onClick: PropTypes.func,
+  to: PropTypes.string,
 }

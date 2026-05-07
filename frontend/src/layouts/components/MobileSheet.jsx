@@ -2,6 +2,7 @@
 import { NavLink } from 'react-router-dom'
 import { ProfileDropdown } from '../../components/ProfileDropdown.jsx'
 import { Sheet } from '../../components/ui/Sheet.jsx'
+import { Button } from '../../components/ui/index.js'
 import { MobileNavLinks } from './NavLinks.jsx'
 
 export function MobileSheet({ open, onClose, showAuthenticatedNav, user }) {
@@ -16,20 +17,24 @@ export function MobileSheet({ open, onClose, showAuthenticatedNav, user }) {
         <div className="my-4 border-t border-gray-200 dark:border-gray-700" />
         {!showAuthenticatedNav ? (
           <div className="flex flex-col gap-2">
-            <NavLink
+            <Button
               to="/login"
+              variant="secondary"
+              size="lg"
+              className="w-full !rounded-xl"
               onClick={() => onClose()}
-              className="flex min-h-12 items-center justify-center rounded-xl border border-gray-200 px-4 font-semibold text-gray-800 active:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:active:bg-gray-800/80"
             >
               Sign In
-            </NavLink>
-            <NavLink
+            </Button>
+            <Button
               to="/register"
+              variant="primary"
+              size="lg"
+              className="w-full !rounded-xl"
               onClick={() => onClose()}
-              className="flex min-h-12 items-center justify-center rounded-xl bg-teal-700 px-4 font-semibold text-white shadow-soft active:opacity-95 hover:bg-[#0C5F5A]"
             >
               Get Started
-            </NavLink>
+            </Button>
           </div>
         ) : (
           <div className="flex justify-center py-2">

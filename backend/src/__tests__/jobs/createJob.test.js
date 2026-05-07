@@ -16,6 +16,9 @@ const jobPayload = (companyId) => ({
   maxSalary: 150000,
   skills: ["node"],
   companyId: String(companyId),
+  applyUrl: "https://example.com/apply",
+  postedByCompanyName: "Acme Corp",
+  category: "technology",
 });
 
 describe("POST /api/v1/jobs", () => {

@@ -13,11 +13,11 @@ vi.mock('../../context/useAuth.jsx', () => ({
 }))
 
 describe('ProtectedRoute', () => {
-  it('redirects to login when not authenticated', () => {
+  it('redirects to home when not authenticated', () => {
     render(
       <MemoryRouter initialEntries={['/candidate/dashboard']}>
         <Routes>
-          <Route path="/login" element={<div>Login page</div>} />
+          <Route path="/" element={<div>Home page</div>} />
           <Route
             path="/candidate/dashboard"
             element={
@@ -30,6 +30,6 @@ describe('ProtectedRoute', () => {
       </MemoryRouter>,
     )
     expect(screen.queryByText('Protected content')).not.toBeInTheDocument()
-    expect(screen.getByText('Login page')).toBeInTheDocument()
+    expect(screen.getByText('Home page')).toBeInTheDocument()
   })
 })

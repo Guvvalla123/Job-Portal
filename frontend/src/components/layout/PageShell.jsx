@@ -12,7 +12,10 @@ const MotionOutlet = motion.div
 export function PageShell({ children }) {
   const { pathname } = useLocation()
   const isFullBleed =
-    pathname === '/' || pathname.startsWith('/recruiter') || pathname.startsWith('/admin')
+    pathname === '/' ||
+    pathname.startsWith('/recruiter') ||
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/candidate/dashboard')
 
   if (isFullBleed) {
     return <div className="w-full min-w-0 flex-1">{children}</div>

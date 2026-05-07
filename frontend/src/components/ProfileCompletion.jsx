@@ -22,23 +22,27 @@ export function ProfileCompletion({ user }) {
   const percent = Math.round((done / total) * 100)
 
   return (
-    <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100">
+    <div className="rounded-xl border border-gray-700/50 bg-gray-800/50 p-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-gray-900">Profile strength</h3>
-        <span className={`text-sm font-bold ${percent >= 80 ? 'text-emerald-600' : percent >= 50 ? 'text-amber-600' : 'text-gray-500'}`}>
+        <h3 className="text-base font-semibold text-white">Profile strength</h3>
+        <span
+          className={`text-sm font-bold ${
+            percent >= 80 ? 'text-teal-400' : percent >= 50 ? 'text-amber-400' : 'text-gray-400'
+          }`}
+        >
           {percent}%
         </span>
       </div>
-      <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-200">
+      <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-900">
         <div
           className={`h-full transition-all duration-500 ${
-            percent >= 80 ? 'bg-emerald-500' : percent >= 50 ? 'bg-amber-500' : 'bg-gray-400'
+            percent >= 80 ? 'bg-teal-500' : percent >= 50 ? 'bg-amber-500' : 'bg-gray-600'
           }`}
           style={{ width: `${percent}%` }}
         />
       </div>
       {percent < 100 && (
-        <p className="mt-2 text-xs text-gray-500">
+        <p className="mt-2 text-xs text-gray-400">
           Add {checks.find((c) => !c.done)?.label?.toLowerCase()} to improve your profile.
         </p>
       )}

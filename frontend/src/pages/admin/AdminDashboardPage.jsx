@@ -10,7 +10,7 @@ import {
   Tooltip,
   Legend,
 } from 'recharts'
-import { getStats, getStatsTrend } from '../../api/adminApi.js'
+import { getStats, getStatsTrend, getRevenueStats } from '../../api/adminApi.js'
 import { queryKeys } from '../../lib/queryKeys.js'
 import { CACHE_TIERS } from '../../lib/queryOptions.js'
 import { Card } from '../../components/ui/Card.jsx'
@@ -23,12 +23,29 @@ function formatStat(n) {
   return Number(n).toLocaleString()
 }
 
+function formatINR(n) {
+  if (n == null || Number.isNaN(Number(n))) return '—'
+  const num = Number(n)
+  return `Rs ${num.toLocaleString('en-IN', {
+    minimumFractionDigits: Number.isInteger(num) ? 0 : 2,
+    maximumFractionDigits: 2,
+  })}`
+}
+
 function formatChartMonth(isoYm) {
   if (!isoYm || typeof isoYm !== 'string') return ''
   const [y, m] = isoYm.split('-')
   const d = new Date(Number(y), Number(m) - 1, 1)
   if (Number.isNaN(d.getTime())) return isoYm
   return d.toLocaleString(undefined, { month: 'short', year: '2-digit' })
+}
+
+const ICON_TONE_CLASS = {
+  teal: 'rounded-lg bg-teal-50 p-2 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300',
+  amber: 'rounded-lg bg-amber-50 p-2 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300',
+  green: 'rounded-lg bg-emerald-50 p-2 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300',
+  violet: 'rounded-lg bg-violet-50 p-2 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300',
+  orange: 'rounded-lg bg-orange-50 p-2 text-orange-700 dark:bg-orange-950/50 dark:text-orange-300',
 }
 
 function IconUsers({ className = 'h-6 w-6' }) {
@@ -99,6 +116,74 @@ function IconCalendar({ className = 'h-6 w-6' }) {
   )
 }
 
+function IconCrown({ className = 'h-6 w-6' }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M5.25 9.75 8.25 4.5l3.75 5.25L15.75 4.5l3 5.25M5.25 19.5h13.5a.75.75 0 0 0 .684-1.06l-1.688-3.375H6.254l-1.688 3.375A.75.75 0 0 0 5.25 19.5Z"
+      />
+    </svg>
+  )
+}
+
+function IconRupee({ className = 'h-6 w-6' }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M15 8.25H18.75M15 12H18.75M15 15.75H18.75M4.5 19.5 19.5 4.5M9.75 8.25H12M9.75 12H12M9.75 15.75H12M9.75 19.5V18.75M12 19.5H11.25"
+      />
+    </svg>
+  )
+}
+
+function IconDocumentCheck({ className = 'h-6 w-6' }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M11.35 3H6.75A2.25 2.25 0 0 0 4.5 5.25v13.5A2.25 2.25 0 0 0 6.75 21h10.5a2.25 2.25 0 0 0 2.25-2.25V8.7M11.35 3v4.65a.75.75 0 0 0 .75.75H16.5M9 12l2.25 2.25L15 10.5"
+      />
+    </svg>
+  )
+}
+
+function IconClockAlert({ className = 'h-6 w-6' }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M12 6v6h4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+      />
+    </svg>
+  )
+}
+
+function IconFlag({ className = 'h-5 w-5' }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3 3v18M3 3h13l-1 4 1 4H3"
+      />
+    </svg>
+  )
+}
+
+function IconChartBar({ className = 'h-5 w-5' }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v18h18M7 14v4M12 10v8M17 6v12" />
+    </svg>
+  )
+}
+
 function IconChevron({ className = 'h-5 w-5' }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden>
@@ -107,27 +192,52 @@ function IconChevron({ className = 'h-5 w-5' }) {
   )
 }
 
-function StatCard({ icon, label, value }) {
-  const IconGlyph = icon
-  return (
-    <Card padding="default" className="flex flex-col gap-3">
+function DashboardSectionIcon({ type, className = 'h-5 w-5' }) {
+  if (type === 'crown') return <IconCrown className={className} />
+  if (type === 'flag') return <IconFlag className={className} />
+  if (type === 'chart') return <IconChartBar className={className} />
+  return null
+}
+
+function StatCard({ icon: IconGlyph, label, value, subtext, to, iconTone = 'teal', valueClassName = '' }) {
+  const toneClass = ICON_TONE_CLASS[iconTone] || ICON_TONE_CLASS.teal
+  const body = (
+    <Card
+      padding="default"
+      as={to ? 'article' : 'div'}
+      hover={Boolean(to)}
+      className="flex h-full flex-col gap-3"
+    >
       <div className="flex items-start justify-between gap-3">
-        <div className="rounded-lg bg-teal-50 p-2 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300">
+        <div className={toneClass}>
           <IconGlyph className="h-6 w-6" />
         </div>
       </div>
       <div>
         <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{label}</p>
-        <p className="mt-1 text-2xl font-bold tabular-nums text-gray-900 dark:text-white">{value}</p>
+        <p
+          className={`mt-1 text-2xl font-bold tabular-nums text-gray-900 dark:text-white ${valueClassName}`.trim()}
+        >
+          {value}
+        </p>
+        {subtext ? <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{subtext}</p> : null}
       </div>
     </Card>
   )
+  if (to) {
+    return (
+      <Link to={to} className="group block min-w-0">
+        {body}
+      </Link>
+    )
+  }
+  return body
 }
 
 function StatsSkeletonGrid() {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {Array.from({ length: 6 }).map((_, i) => (
+      {Array.from({ length: 10 }).map((_, i) => (
         <Card key={i} padding="default" className="space-y-3">
           <Skeleton className="h-10 w-10 rounded-lg" />
           <Skeleton className="h-4 w-28" />
@@ -153,6 +263,13 @@ export function AdminDashboardPage() {
     gcTime: CACHE_TIERS.dashboard.gcTime,
   })
 
+  const revenueQuery = useQuery({
+    queryKey: queryKeys.admin.revenueStats(),
+    queryFn: () => getRevenueStats(),
+    staleTime: CACHE_TIERS.dashboard.staleTime,
+    gcTime: CACHE_TIERS.dashboard.gcTime,
+  })
+
   const stats = statsQuery.data || {}
   const showSkeleton = statsQuery.isPending
   const trendSeries = trendQuery.data?.series ?? []
@@ -161,6 +278,10 @@ export function AdminDashboardPage() {
     users: s.users,
     jobs: s.jobs,
   }))
+
+  const expiringCount = Number(stats.jobsExpiringNext24h) || 0
+  const revenuePayload = revenueQuery.data
+  const showRevenueOverview = revenueQuery.isSuccess && revenuePayload != null && !revenueQuery.isError
 
   return (
     <section className="space-y-8">
@@ -187,14 +308,123 @@ export function AdminDashboardPage() {
         <StatsSkeletonGrid />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <StatCard icon={IconUsers} label="Total users" value={formatStat(stats.totalUsers)} />
-          <StatCard icon={IconBriefcase} label="Total jobs" value={formatStat(stats.totalJobs)} />
-          <StatCard icon={IconBuilding} label="Total companies" value={formatStat(stats.totalCompanies)} />
-          <StatCard icon={IconClipboard} label="Total applications" value={formatStat(stats.totalApplications)} />
-          <StatCard icon={IconBolt} label="Active jobs" value={formatStat(stats.activeJobs)} />
-          <StatCard icon={IconCalendar} label="New users this month" value={formatStat(stats.newUsersThisMonth)} />
+          <StatCard
+            icon={IconUsers}
+            label="Total users"
+            value={formatStat(stats.totalUsers)}
+            to="/admin/users"
+            iconTone="teal"
+          />
+          <StatCard
+            icon={IconBriefcase}
+            label="Total jobs"
+            value={formatStat(stats.totalJobs)}
+            to="/admin/jobs"
+            iconTone="teal"
+          />
+          <StatCard
+            icon={IconBuilding}
+            label="Total companies"
+            value={formatStat(stats.totalCompanies)}
+            to="/admin/companies"
+            iconTone="teal"
+          />
+          <StatCard
+            icon={IconClipboard}
+            label="Total applications"
+            value={formatStat(stats.totalApplications)}
+            to="/admin/applications"
+            iconTone="teal"
+          />
+          <StatCard
+            icon={IconBolt}
+            label="Active jobs"
+            value={formatStat(stats.activeJobs)}
+            to="/admin/jobs"
+            iconTone="teal"
+          />
+          <StatCard
+            icon={IconCalendar}
+            label="New users this month"
+            value={formatStat(stats.newUsersThisMonth)}
+            to="/admin/users"
+            iconTone="teal"
+          />
+          <StatCard
+            icon={IconCrown}
+            label="Premium Users"
+            value={formatStat(stats.totalPremiumUsers ?? 0)}
+            to="/admin/subscriptions"
+            iconTone="amber"
+          />
+          <StatCard
+            icon={IconRupee}
+            label="Revenue This Month"
+            value={formatINR(stats.revenueThisMonthINR ?? 0)}
+            subtext="from subscriptions"
+            to="/admin/revenue"
+            iconTone="green"
+          />
+          <StatCard
+            icon={IconDocumentCheck}
+            label="ATS Checks This Month"
+            value={formatStat(stats.atsChecksThisMonth ?? 0)}
+            subtext="by all users"
+            iconTone="violet"
+          />
+          <StatCard
+            icon={IconClockAlert}
+            label="Expiring Tomorrow"
+            value={formatStat(expiringCount)}
+            subtext="need review"
+            to="/admin/jobs"
+            iconTone="orange"
+            valueClassName={
+              expiringCount > 0 ? 'text-orange-600 dark:text-orange-400' : ''
+            }
+          />
         </div>
       )}
+
+      {showRevenueOverview ? (
+        <Card padding="default" className="space-y-4">
+          <h2 className="text-base font-semibold text-teal-700 dark:text-teal-300">Revenue Overview</h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                Total revenue all time
+              </p>
+              <p className="mt-1 text-lg font-semibold tabular-nums text-gray-900 dark:text-white">
+                {formatINR(revenuePayload.totalRevenueINR ?? 0)}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                This month revenue
+              </p>
+              <p className="mt-1 text-lg font-semibold tabular-nums text-gray-900 dark:text-white">
+                {formatINR(revenuePayload.revenueThisMonthINR ?? 0)}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                Active subscribers
+              </p>
+              <p className="mt-1 text-lg font-semibold tabular-nums text-gray-900 dark:text-white">
+                {formatStat(revenuePayload.activeSubscriptions ?? 0)}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                Cancelled this month
+              </p>
+              <p className="mt-1 text-lg font-semibold tabular-nums text-gray-900 dark:text-white">
+                {formatStat(revenuePayload.cancelledThisMonth ?? 0)}
+              </p>
+            </div>
+          </div>
+        </Card>
+      ) : null}
 
       <Card padding="default" className="space-y-3">
         <div>
@@ -244,9 +474,16 @@ export function AdminDashboardPage() {
                 padding="default"
                 className="flex h-full items-center justify-between gap-3 ring-gray-100 dark:ring-gray-700"
               >
-                <div className="min-w-0">
-                  <p className="font-semibold text-gray-900 dark:text-white">{item.label}</p>
-                  <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">{item.description}</p>
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  {item.dashboardIcon ? (
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300">
+                      <DashboardSectionIcon type={item.dashboardIcon} />
+                    </span>
+                  ) : null}
+                  <div className="min-w-0">
+                    <p className="font-semibold text-gray-900 dark:text-white">{item.label}</p>
+                    <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">{item.description}</p>
+                  </div>
                 </div>
                 <IconChevron className="h-5 w-5 shrink-0 text-gray-400 transition-transform group-hover:translate-x-0.5 dark:text-gray-500" />
               </Card>

@@ -12,9 +12,12 @@ import { getMe } from '../api/userApi.js'
 import {
   AUTH_KEYS,
   clearPersistedAuthKeys,
+  clearSessionActiveFlag,
   clearSessionEndedFlag,
+  isSessionActive,
   isSessionIntentionallyEnded,
   SESSION_ENDED_KEY,
+  setSessionActiveFlag,
   setSessionEndedFlag,
 } from '../lib/authConstants.js'
 import { toPersistedSessionUser } from '../lib/sessionUser.js'
@@ -22,8 +25,12 @@ import { subscribeToSessionExpiry } from '../lib/authEvents.js'
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
+  const bootstrapStarted = useRef(false)
   /** Synchronous gate: bootstrapPromise exists before any child effect can fire apiClient (fixes race with useEffect restore). */
-  startBootstrap()
+  if (!bootstrapStarted.current) {
+    bootstrapStarted.current = true
+    startBootstrap()
+  }
   const queryClient = useQueryClient()
   const logoutInProgress = useRef(false)
   /** Bumps on login/logout so in-flight /auth/me cannot overwrite a newer session. */
@@ -70,6 +77,11 @@ export function AuthProvider({ children }) {
     } catch {
       /* ignore private mode / blocked storage */
     }
+    try {
+      sessionStorage.clear()
+    } catch {
+      /* ignore */
+    }
 
     setUser(null)
     if (clearCache) {
@@ -79,7 +91,7 @@ export function AuthProvider({ children }) {
     logoutInProgress.current = false
 
     if (redirectToLogin) {
-      window.location.replace('/login')
+      window.location.replace('/')
     }
   }, [queryClient])
 
@@ -111,8 +123,9 @@ export function AuthProvider({ children }) {
       } catch {
         /* ignore */
       }
+      clearSessionActiveFlag()
       queryClient.clear()
-      window.location.replace('/login')
+      window.location.replace('/')
     }
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
@@ -130,6 +143,23 @@ export function AuthProvider({ children }) {
         } catch {
           /* ignore */
         }
+      }
+
+      /**
+       * Tab-scoped session: if no session_active flag (sessionStorage clears on tab close),
+       * never call refresh — user must sign in again.
+       */
+      if (!isSessionActive()) {
+        if (cancelled || epochAtStart !== authEpoch.current) return
+        setUser(null)
+        clearSession()
+        try {
+          clearPersistedAuthKeys()
+        } catch {
+          /* ignore */
+        }
+        setLoading(false)
+        return
       }
 
       const restored = await restoreSessionFromCookie()
@@ -181,6 +211,7 @@ export function AuthProvider({ children }) {
   const login = useCallback(({ user: userData, accessToken }) => {
     authEpoch.current += 1
     clearSessionEndedFlag()
+    setSessionActiveFlag()
     setUser(userData)
     const minimal = toPersistedSessionUser(userData)
     if (minimal) localStorage.setItem(AUTH_KEYS.USER, JSON.stringify(minimal))
